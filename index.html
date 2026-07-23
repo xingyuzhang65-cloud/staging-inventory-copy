@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>暂存库存 - 美仓海外仓系统</title>
+  <link rel="stylesheet" href="styles.css?v=20260722-staging-inventory" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">MW</span><span class="brand-name">美仓海外仓系统</span></div>
+    <nav class="side-nav" aria-label="主导航">
+      <button class="nav-item"><span class="nav-icon">▱</span><span>货件管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">☷</span><span>出运计划</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">⌂</span><span>入库管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item expanded"><span class="nav-icon">♙</span><span>出库管理</span><span class="nav-arrow">⌃</span></button>
+      <div class="nav-children">
+        <button><span>♙</span>出库单管理</button>
+        <button><span>♙</span>承运批次管理</button>
+        <button><span>♙</span>预约管理</button>
+        <button><span>♙</span>转仓管理</button>
+      </div>
+      <button class="nav-item expanded"><span class="nav-icon">♙</span><span>库内管理</span><span class="nav-arrow">⌃</span></button>
+      <div class="nav-children inventory-children">
+        <button><span>♙</span>常规库存</button>
+        <button class="active"><span>♙</span>暂存库存</button>
+        <button><span>♙</span>库存盘点</button>
+      </div>
+      <button class="nav-item"><span class="nav-icon">⌂</span><span>仓库管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">♙</span><span>数据报表</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">⚙</span><span>系统设置</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">▤</span><span>单据管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">▧</span><span>财务管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">♙</span><span>询价管理</span><span class="nav-arrow">⌄</span></button>
+      <button class="nav-item"><span class="nav-icon">♙</span><span>报价询价</span><span class="nav-arrow">⌄</span></button>
+    </nav>
+    <button class="sidebar-collapse" type="button">‹</button>
+  </aside>
+  <section class="workspace">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-button menu-toggle">☰</button><button class="icon-button">‹</button>
+        <div class="page-tabs"><button class="page-tab active">暂存库存 <span>×</span></button><button class="page-tab">出库单管理 <span>×</span></button></div>
+      </div>
+      <div class="topbar-right">
+        <span class="top-caret">›</span><button class="plain-button">导出任务中心</button><button class="plain-button">英文</button>
+        <button class="pill">上海时区⌄</button><button class="pill">⌾ 美仓1号仓⌄</button>
+        <button class="bell">♧<b>12</b></button><span class="avatar">A</span><span class="username">admin</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="filter-card" id="filterCard">
+        <div class="filter-grid">
+          <label class="filter-field"><span>关键字 <i>?</i></span><input id="keywordFilter" type="text" placeholder="单个精准搜索" /></label>
+          <label class="filter-field"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
+          <label class="filter-field"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
+          <label class="filter-field"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
+          <label class="filter-field"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
+          <label class="filter-field"><span>派送方式</span><select id="dispatchFilter"><option value="">派送方式</option></select></label>
+          <label class="filter-field"><span>库位</span><select id="locationFilter"><option value="">库位</option></select></label>
+          <label class="filter-field"><span>柜号</span><input id="containerFilter" type="text" placeholder="单个模糊，批量精准" /></label>
+          <label class="filter-field"><span>托盘标签</span><input id="palletFilter" type="text" placeholder="单个模糊，批量精准" /></label>
+          <label class="filter-field">
+            <span>入库时间</span><span class="date-range"><input id="dateFrom" type="text" placeholder="开始日期" /><em>→</em><input id="dateTo" type="text" placeholder="结束日期" /><b>□</b></span>
+          </label>
+          <label class="filter-field"><span>是否拦截</span><select id="blockedFilter"><option value="">是否拦截</option><option value="是">是</option><option value="否">否</option></select></label>
+        </div>
+        <div class="filter-actions">
+          <button class="btn primary" id="searchButton">搜索</button><button class="btn" id="resetButton">重置</button>
+          <button class="btn collapse-button" id="collapseButton"><span>⌃</span> 收起</button>
+        </div>
+      </section>
+
+      <section class="inventory-card">
+        <div class="status-bar">
+          <div class="status-tabs" id="statusTabs">
+            <button class="status-tab active" data-status="暂存">暂存(274)</button>
+            <button class="status-tab" data-status="待审批">待审批(1)</button>
+            <button class="status-tab" data-status="指令待处理">指令待处理(0)</button>
+            <button class="status-tab" data-status="指令处理中">指令处理中(0)</button>
+            <button class="status-tab" data-status="待出库">指令处理完成，待出库(92)</button>
+            <button class="status-tab" data-status="已出库">已出库(31)</button>
+            <button class="status-tab" data-status="审批拒绝">审批拒绝(36)</button>
+          </div>
+          <div class="status-actions"><button class="btn">更换库位</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
+        </div>
+        <div class="summary-bar">
+          <div>已选择内容：总托盘数：<b id="selectedPallets">0</b><span>总箱数：<b id="selectedBoxes">0</b></span><span>总板数：<b id="selectedBoards">0</b></span><span>总重量：<b id="selectedWeight">0</b></span><span>总体积：<b id="selectedVolume">0</b></span></div>
+          <button class="settings-button" id="densityButton">⚙</button>
+        </div>
+        <div class="table-scroll">
+          <table class="inventory-table">
+            <thead><tr>
+              <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
+              <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
+              <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
+              <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
+              <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
+            </tr></thead>
+            <tbody id="inventoryBody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer"><span>共 274 条</span><button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button><select><option>50 条/页</option></select></div>
+      </section>
+    </main>
+  </section>
+</div>
+<div class="release-overlay" id="releaseOverlay" hidden>
+  <aside class="release-drawer" role="dialog" aria-modal="true" aria-labelledby="releaseTitle">
+    <header class="release-header">
+      <button class="release-close" id="releaseClose" type="button" aria-label="关闭">×</button>
+      <h2 id="releaseTitle">放货</h2>
+    </header>
+    <div class="release-summary">
+      <div><span>柜号：</span><b id="releaseContainer">-</b></div>
+      <div><span>派送方式：</span><b id="releaseDispatch">-</b></div>
+      <div><span>托盘标签：</span><b id="releasePallet">-</b></div>
+      <div><span>转运方式：</span><b id="releaseTransfer">-</b></div>
+      <div><span>未发货箱数：</span><b id="releaseUnsent">0</b></div>
+    </div>
+    <form class="release-form" id="releaseForm">
+      <section class="release-fields">
+        <label class="release-field radio-field">
+          <span class="required">发货申请</span>
+          <span class="radio-group"><label><input type="radio" name="application" value="FBA" checked /> FBA</label><label><input type="radio" name="application" value="其他地址" /> 其他地址</label></span>
+        </label>
+        <label class="release-field"><span class="required">目的地</span><select id="releaseDestination" required><option value="">请选择</option><option>ABE2</option><option>ABE8</option><option>BWI9</option><option>FEDEX</option></select></label>
+        <label class="release-field"><span class="required">ShipmentID</span><input id="releaseShipment" required placeholder="请输入" /></label>
+        <label class="release-field"><span class="required">派送方式</span><select id="releaseMethod" required><option>Truck-Amazon</option><option>Truck-Walmart</option><option>Truck-Other</option><option>FEDEX</option></select></label>
+        <label class="release-field"><span class="required">ReferenceID</span><input id="releaseReference" required placeholder="请输入" /></label>
+        <label class="release-field"><span class="required">箱数</span><input id="releaseBoxes" type="number" min="1" required placeholder="请输入" /></label>
+        <label class="release-field"><span class="required">预约发货时间</span><span class="release-date"><input id="releaseDate" type="date" required /><i>□</i></span></label>
+        <label class="release-field"><span>备注</span><input id="releaseRemark" placeholder="请输入" /></label>
+        <label class="release-field upload-field"><span>附件上传</span><span><input id="releaseFile" type="file" hidden /><button class="upload-button" id="uploadButton" type="button">↥&nbsp; 上传</button><em id="uploadName"></em></span></label>
+      </section>
+      <section class="cargo-box-section">
+        <h3>货箱信息</h3>
+        <div class="cargo-box-table-wrap">
+          <table class="cargo-box-table">
+            <thead><tr>
+              <th class="cargo-check"><input type="checkbox" disabled aria-label="全选货箱" /></th>
+              <th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th><th>承运商</th>
+              <th>快递标</th><th>仓库回填转单号</th><th>17网状态</th><th>状态</th>
+            </tr></thead>
+            <tbody id="cargoBoxBody"></tbody>
+          </table>
+        </div>
+      </section>
+<section class="instruction-section">
+  <h3>操作指令</h3>
+  <button class="instruction-add" id="instructionAdd" type="button">新增</button>
+  <div class="instruction-list-wrap">
+    <table class="instruction-table">
+      <thead><tr>
+        <th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*计费单价（元）</th><th>*计费数量</th>
+        <th>*币种</th><th>总价（元）</th><th>添加时间</th><th>添加人</th><th>描述</th><th>操作</th>
+      </tr></thead>
+      <tbody id="instructionBody"></tbody>
+    </table>
+  </div>
+</section>
+<div class="release-actions">
+  <button class="btn primary" type="submit">确定</button>
+  <button class="btn" id="releaseCancel" type="button">取消</button>
+</div>
+    </form>
+  </aside>
+</div>
+<div class="instruction-overlay" id="instructionOverlay" hidden>
+  <aside class="instruction-drawer" role="dialog" aria-modal="true" aria-labelledby="instructionDrawerTitle">
+    <header><h3 id="instructionDrawerTitle">添加指令</h3><button id="instructionClose" type="button" aria-label="关闭">×</button></header>
+    <div class="instruction-picker-content">
+      <section class="instruction-picker-card">
+        <div class="instruction-search">
+          <label><span>费用名称：</span><input id="instructionSearchName" placeholder="请输入代码/名称" /></label>
+          <label><span>费用类型：</span><select id="instructionSearchType"><option value="">请选择费用类型</option><option>仓储费</option><option>操作费</option></select></label>
+          <button class="btn primary" id="instructionSearch" type="button">搜索</button>
+          <button class="btn" id="instructionReset" type="button">重置</button>
+        </div>
+        <div class="instruction-picker-table-wrap">
+          <table class="instruction-picker-table">
+            <thead><tr><th class="picker-check"><input id="instructionSelectAll" type="checkbox" /></th><th>费用代码</th><th>费用名称</th><th>费用类型</th><th>计费单位</th><th>计费单价</th><th>币种</th><th>描述</th></tr></thead>
+            <tbody id="instructionPickerBody"></tbody>
+          </table>
+        </div>
+        <div class="instruction-pagination">
+          <span id="instructionSelectedCount">已选中0条</span>
+          <div><span>共 50 条</span><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><span>...</span><button>50</button><select><option>10/页</option><option>20/页</option></select><span>转到</span><input value="8" /></div>
+        </div>
+      </section>
+    </div>
+    <footer><button class="btn primary" id="instructionConfirm" type="button">确认</button><button class="btn" id="instructionCancel" type="button">取消</button></footer>
+  </aside>
+</div>
+<div class="instruction-modal-overlay" id="instructionEditOverlay" hidden>
+  <section class="instruction-modal edit-modal" role="dialog" aria-modal="true">
+    <header><h3>编辑费用项</h3></header>
+    <form id="instructionEditForm">
+      <div class="instruction-edit-fields">
+        <label><span class="required">费用代码</span><input id="editInstructionCode" readonly /></label>
+        <label><span class="required">费用名称</span><input id="editInstructionName" readonly /></label>
+        <label><span class="required">费用类型</span><select id="editInstructionType"><option>仓储费</option><option>操作费</option></select></label>
+        <label><span class="required">计费单位</span><select id="editInstructionUnit"><option>票</option><option>箱</option><option>KG</option></select></label>
+        <label><span class="required">计费单价</span><input id="editInstructionPrice" type="number" min="0" step="0.01" required /></label>
+        <label><span class="required">计费数量</span><input id="editInstructionQuantity" type="number" min="0.01" step="0.01" required /></label>
+        <label><span class="required">币种</span><select id="editInstructionCurrency"><option>人民币</option><option>USD</option></select></label>
+      </div>
+      <footer><button class="btn" id="instructionEditCancel" type="button">取消</button><button class="btn primary" type="submit">确定</button></footer>
+    </form>
+  </section>
+</div>
+<div class="instruction-modal-overlay" id="instructionDeleteOverlay" hidden>
+  <section class="instruction-modal delete-modal" role="dialog" aria-modal="true">
+    <header><h3>删除费用项</h3></header>
+    <p>确定删除费用项“<b id="deleteInstructionName"></b>”吗？</p>
+    <footer><button class="btn" id="instructionDeleteCancel" type="button">取消</button><button class="btn primary" id="instructionDeleteConfirm" type="button">确定</button></footer>
+  </section>
+</div>
+<div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
+<div class="watermarks" id="watermarks"></div>
+<script src="script.js?v=20260722-staging-inventory"></script>
+</body>
+</html>
