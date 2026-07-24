@@ -19,49 +19,285 @@ const inventoryRows = rawRows.map((r, index) => ({
   time: r[9], weight: r[10], volume: r[11], boxes: r[12], pending: r[13],
   unsent: r[14], sent: r[15], status: r[16]
 }));
-const approvalRows = [{
-  id: 1,
-  customer: "TTTX",
-  applicationNo: "",
-  container: "CCCA1414141",
-  system: "/",
-  inbound: "111",
-  blocked: "",
-  applicationType: "FBA仓库",
-  shipmentId: "1",
-  referenceId: "1",
-  transfer: "拆转",
-  destination: "ABE3",
-  dispatch: "Truck-Amazon",
-  pallet: "CCCA1414141-240411-111-1",
-  inboundTime: "",
-  appliedBoxes: 1,
-  appliedVolume: 0,
-  chargedPallets: "",
-  approvalStage: "待仓库审批",
-  status: "待审批"
-}];
-const instructionPendingRows = [{
-  id: 1,
-  customer: "23",
-  applicationNo: "20260722001",
-  container: "8889990",
-  system: "8889990-250623",
-  inbound: "88",
+const approvalBase = {
   blocked: "是",
   applicationType: "FBA仓库",
-  shipmentId: "1237454",
-  referenceId: "134354",
   transfer: "拆转",
   dispatch: "Truck-Amazon",
-  pallet: "8889990-250623-88-6",
-  inboundTime: "2025-07-11 15:29:34",
-  appliedBoxes: 1,
-  appliedVolume: 0.4,
-  chargedPallets: "",
-  status: "指令待处理"
-}];
-const instructionProcessingRows = instructionPendingRows.map((row) => ({ ...row, status: "指令处理中" }));
+  chargedPallets: ""
+};
+const approvalRows = [
+  {
+    customer: "TTTX", applicationNo: "20260723001", container: "CCCA1414141", system: "CCCA1414141-240411", inbound: "111",
+    shipmentId: "FBA19APPR001", referenceId: "REF20260723001", pallet: "CCCA1414141-240411-111-1", inboundTime: "2026-07-22 09:18:32",
+    appliedBoxes: 2, appliedVolume: 0.48, approvalStage: "待仓库审批",
+    instructions: [
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: false },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260723002", container: "8889990", system: "8889990-250623", inbound: "88",
+    shipmentId: "FBA19APPR002", referenceId: "REF20260723002", pallet: "8889990-250623-88-6", inboundTime: "2026-07-22 10:26:15",
+    appliedBoxes: 3, appliedVolume: 1.2, approvalStage: "待初审",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: false },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: false },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX2", applicationNo: "20260723003", container: "WEMA1131231", system: "/", inbound: "2",
+    applicationType: "其他地址", shipmentId: "", referenceId: "", dispatch: "USPS", pallet: "2-ABE2-1", inboundTime: "2026-07-22 11:04:09",
+    appliedBoxes: 2, appliedVolume: 0.182, approvalStage: "待仓库审批",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: false },
+      { text: "60 CNY 加固服务费 (30/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "ABC-US", applicationNo: "20260723004", container: "MSCU7654321", system: "MSCU7654321-260701", inbound: "US0601",
+    shipmentId: "FBA19APPR004", referenceId: "REF20260723004", pallet: "MSCU7654321-US0601-1", inboundTime: "2026-07-22 13:45:27",
+    appliedBoxes: 4, appliedVolume: 1.68, approvalStage: "待初审",
+    instructions: [
+      { text: "30 CNY 清点服务费 (15/箱)", completed: false },
+      { text: "60 CNY 加固服务费 (30/箱)", completed: false },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260723005", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461",
+    shipmentId: "FBA19APPR005", referenceId: "REF20260723005", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "2026-07-22 15:12:43",
+    appliedBoxes: 3, appliedVolume: 0.87, approvalStage: "待仓库审批",
+    instructions: [
+      { text: "3 CNY 仓储渠道-免仓30天 (3/票)", completed: false },
+      { text: "4 CNY 仓储渠道-31-90天 (4/票)", completed: false },
+      { text: "2 CNY 仓储渠道-90天以上 (2/票)", completed: false }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260723006", container: "TLLU2026072", system: "TLLU2026072-260715", inbound: "72",
+    shipmentId: "FBA19APPR006", referenceId: "REF20260723006", pallet: "TLLU2026072-72-3", inboundTime: "2026-07-23 08:36:18",
+    appliedBoxes: 2, appliedVolume: 0.94, approvalStage: "待仓库审批",
+    instructions: [
+      { text: "3.5 CNY 更换标签费 (0.5/件)", completed: false },
+      { text: "10 CNY 重新打包费 (10/票)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260723007", container: "AAAA0000000", system: "AAAA0000000-241109", inbound: "2",
+    shipmentId: "FBA19APPR007", referenceId: "REF20260723007", pallet: "AAAA0000000-241109-ABE8-2", inboundTime: "2026-07-23 09:52:06",
+    appliedBoxes: 3, appliedVolume: 1.109, approvalStage: "待初审",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: false },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "MARY-US", applicationNo: "20260723008", container: "CCLU8765432", system: "CCLU8765432-260720", inbound: "US0720",
+    shipmentId: "FBA19APPR008", referenceId: "REF20260723008", pallet: "CCLU8765432-US0720-2", inboundTime: "2026-07-23 11:28:34",
+    appliedBoxes: 4, appliedVolume: 2.16, approvalStage: "待仓库审批",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: false },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: false },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: false },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: false }
+    ]
+  }
+].map((row, index) => ({ id: index + 1, ...approvalBase, ...row, status: "待审批" }));
+const instructionPendingBase = {
+  blocked: "是",
+  applicationType: "FBA仓库",
+  transfer: "拆转",
+  dispatch: "Truck-Amazon",
+  chargedPallets: ""
+};
+const instructionPendingRows = [
+  {
+    customer: "23", applicationNo: "20260722001", container: "8889990", system: "8889990-250623", inbound: "88",
+    shipmentId: "1237454", referenceId: "134354", pallet: "8889990-250623-88-6", inboundTime: "2025-07-11 15:29:34",
+    appliedBoxes: 4, appliedVolume: 1.6, financialAudit: "部分审核",
+    instructions: [
+      { text: "3 CNY 仓储渠道-免仓30天 (3/票)", completed: true },
+      { text: "4 CNY 仓储渠道-31-90天 (4/票)", completed: false },
+      { text: "3.5 CNY 更换标签费 (0.5/件)", completed: true },
+      { text: "10 CNY 重新打包费 (10/票)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722002", container: "AAAA0000000", system: "AAAA0000000-241109", inbound: "2",
+    shipmentId: "FBA19C9LZ2R8", referenceId: "FBA19C9LZ2R8", pallet: "AAAA0000000-241109-ABE8-2", inboundTime: "2024-11-05 15:18:21",
+    appliedBoxes: 3, appliedVolume: 1.109, financialAudit: "未审核",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: false },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: false },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX2", applicationNo: "20260722003", container: "WEMA1131231", system: "/", inbound: "2",
+    applicationType: "其他地址", shipmentId: "", referenceId: "", dispatch: "USPS", pallet: "2-ABE2-1", inboundTime: "2024-04-23 15:22:43",
+    appliedBoxes: 2, appliedVolume: 0.182, financialAudit: "已审核",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: true },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: true }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260722004", container: "8889990", system: "8889990-250623", inbound: "88",
+    shipmentId: "FBA323N235Y8", referenceId: "FBA323N235Y8", pallet: "8889990-250623-BWI9-10", inboundTime: "2025-07-11 15:29:34",
+    appliedBoxes: 5, appliedVolume: 3.8, financialAudit: "部分审核",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "4 CNY 拦截-免仓7天 (4/票)", completed: false },
+      { text: "3 CNY 拦截-免仓8-90天 (3/票)", completed: false },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722005", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461",
+    shipmentId: "FBA19BWNJY55", referenceId: "FBA19BWNJY55", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "2025-09-25 10:18:40",
+    appliedBoxes: 4, appliedVolume: 0.87, financialAudit: "已审核",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: true },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: false }
+    ]
+  },
+  {
+    customer: "ABC-US", applicationNo: "20260722006", container: "MSCU7654321", system: "MSCU7654321-260701", inbound: "US0601",
+    shipmentId: "FBA19TEST001", referenceId: "REF20260722006", pallet: "MSCU7654321-US0601-1", inboundTime: "2026-07-20 09:12:36",
+    appliedBoxes: 2, appliedVolume: 0.56, financialAudit: "未审核",
+    instructions: [
+      { text: "30 CNY 清点服务费 (15/箱)", completed: false },
+      { text: "60 CNY 加固服务费 (30/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722007", container: "CCCA1414141", system: "CCCA1414141-240411", inbound: "111",
+    shipmentId: "FBA19DONE001", referenceId: "FBA19DONE001", pallet: "CCCA1414141-240411-111-1", inboundTime: "2026-07-19 14:36:20",
+    appliedBoxes: 4, appliedVolume: 1.2, financialAudit: "已审核",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: true },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: true },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: true }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260722008", container: "TLLU2026072", system: "TLLU2026072-260715", inbound: "72",
+    shipmentId: "FBA19MIXED08", referenceId: "REF20260722008", pallet: "TLLU2026072-72-3", inboundTime: "2026-07-21 16:08:55",
+    appliedBoxes: 5, appliedVolume: 2.35, financialAudit: "部分审核",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "3.5 CNY 更换标签费 (0.5/件)", completed: false },
+      { text: "10 CNY 重新打包费 (10/票)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
+    ]
+  }
+].map((row, index) => ({ id: index + 1, ...instructionPendingBase, ...row, status: "指令待处理" }));
+const instructionProcessingRows = [
+  {
+    customer: "23", applicationNo: "20260722001", container: "8889990", system: "8889990-250623", inbound: "88",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "1237454", referenceId: "134354", pallet: "8889990-250623-88-6", inboundTime: "2025-07-11 15:29:34",
+    appliedBoxes: 4, appliedVolume: 1.6, financialAudit: "已审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "3 CNY 仓储渠道-免仓30天 (3/票)", completed: true },
+      { text: "4 CNY 仓储渠道-31-90天 (4/票)", completed: true },
+      { text: "3.5 CNY 更换标签费 (0.5/件)", completed: true },
+      { text: "10 CNY 重新打包费 (10/票)", completed: true }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722002", container: "AAAA0000000", system: "AAAA0000000-241109", inbound: "2",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA19C9LZ2R8", referenceId: "FBA19C9LZ2R8", pallet: "AAAA0000000-241109-ABE8-2", inboundTime: "2024-11-05 15:18:21",
+    appliedBoxes: 3, appliedVolume: 1.109, financialAudit: "已审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX2", applicationNo: "20260722003", container: "WEMA1131231", system: "/", inbound: "2",
+    blocked: "是", applicationType: "其他地址", transfer: "拆转", dispatch: "USPS", chargedPallets: "",
+    shipmentId: "", referenceId: "", pallet: "2-ABE2-1", inboundTime: "2024-04-23 15:22:43",
+    appliedBoxes: 2, appliedVolume: 0.182, financialAudit: "已审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: true },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: true }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260722004", container: "8889990", system: "8889990-250623", inbound: "88",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA323N235Y8", referenceId: "FBA323N235Y8", pallet: "8889990-250623-BWI9-10", inboundTime: "2025-07-11 15:29:34",
+    appliedBoxes: 5, appliedVolume: 3.8, financialAudit: "部分审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "4 CNY 拦截-免仓7天 (4/票)", completed: false },
+      { text: "3 CNY 拦截-免仓8-90天 (3/票)", completed: false },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722005", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA19BWNJY55", referenceId: "FBA19BWNJY55", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "2025-09-25 10:18:40",
+    appliedBoxes: 4, appliedVolume: 0.87, financialAudit: "已审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: true },
+      { text: "120 CNY 托盘操作费 (30/托)", completed: true }
+    ]
+  },
+  {
+    customer: "ABC-US", applicationNo: "20260722006", container: "MSCU7654321", system: "MSCU7654321-260701", inbound: "US0601",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA19TEST001", referenceId: "REF20260722006", pallet: "MSCU7654321-US0601-1", inboundTime: "2026-07-20 09:12:36",
+    appliedBoxes: 2, appliedVolume: 0.56, financialAudit: "未审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "30 CNY 清点服务费 (15/箱)", completed: false },
+      { text: "60 CNY 加固服务费 (30/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "TTTX", applicationNo: "20260722007", container: "CCCA1414141", system: "CCCA1414141-240411", inbound: "111",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA19DONE001", referenceId: "FBA19DONE001", pallet: "CCCA1414141-240411-111-1", inboundTime: "2026-07-19 14:36:20",
+    appliedBoxes: 4, appliedVolume: 1.2, financialAudit: "已审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "979.4 CNY 基础运费 (5.9/KG)", completed: true },
+      { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: true },
+      { text: "45 CNY 重新打包费 (15/箱)", completed: false }
+    ]
+  },
+  {
+    customer: "23", applicationNo: "20260722008", container: "TLLU2026072", system: "TLLU2026072-260715", inbound: "72",
+    blocked: "是", applicationType: "FBA仓库", transfer: "拆转", dispatch: "Truck-Amazon", chargedPallets: "",
+    shipmentId: "FBA19MIXED08", referenceId: "REF20260722008", pallet: "TLLU2026072-72-3", inboundTime: "2026-07-21 16:08:55",
+    appliedBoxes: 5, appliedVolume: 2.35, financialAudit: "部分审核", instructionAudit: "审核中",
+    instructions: [
+      { text: "900 CNY 国外拦截费 (900/票)", completed: true },
+      { text: "3.5 CNY 更换标签费 (0.5/件)", completed: true },
+      { text: "10 CNY 重新打包费 (10/票)", completed: true },
+      { text: "50 CNY 拍照服务费 (10/箱)", completed: false },
+      { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
+    ]
+  }
+].map((row, index) => ({ id: index + 1, ...row, status: "指令处理中" }));
 const outboundSeedRows = [
   { customer: "23", applicationNo: "20260722009", container: "8889990", system: "8889990-250623", inbound: "88", blocked: "是", applicationType: "FBA仓库", shipmentId: "111111", referenceId: "1111111111", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-88-9", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 1, appliedVolume: 0.4, chargedPallets: "" },
   { customer: "23", applicationNo: "20260722008", container: "8889990", system: "8889990-250623", inbound: "88", blocked: "是", applicationType: "FBA仓库", shipmentId: "11111", referenceId: "1111", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-88-9", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 1, appliedVolume: 0.4, chargedPallets: "" },
@@ -78,12 +314,21 @@ const outboundSeedRows = [
   { customer: "TTTX", applicationNo: "20250925086", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461", blocked: "", applicationType: "FBA仓库", shipmentId: "41414", referenceId: "1414141", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "", appliedBoxes: 2, appliedVolume: 0.87, chargedPallets: "" },
   { customer: "TTTX", applicationNo: "20250925085", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461", blocked: "", applicationType: "FBA仓库", shipmentId: "41414", referenceId: "1414141", transfer: "拆转", dispatch: "Truck-Walmart", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "", appliedBoxes: 1, appliedVolume: 0.44, chargedPallets: "" }
 ];
+const completedInstructionTextSets = [
+  ["979.4 CNY 基础运费 (5.9/KG)", "20 CNY 换标服务费 (0.5/件)"],
+  ["900 CNY 国外拦截费 (900/票)", "45 CNY 重新打包费 (15/箱)", "50 CNY 拍照服务费 (10/箱)"],
+  ["3 CNY 仓储渠道-免仓30天 (3/票)", "4 CNY 仓储渠道-31-90天 (4/票)", "2 CNY 仓储渠道-90天以上 (2/票)"],
+  ["30 CNY 清点服务费 (15/箱)", "60 CNY 加固服务费 (30/箱)", "120 CNY 托盘操作费 (30/托)"]
+];
 const outboundRows = Array.from({ length: 95 }, (_, index) => {
   const seed = outboundSeedRows[index % outboundSeedRows.length];
   return {
     ...seed,
     id: index + 1,
     applicationNo: index < outboundSeedRows.length ? seed.applicationNo : `2025${String(9200000 - index).padStart(8, "0")}`,
+    financialAudit: ["已审核", "已审核", "部分审核", "未审核", "已审核", "部分审核", "已审核"][index % 7],
+    instructionAudit: "已审核",
+    instructions: completedInstructionTextSets[index % completedInstructionTextSets.length].map((text) => ({ text, completed: true })),
     status: "待出库"
   };
 });
@@ -137,6 +382,10 @@ function isInstructionView() {
   return activeStatus === "指令待处理" || activeStatus === "指令处理中";
 }
 
+function isInstructionPendingView() {
+  return activeStatus === "指令待处理";
+}
+
 function isOutboundView() {
   return activeStatus === "待出库" || activeStatus === "已出库";
 }
@@ -169,11 +418,58 @@ function getActiveStatusRows() {
   return inventoryRows;
 }
 
+const financialAuditTone = {
+  已审核: "status-success",
+  部分审核: "status-partial",
+  未审核: "status-pending"
+};
+
+function renderFinancialAudit(status) {
+  return `<span class="workflow-status ${financialAuditTone[status] || "status-neutral"}">${status || "-"}</span>`;
+}
+
+const instructionAuditTone = {
+  已审核: "status-success",
+  审核中: "status-partial",
+  未审核: "status-pending"
+};
+
+function renderInstructionAudit(status) {
+  return `<span class="workflow-status ${instructionAuditTone[status] || "status-neutral"}">${status || "-"}</span>`;
+}
+
+function getInstructionProgress(row) {
+  const total = row.instructions?.length || 0;
+  const completed = row.instructions?.filter((instruction) => instruction.completed).length || 0;
+  const status = total > 0 && completed === total ? "已处理" : completed > 0 ? "部分处理" : "待处理";
+  return { total, completed, status };
+}
+
+function renderInstructionStatus(row) {
+  const progress = getInstructionProgress(row);
+  const tone = progress.status === "已处理" ? "status-success" : progress.status === "部分处理" ? "status-partial" : "status-pending";
+  return `<div class="instruction-status-summary" title="${progress.completed} 条已完成，${progress.total - progress.completed} 条未完成">
+    <div class="instruction-status-top"><span class="workflow-status ${tone}">${progress.status}</span><span class="instruction-progress-count">${progress.completed}/${progress.total}</span></div>
+  </div>`;
+}
+
+function renderInstructionLines(row) {
+  if (!row.instructions?.length) return '<span class="instruction-empty">-</span>';
+  return `<div class="instruction-lines">${row.instructions.map((instruction) =>
+    `<div class="instruction-line ${instruction.completed ? "status-success" : "status-pending"}" title="${instruction.completed ? "已完成" : "未完成"}：${instruction.text}"><span class="instruction-state-dot"></span><span class="instruction-line-text">${instruction.text}</span></div>`
+  ).join("")}</div>`;
+}
+
+function getInstructionText(row) {
+  return row.instructions?.map((instruction) => `[${instruction.completed ? "已完成" : "未完成"}] ${instruction.text}`).join("；") || "";
+}
+
 function renderTableChrome() {
   const requestTable = isRequestTableView();
   document.body.classList.toggle("request-view", requestTable);
   document.body.classList.toggle("approval-view", isApprovalView());
   document.body.classList.toggle("instruction-view", isInstructionView());
+  document.body.classList.toggle("instruction-pending-view", isInstructionPendingView());
   document.body.classList.toggle("outbound-view", isOutboundView());
   document.body.classList.toggle("rejection-view", isRejectedView());
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
@@ -186,7 +482,15 @@ function renderTableChrome() {
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
     <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
-    <th class="sortable">入库时间</th><th class="sortable">申请箱数</th><th>申请箱数总体积</th><th>收费托数</th><th class="operation-col">操作</th>
+    <th class="sortable">入库时间</th><th class="sortable">申请箱数</th><th>申请箱数总体积</th><th>收费托数</th>
+    ${isApprovalView()
+      ? '<th class="instruction-list-col">指令</th>'
+      : isInstructionPendingView()
+        ? '<th class="financial-audit-col">财务审核</th><th class="instruction-status-col">指令状态</th><th class="instruction-list-col">指令</th>'
+        : (isInstructionView() || isOutboundView())
+          ? '<th class="financial-audit-col">财务审核</th><th class="instruction-audit-col">指令审核</th><th class="instruction-list-col">指令</th>'
+          : ""}
+    <th class="operation-col">操作</th>
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
@@ -210,7 +514,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    body.innerHTML = '<tr><td class="empty-row" colspan="19">暂无匹配库存记录</td></tr>';
+    body.innerHTML = `<tr><td class="empty-row" colspan="${(isInstructionView() || isOutboundView()) ? 22 : isApprovalView() ? 20 : 19}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
     return;
@@ -226,13 +530,24 @@ function renderRows() {
       <td>${row.applicationType}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
       <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       <td>${row.inboundTime}</td><td>${row.appliedBoxes}</td><td>${row.appliedVolume}</td><td>${row.chargedPallets}</td>
+      ${isApprovalView()
+        ? `<td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
+        : isInstructionPendingView()
+          ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
+             <td class="instruction-status-col">${renderInstructionStatus(row)}</td>
+             <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
+          : (isInstructionView() || isOutboundView())
+            ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
+               <td class="instruction-audit-col">${renderInstructionAudit(row.instructionAudit)}</td>
+               <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
+            : ""}
       <td class="operation-col approval-actions">${isRejectedView()
         ? `<button class="action-link detail-button" data-id="${row.id}">详情</button>`
         : isOutboundView()
           ? `<button class="action-link receivable-button">应收费用</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
           : isInstructionView()
             ? `<button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
-            : `<button class="action-link review-button">审核申请</button><button class="action-link detail-button" data-id="${row.id}">详情</button>`}</td>
+            : `<button class="action-link review-button" data-id="${row.id}">审核申请</button><button class="action-link detail-button" data-id="${row.id}">详情</button>`}</td>
     </tr>`).join("") : visibleRows.map((row) => `
     <tr>
       <td class="index-col">${row.id}</td>
@@ -345,12 +660,23 @@ $(".menu-toggle").addEventListener("click", () => {
   document.body.classList.toggle("sidebar-collapsed");
 });
 $("#exportButton").addEventListener("click", () => {
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签","入库时间","申请箱数","申请箱数总体积","收费托数"];
+  if (isApprovalView()) requestHeader.push("指令");
+  else if (isInstructionPendingView()) requestHeader.push("财务审核", "指令状态", "指令");
+  else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令审核", "指令");
   const header = isRequestTableView()
-    ? ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签","入库时间","申请箱数","申请箱数总体积","收费托数"]
+    ? requestHeader
     : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
-  const lines = [header, ...visibleRows.map((r) => isRequestTableView()
-    ? [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet,r.inboundTime,r.appliedBoxes,r.appliedVolume,r.chargedPallets]
-    : [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent])];
+  const lines = [header, ...visibleRows.map((r) => {
+    if (!isRequestTableView()) {
+      return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
+    }
+    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet,r.inboundTime,r.appliedBoxes,r.appliedVolume,r.chargedPallets];
+    if (isApprovalView()) requestRow.push(getInstructionText(r));
+    else if (isInstructionPendingView()) requestRow.push(r.financialAudit, getInstructionProgress(r).status, getInstructionText(r));
+    else if (isInstructionView() || isOutboundView()) requestRow.push(r.financialAudit, r.instructionAudit, getInstructionText(r));
+    return requestRow;
+  })];
   const csv = "\ufeff" + lines.map((line) => line.map((cell) => `"${String(cell).replaceAll('"','""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
@@ -430,7 +756,7 @@ function closeApprovalReview() {
 body.addEventListener("click", (event) => {
   const button = event.target.closest(".review-button");
   if (!button) return;
-  const row = approvalRows[0];
+  const row = approvalRows.find((item) => item.id === Number(button.dataset.id));
   if (row) openApprovalReview(row);
 });
 $("#approvalReviewTabs").addEventListener("click", (event) => {
