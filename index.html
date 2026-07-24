@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260722-staging-inventory" />
+  <link rel="stylesheet" href="styles.css?v=20260723-detail-view" />
 </head>
 <body>
 
@@ -15,19 +15,14 @@
       <button class="nav-item"><span class="nav-icon">▱</span><span>货件管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">☷</span><span>出运计划</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">⌂</span><span>入库管理</span><span class="nav-arrow">⌄</span></button>
-      <button class="nav-item expanded"><span class="nav-icon">♙</span><span>出库管理</span><span class="nav-arrow">⌃</span></button>
-      <div class="nav-children">
-        <button><span>♙</span>出库单管理</button>
-        <button><span>♙</span>承运批次管理</button>
-        <button><span>♙</span>预约管理</button>
-        <button><span>♙</span>转仓管理</button>
-      </div>
+      <button class="nav-item"><span class="nav-icon">♙</span><span>出库管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item expanded"><span class="nav-icon">♙</span><span>库内管理</span><span class="nav-arrow">⌃</span></button>
       <div class="nav-children inventory-children">
         <button><span>♙</span>常规库存</button>
         <button class="active"><span>♙</span>暂存库存</button>
         <button><span>♙</span>库存盘点</button>
       </div>
+      <button class="nav-item"><span class="nav-icon">⌂</span><span>客户管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">⌂</span><span>仓库管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">♙</span><span>数据报表</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">⚙</span><span>系统设置</span><span class="nav-arrow">⌄</span></button>
@@ -42,7 +37,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <button class="icon-button menu-toggle">☰</button><button class="icon-button">‹</button>
-        <div class="page-tabs"><button class="page-tab active">暂存库存 <span>×</span></button><button class="page-tab">出库单管理 <span>×</span></button></div>
+        <div class="page-tabs"><button class="page-tab">出库单管理 <span>×</span></button><button class="page-tab active">暂存库存 <span>×</span></button></div>
       </div>
       <div class="topbar-right">
         <span class="top-caret">›</span><button class="plain-button">导出任务中心</button><button class="plain-button">英文</button>
@@ -52,61 +47,107 @@
     </header>
 
     <main class="content">
-      <section class="filter-card" id="filterCard">
+      <section class="filter-card approval-filter" id="filterCard">
         <div class="filter-grid">
-          <label class="filter-field"><span>关键字 <i>?</i></span><input id="keywordFilter" type="text" placeholder="单个精准搜索" /></label>
-          <label class="filter-field"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
-          <label class="filter-field"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
-          <label class="filter-field"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
-          <label class="filter-field"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
-          <label class="filter-field"><span>派送方式</span><select id="dispatchFilter"><option value="">派送方式</option></select></label>
-          <label class="filter-field"><span>库位</span><select id="locationFilter"><option value="">库位</option></select></label>
-          <label class="filter-field"><span>柜号</span><input id="containerFilter" type="text" placeholder="单个模糊，批量精准" /></label>
-          <label class="filter-field"><span>托盘标签</span><input id="palletFilter" type="text" placeholder="单个模糊，批量精准" /></label>
-          <label class="filter-field">
+          <label class="filter-field approval-primary"><span>关键字 <i>?</i></span><input id="keywordFilter" type="text" placeholder="单个精准搜索" /></label>
+          <label class="filter-field approval-primary"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
+          <label class="filter-field approval-primary"><span>申请单号</span><input id="requestFilter" type="text" placeholder="申请单号" /></label>
+          <label class="filter-field approval-primary"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
+          <label class="filter-field staging-filter"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
+          <label class="filter-field staging-filter"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
+          <label class="filter-field staging-filter"><span>派送方式</span><select id="dispatchFilter"><option value="">派送方式</option></select></label>
+          <label class="filter-field staging-filter"><span>库位</span><select id="locationFilter"><option value="">库位</option></select></label>
+          <label class="filter-field staging-filter"><span>柜号</span><input id="containerFilter" type="text" placeholder="单个模糊，批量精准" /></label>
+          <label class="filter-field staging-filter"><span>托盘标签</span><input id="palletFilter" type="text" placeholder="单个模糊，批量精准" /></label>
+          <label class="filter-field staging-filter">
             <span>入库时间</span><span class="date-range"><input id="dateFrom" type="text" placeholder="开始日期" /><em>→</em><input id="dateTo" type="text" placeholder="结束日期" /><b>□</b></span>
           </label>
-          <label class="filter-field"><span>是否拦截</span><select id="blockedFilter"><option value="">是否拦截</option><option value="是">是</option><option value="否">否</option></select></label>
+          <label class="filter-field staging-filter"><span>是否拦截</span><select id="blockedFilter"><option value="">是否拦截</option><option value="是">是</option><option value="否">否</option></select></label>
         </div>
         <div class="filter-actions">
           <button class="btn primary" id="searchButton">搜索</button><button class="btn" id="resetButton">重置</button>
-          <button class="btn collapse-button" id="collapseButton"><span>⌃</span> 收起</button>
+          <button class="btn collapse-button" id="collapseButton"><span>⌄</span> 展开</button>
         </div>
       </section>
 
       <section class="inventory-card">
         <div class="status-bar">
           <div class="status-tabs" id="statusTabs">
-            <button class="status-tab active" data-status="暂存">暂存(274)</button>
-            <button class="status-tab" data-status="待审批">待审批(1)</button>
-            <button class="status-tab" data-status="指令待处理">指令待处理(0)</button>
-            <button class="status-tab" data-status="指令处理中">指令处理中(0)</button>
-            <button class="status-tab" data-status="待出库">指令处理完成，待出库(92)</button>
-            <button class="status-tab" data-status="已出库">已出库(31)</button>
+            <button class="status-tab" data-status="暂存">暂存(273)</button>
+            <button class="status-tab active" data-status="待审批">待审批(1)</button>
+            <button class="status-tab" data-status="指令待处理">指令待处理(1)</button>
+            <button class="status-tab" data-status="指令处理中">指令处理中(1)</button>
+            <button class="status-tab" data-status="待出库">指令处理完成，待出库(95)</button>
+            <button class="status-tab" data-status="已出库">已出库(30)</button>
             <button class="status-tab" data-status="审批拒绝">审批拒绝(36)</button>
           </div>
-          <div class="status-actions"><button class="btn">更换库位</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
+          <div class="status-actions"><button class="btn context-action" id="contextAction">批量初审</button><button class="btn countdown-action" id="countdownAction" hidden>倒计时配置</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
         </div>
-        <div class="summary-bar">
+        <div class="summary-bar" id="summaryBar">
           <div>已选择内容：总托盘数：<b id="selectedPallets">0</b><span>总箱数：<b id="selectedBoxes">0</b></span><span>总板数：<b id="selectedBoards">0</b></span><span>总重量：<b id="selectedWeight">0</b></span><span>总体积：<b id="selectedVolume">0</b></span></div>
           <button class="settings-button" id="densityButton">⚙</button>
         </div>
+        <div class="approval-subbar" id="approvalSubbar">
+          <div class="approval-tabs">
+            <button class="approval-tab active">全部(1)</button>
+            <button class="approval-tab">待初审(0)</button>
+            <button class="approval-tab">待仓库审批(1)</button>
+          </div>
+          <button class="settings-button" id="approvalDensityButton">⚙</button>
+        </div>
         <div class="table-scroll">
           <table class="inventory-table">
-            <thead><tr>
-              <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
-              <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-              <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
-              <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
-              <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
-            </tr></thead>
+            <thead id="inventoryHead"></thead>
             <tbody id="inventoryBody"></tbody>
           </table>
         </div>
-        <div class="table-footer"><span>共 274 条</span><button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button><select><option>50 条/页</option></select></div>
+        <div class="table-footer" id="tableFooter"></div>
       </section>
     </main>
   </section>
+</div>
+<div class="approval-review-overlay" id="approvalReviewOverlay" hidden>
+  <aside class="approval-review-drawer" role="dialog" aria-modal="true" aria-labelledby="approvalReviewTitle">
+    <header class="approval-review-header">
+      <button class="approval-review-close" id="approvalReviewClose" type="button" aria-label="关闭">×</button>
+      <h2 id="approvalReviewTitle">审核申请</h2>
+    </header>
+    <section class="approval-pallet-info">
+      <h3>托盘信息</h3>
+      <div class="approval-info-grid">
+        <div><span>柜号：</span><b id="approvalInfoContainer">-</b></div>
+        <div><span>托盘标签：</span><b id="approvalInfoPallet">-</b></div>
+        <div><span>派送方式：</span><b id="approvalInfoDispatch">-</b></div>
+        <div><span>客户：</span><b id="approvalInfoCustomer">-</b></div>
+        <div><span>库位：</span><b id="approvalInfoLocation">-</b></div>
+      </div>
+    </section>
+    <section class="approval-review-main">
+      <div class="approval-review-toolbar">
+        <div class="approval-review-tabs" id="approvalReviewTabs">
+          <button class="active" data-review-status="pending">待审核(1)</button>
+          <button data-review-status="passed">已通过(0)</button>
+          <button data-review-status="rejected">已拒绝(0)</button>
+          <button data-review-status="first">初审(0)</button>
+        </div>
+        <button class="btn approval-toolbar-cancel" id="approvalToolbarCancel" type="button">取消</button>
+      </div>
+      <div class="approval-review-table-wrap">
+        <table class="approval-review-table">
+          <thead><tr>
+            <th class="review-check"><input id="approvalReviewSelectAll" type="checkbox" /></th><th class="review-index">#</th>
+            <th>派送方式</th><th>目的地(FBA仓库)</th><th>箱数</th><th>申请时间</th><th>预约发货时间</th>
+            <th>增值服务</th><th>发货申请附件</th><th>客户备注信息</th><th class="review-marker">#</th><th class="review-operation">操作</th>
+          </tr></thead>
+          <tbody id="approvalReviewBody"></tbody>
+        </table>
+      </div>
+    </section>
+    <footer class="approval-review-footer">
+      <button class="btn primary" id="approvalReviewConfirm" type="button">确定</button>
+      <button class="btn" id="approvalReviewCancel" type="button">取消</button>
+    </footer>
+  </aside>
 </div>
 <div class="release-overlay" id="releaseOverlay" hidden>
   <aside class="release-drawer" role="dialog" aria-modal="true" aria-labelledby="releaseTitle">
@@ -127,7 +168,7 @@
           <span class="required">发货申请</span>
           <span class="radio-group"><label><input type="radio" name="application" value="FBA" checked /> FBA</label><label><input type="radio" name="application" value="其他地址" /> 其他地址</label></span>
         </label>
-        <label class="release-field"><span class="required">目的地</span><select id="releaseDestination" required><option value="">请选择</option><option>ABE2</option><option>ABE8</option><option>BWI9</option><option>FEDEX</option></select></label>
+        <label class="release-field"><span class="required">目的地</span><select id="releaseDestination" required><option value="">请选择</option><option>ABE2</option><option>ABE3</option><option>ABE8</option><option>BWI9</option><option>FEDEX</option></select></label>
         <label class="release-field"><span class="required">ShipmentID</span><input id="releaseShipment" required placeholder="请输入" /></label>
         <label class="release-field"><span class="required">派送方式</span><select id="releaseMethod" required><option>Truck-Amazon</option><option>Truck-Walmart</option><option>Truck-Other</option><option>FEDEX</option></select></label>
         <label class="release-field"><span class="required">ReferenceID</span><input id="releaseReference" required placeholder="请输入" /></label>
@@ -163,7 +204,7 @@
   </div>
 </section>
 <div class="release-actions">
-  <button class="btn primary" type="submit">确定</button>
+  <button class="btn primary" id="releaseConfirm" type="submit">确定</button>
   <button class="btn" id="releaseCancel" type="button">取消</button>
 </div>
     </form>
@@ -221,6 +262,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260722-staging-inventory"></script>
+<script src="script.js?v=20260723-detail-view"></script>
 </body>
 </html>
