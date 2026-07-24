@@ -11,7 +11,7 @@ const rawRows = [
   ["23","8889990","8889990-250623","88","是","拆转","BWI9","Truck-Walmart","8889990-250623-BWI9-9","2025-07-11 15:29:34",0,0,0,0,0,0,"暂存"],
   ["TTTX","AAAA0000000","AAAA0000000-241109","2","是","拆转","ABE2","Truck-Amazon","AAAA0000000-241109-ABE8-2","2024-11-05 15:18:21",0,0,0,0,0,0,"暂存"],
   ["TTTX","AAAA0000000","AAAA0000000-2411...","2","是","拆转","ABE8","Truck-Amazon","AAAA0000000-241109-ABE8-3","2024-11-05 15:18:21",0,0,0,0,0,0,"暂存"],
-  ["TTTX","AAAA0000000","AAAA0000000-2411...","2","是","拆转","ABE8","Truck-Amazon","AAAA0000000-241109-ABE8-5","2024-11-05 15:18:21",61.8,4.436,4,2,3,1,"待审批"]
+  ["TTTX","AAAA0000000","AAAA0000000-2411...","2","是","拆转","ABE8","Truck-Amazon","AAAA0000000-241109-ABE8-5","2024-11-05 15:18:21",61.8,4.436,4,0,3,1,"暂存"]
 ];
 const inventoryRows = rawRows.map((r, index) => ({
   id: index + 1, customer: r[0], container: r[1], system: r[2], inbound: r[3],
@@ -19,6 +19,76 @@ const inventoryRows = rawRows.map((r, index) => ({
   time: r[9], weight: r[10], volume: r[11], boxes: r[12], pending: r[13],
   unsent: r[14], sent: r[15], status: r[16]
 }));
+const approvalRows = [{
+  id: 1,
+  customer: "TTTX",
+  applicationNo: "",
+  container: "CCCA1414141",
+  system: "/",
+  inbound: "111",
+  blocked: "",
+  applicationType: "FBA仓库",
+  shipmentId: "1",
+  referenceId: "1",
+  transfer: "拆转",
+  destination: "ABE3",
+  dispatch: "Truck-Amazon",
+  pallet: "CCCA1414141-240411-111-1",
+  inboundTime: "",
+  appliedBoxes: 1,
+  appliedVolume: 0,
+  chargedPallets: "",
+  approvalStage: "待仓库审批",
+  status: "待审批"
+}];
+const instructionPendingRows = [{
+  id: 1,
+  customer: "23",
+  applicationNo: "20260722001",
+  container: "8889990",
+  system: "8889990-250623",
+  inbound: "88",
+  blocked: "是",
+  applicationType: "FBA仓库",
+  shipmentId: "1237454",
+  referenceId: "134354",
+  transfer: "拆转",
+  dispatch: "Truck-Amazon",
+  pallet: "8889990-250623-88-6",
+  inboundTime: "2025-07-11 15:29:34",
+  appliedBoxes: 1,
+  appliedVolume: 0.4,
+  chargedPallets: "",
+  status: "指令待处理"
+}];
+const instructionProcessingRows = instructionPendingRows.map((row) => ({ ...row, status: "指令处理中" }));
+const outboundSeedRows = [
+  { customer: "23", applicationNo: "20260722009", container: "8889990", system: "8889990-250623", inbound: "88", blocked: "是", applicationType: "FBA仓库", shipmentId: "111111", referenceId: "1111111111", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-88-9", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 1, appliedVolume: 0.4, chargedPallets: "" },
+  { customer: "23", applicationNo: "20260722008", container: "8889990", system: "8889990-250623", inbound: "88", blocked: "是", applicationType: "FBA仓库", shipmentId: "11111", referenceId: "1111", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-88-9", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 1, appliedVolume: 0.4, chargedPallets: "" },
+  { customer: "TTTX2", applicationNo: "20260715002", container: "WEMA1131231", system: "/", inbound: "2", blocked: "是", applicationType: "其他地址", shipmentId: "", referenceId: "", transfer: "拆转", dispatch: "USPS", pallet: "2-ABE2-1", inboundTime: "2024-04-23 15:22:43", appliedBoxes: 2, appliedVolume: 0.182, chargedPallets: "" },
+  { customer: "23", applicationNo: "20260512001", container: "8889990", system: "8889990-250623", inbound: "88", blocked: "是", applicationType: "FBA仓库", shipmentId: "1", referenceId: "1", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-88-6", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 1, appliedVolume: 0.4, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260508008", container: "AAAA1234588", system: "AAAA1234588-2409...", inbound: "", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA19C9LZ2R8", referenceId: "FBA19C9LZ2R8", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "AAAA1234588-240929-USPS-1", inboundTime: "2024-11-11 15:35:24", appliedBoxes: 3, appliedVolume: 3, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260508007", container: "AAAA1234588", system: "AAAA1234588-2409...", inbound: "", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA19C8QWJY8", referenceId: "FBA19C8QWJY8", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "AAAA1234588-240929-USPS-1", inboundTime: "2024-11-11 15:35:24", appliedBoxes: 5, appliedVolume: 5, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260508006", container: "AAAA1234588", system: "AAAA1234588-2409...", inbound: "", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA19BWNJY55", referenceId: "FBA19BWNJY55", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "AAAA1234588-240929-USPS-1", inboundTime: "2024-11-11 15:35:24", appliedBoxes: 3, appliedVolume: 3, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260415003", container: "AAAA0000000", system: "AAAA0000000-2411...", inbound: "", blocked: "是", applicationType: "其他地址", shipmentId: "", referenceId: "", transfer: "拆转", dispatch: "USPS", pallet: "AAAA0000000-241109-FEDEX-1", inboundTime: "2024-11-05 15:18:21", appliedBoxes: 1, appliedVolume: 0.075, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260415002", container: "AAAA0000000", system: "AAAA0000000-2411...", inbound: "", blocked: "是", applicationType: "其他地址", shipmentId: "", referenceId: "", transfer: "拆转", dispatch: "USPS", pallet: "AAAA0000000-241109-FEDEX-1", inboundTime: "2024-11-05 15:18:21", appliedBoxes: 1, appliedVolume: 0.075, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260411001", container: "AAAA0000000", system: "AAAA0000000-2411...", inbound: "", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA199X7633H", referenceId: "FBA199X7633H", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "AAAA0000000-241109-ABE8-5", inboundTime: "2024-11-05 15:18:21", appliedBoxes: 1, appliedVolume: 1.109, chargedPallets: "" },
+  { customer: "23", applicationNo: "20260409003", container: "8889990", system: "8889990-250623", inbound: "", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA323N235Y8", referenceId: "FBA323N235Y8", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "8889990-250623-BWI9-10", inboundTime: "2025-07-11 15:29:34", appliedBoxes: 5, appliedVolume: 3.8, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20260407001", container: "ABCD1234567", system: "ABCD1234567-2410...", inbound: "1", blocked: "是", applicationType: "FBA仓库", shipmentId: "FBA12345678990", referenceId: "FBA12345678990", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "ABCD1234567-241018-ABE3-1", inboundTime: "2024-10-16 14:22:38", appliedBoxes: 1, appliedVolume: 0.1, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20250925086", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461", blocked: "", applicationType: "FBA仓库", shipmentId: "41414", referenceId: "1414141", transfer: "拆转", dispatch: "Truck-Amazon", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "", appliedBoxes: 2, appliedVolume: 0.87, chargedPallets: "" },
+  { customer: "TTTX", applicationNo: "20250925085", container: "BPAI9461644", system: "BPAI9461644-240330", inbound: "BBA9461", blocked: "", applicationType: "FBA仓库", shipmentId: "41414", referenceId: "1414141", transfer: "拆转", dispatch: "Truck-Walmart", pallet: "BPAI9461644-240330-BBA9461-24", inboundTime: "", appliedBoxes: 1, appliedVolume: 0.44, chargedPallets: "" }
+];
+const outboundRows = Array.from({ length: 95 }, (_, index) => {
+  const seed = outboundSeedRows[index % outboundSeedRows.length];
+  return {
+    ...seed,
+    id: index + 1,
+    applicationNo: index < outboundSeedRows.length ? seed.applicationNo : `2025${String(9200000 - index).padStart(8, "0")}`,
+    status: "待出库"
+  };
+});
+const shippedRows = outboundRows.slice(0, 30).map((row) => ({ ...row, status: "已出库" }));
+const rejectedRows = outboundRows.slice(0, 36).map((row) => ({ ...row, status: "审批拒绝" }));
 const instructionCatalog = [
   { code: "FY202509260001", name: "仓储渠道-免仓30天", type: "仓储费", unit: "票", price: "3", currency: "人民币", description: "提柜入仓当天起算" },
   { code: "FY202509260002", name: "仓储渠道-31-90天", type: "仓储费", unit: "票", price: "4", currency: "人民币", description: "按1级单价收取" },
@@ -26,94 +96,23 @@ const instructionCatalog = [
   { code: "FY202509260004", name: "拦截-免仓7天", type: "仓储费", unit: "票", price: "4", currency: "人民币", description: "提柜入仓当天起算" },
   { code: "FY202509260005", name: "拦截-免仓8-90天", type: "仓储费", unit: "票", price: "3", currency: "人民币", description: "按1级单价收取" },
   { code: "FY202509260006", name: "拦截-免仓90天以上", type: "仓储费", unit: "票", price: "2", currency: "人民币", description: "按2级单价收取" },
-  { code: "FY202509260007", name: "扣货-无免仓期", type: "仓储费", unit: "票", price: "2", currency: "人民币", description: "按1级单价收取" },
-  { code: "FY202607240008", name: "换标操作费", type: "操作费", unit: "箱", price: "5", currency: "人民币", description: "更换外箱标签" },
-  { code: "FY202607240009", name: "标签材料费", type: "操作费", unit: "张", price: "3", currency: "人民币", description: "标签打印及耗材" },
-  { code: "FY202607240010", name: "拍照服务费", type: "操作费", unit: "箱", price: "2", currency: "人民币", description: "按箱拍照并回传" }
+  { code: "FY202509260007", name: "扣货-无免仓期", type: "仓储费", unit: "票", price: "2", currency: "人民币", description: "按1级单价收取" }
 ];
-const instructionRecordsByInventory = new Map([
-  [13, [
-    {
-      id: "CZ202607240001",
-      boxNo: "FBA31DNZH02MU000313U0001",
-      scope: "按箱",
-      type: "换标",
-      description: "更换外箱标签后拍照回传，标签位置保持平整清晰",
-      status: "待处理",
-      priority: "紧急",
-      remark: "优先处理第一箱",
-      createdBy: "天朗（付豪）",
-      createdAt: "2026-07-24 09:18:32",
-      processedBy: "",
-      processedAt: "",
-      processMethod: "",
-      fees: [
-        { ...instructionCatalog[7], quantity: "1", addedAt: "2026-07-24 09:18:32", addedBy: "天朗（付豪）" },
-        { ...instructionCatalog[8], quantity: "1", addedAt: "2026-07-24 09:18:32", addedBy: "天朗（付豪）" }
-      ]
-    },
-    {
-      id: "CZ202607240002",
-      boxNo: "FBA31DNZH02MU000313U0002",
-      scope: "按箱",
-      type: "拍照",
-      description: "拍摄外箱六面及标签近照并上传",
-      status: "已处理",
-      priority: "普通",
-      remark: "",
-      createdBy: "天朗（付豪）",
-      createdAt: "2026-07-24 08:46:10",
-      processedBy: "仓库操作员01",
-      processedAt: "2026-07-24 09:05:26",
-      processMethod: "PDA处理",
-      fees: [
-        { ...instructionCatalog[9], quantity: "1", addedAt: "2026-07-24 08:46:10", addedBy: "天朗（付豪）" }
-      ]
-    }
-  ]]
-]);
-const releaseDetailsByInventory = new Map([
-  [13, {
-    application: "FBA",
-    destination: "ABE8",
-    shipment: "FBA19DNZH02MU000319",
-    method: "Truck-Amazon",
-    reference: "REF-20260722-001",
-    boxes: "2",
-    date: "2026-07-25",
-    remark: "预约完成后安排出库",
-    attachment: "放货预约单.pdf"
-  }]
-]);
-const statusCounts = {
-  "暂存": 274,
-  "待审批": 1,
-  "指令待处理": 0,
-  "指令处理中": 0,
-  "待出库": 92,
-  "已出库": 31,
-  "审批拒绝": 36
-};
-const statusLabels = { "待出库": "指令处理完成，待出库" };
-let instructionDraftCodes = new Set();
-let instructionCreateDraftFees = [];
-let feePickerContext = null;
-let activeInstructionStatus = "全部";
-let editingFeeContext = null;
-let deletingFeeContext = null;
-let instructionSequence = 3;
-let instructionNoticeTimer;
-let isCreatingInstruction = false;
-const expandedInstructionIds = new Set(["CZ202607240001"]);
+const instructionRowsByInventory = new Map();
+let instructionDraftCodes = new Set(instructionCatalog.slice(0, 3).map((row) => row.code));
+let editingInstructionCode = "";
+let deletingInstructionCode = "";
 const selected = new Set();
-let activeStatus = "暂存";
-let visibleRows = inventoryRows.filter((row) => row.status === activeStatus);
+let activeStatus = "待审批";
+let visibleRows = [...approvalRows];
 
 const $ = (selector) => document.querySelector(selector);
 const body = $("#inventoryBody");
-const selectAll = $("#selectAll");
+const head = $("#inventoryHead");
+const footer = $("#tableFooter");
+let selectAll = null;
 const filters = {
-  keyword: $("#keywordFilter"), customer: $("#customerFilter"), inbound: $("#inboundFilter"),
+  keyword: $("#keywordFilter"), customer: $("#customerFilter"), request: $("#requestFilter"), inbound: $("#inboundFilter"),
   transfer: $("#transferFilter"), fba: $("#fbaFilter"), dispatch: $("#dispatchFilter"),
   location: $("#locationFilter"), container: $("#containerFilter"), pallet: $("#palletFilter"),
   blocked: $("#blockedFilter")
@@ -125,26 +124,116 @@ function addOptions(select, values) {
     option.value = value; option.textContent = value; select.appendChild(option);
   });
 }
-addOptions(filters.customer, inventoryRows.map((row) => row.customer));
+addOptions(filters.customer, [...inventoryRows, ...approvalRows, ...instructionPendingRows, ...outboundRows].map((row) => row.customer));
 addOptions(filters.fba, inventoryRows.map((row) => row.destination));
 addOptions(filters.dispatch, inventoryRows.map((row) => row.dispatch));
 addOptions(filters.location, ["A01-01", "A02-03", "B01-07"]);
-function updateStatusDisplay() {
-  document.querySelectorAll(".status-tab").forEach((tab) => {
-    const status = tab.dataset.status;
-    const label = statusLabels[status] || status;
-    tab.textContent = `${label}(${statusCounts[status] ?? 0})`;
-  });
-  $("#tableTotal").textContent = `共 ${statusCounts[activeStatus] ?? 0} 条`;
+
+function isApprovalView() {
+  return activeStatus === "待审批";
 }
+
+function isInstructionView() {
+  return activeStatus === "指令待处理" || activeStatus === "指令处理中";
+}
+
+function isOutboundView() {
+  return activeStatus === "待出库" || activeStatus === "已出库";
+}
+
+function isShippedView() {
+  return activeStatus === "已出库";
+}
+
+function isRejectedView() {
+  return activeStatus === "审批拒绝";
+}
+
+function getOutboundViewRows() {
+  return isShippedView() ? shippedRows : outboundRows;
+}
+
+function isRequestTableView() {
+  return isApprovalView() || isInstructionView() || isOutboundView() || isRejectedView();
+}
+
+function getInstructionViewRows() {
+  return activeStatus === "指令待处理" ? instructionPendingRows : instructionProcessingRows;
+}
+
+function getActiveStatusRows() {
+  if (isApprovalView()) return approvalRows;
+  if (isInstructionView()) return getInstructionViewRows();
+  if (isOutboundView()) return getOutboundViewRows();
+  if (isRejectedView()) return rejectedRows;
+  return inventoryRows;
+}
+
+function renderTableChrome() {
+  const requestTable = isRequestTableView();
+  document.body.classList.toggle("request-view", requestTable);
+  document.body.classList.toggle("approval-view", isApprovalView());
+  document.body.classList.toggle("instruction-view", isInstructionView());
+  document.body.classList.toggle("outbound-view", isOutboundView());
+  document.body.classList.toggle("rejection-view", isRejectedView());
+  document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
+  $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionView() ? "开始处理" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
+  $("#contextAction").hidden = isRejectedView();
+  $("#countdownAction").hidden = !isInstructionView();
+  $("#approvalDensityButton").hidden = isRejectedView();
+
+  head.innerHTML = requestTable ? `<tr>
+    <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
+    <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
+    <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
+    <th class="sortable">入库时间</th><th class="sortable">申请箱数</th><th>申请箱数总体积</th><th>收费托数</th><th class="operation-col">操作</th>
+  </tr>` : `<tr>
+    <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
+    <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
+    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
+    <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
+    <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
+  </tr>`;
+
+  const requestTotal = getActiveStatusRows().filter((row) => row.status === activeStatus).length;
+  footer.innerHTML = requestTable
+    ? `<span>共 ${requestTotal} 条</span><button>‹</button><button class="active">1</button><button>›</button><select><option>100 条/页</option></select>`
+    : '<span>共 273 条</span><button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button><select><option>50 条/页</option></select>';
+
+  selectAll = $("#selectAll");
+  selectAll.addEventListener("change", () => {
+    visibleRows.forEach((row) => selectAll.checked ? selected.add(row.id) : selected.delete(row.id));
+    renderRows();
+  });
+}
+
 function renderRows() {
+  renderTableChrome();
   if (!visibleRows.length) {
     body.innerHTML = '<tr><td class="empty-row" colspan="19">暂无匹配库存记录</td></tr>';
     selectAll.checked = false;
     updateSummary();
     return;
   }
-  body.innerHTML = visibleRows.map((row) => `
+  body.innerHTML = isRequestTableView() ? visibleRows.map((row) => `
+    <tr class="${isOutboundView() && row.id === 2 ? "row-highlighted" : ""}">
+      <td class="index-col">${row.id}</td>
+      <td class="check-col"><input class="row-check" type="checkbox" data-id="${row.id}" ${selected.has(row.id) ? "checked" : ""}></td>
+      <td title="${row.customer}">${row.customer}</td>
+      <td title="${row.applicationNo}">${row.applicationNo}</td>
+      <td title="${row.container}">${row.container}</td>
+      <td>${row.system}</td><td>${row.inbound}</td><td class="${row.blocked === "是" ? "blocked" : ""}">${row.blocked === "是" ? "拦截" : row.blocked}</td>
+      <td>${row.applicationType}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
+      <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
+      <td>${row.inboundTime}</td><td>${row.appliedBoxes}</td><td>${row.appliedVolume}</td><td>${row.chargedPallets}</td>
+      <td class="operation-col approval-actions">${isRejectedView()
+        ? `<button class="action-link detail-button" data-id="${row.id}">详情</button>`
+        : isOutboundView()
+          ? `<button class="action-link receivable-button">应收费用</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
+          : isInstructionView()
+            ? `<button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
+            : `<button class="action-link review-button">审核申请</button><button class="action-link detail-button" data-id="${row.id}">详情</button>`}</td>
+    </tr>`).join("") : visibleRows.map((row) => `
     <tr>
       <td class="index-col">${row.id}</td>
       <td class="check-col"><input class="row-check" type="checkbox" data-id="${row.id}" ${selected.has(row.id) ? "checked" : ""}></td>
@@ -160,7 +249,7 @@ function renderRows() {
       <td>${row.time}</td>
       <td>${row.weight || 0}</td><td>${row.volume || 0}</td><td>${row.boxes}</td>
       <td>${row.pending}</td><td>${row.unsent}</td><td>${row.sent}</td>
-      <td class="operation-col"><button class="action-link release-button" type="button" data-id="${row.id}" data-mode="${row.status === "待审批" ? "detail" : "release"}" aria-label="${row.status === "待审批" ? `查看柜号 ${row.container} 的放货详情` : `为柜号 ${row.container} 放货`}">${row.status === "待审批" ? "详情" : "放货"}</button><button class="action-link" type="button">日志</button></td>
+      <td class="operation-col"><button class="action-link release-button" data-id="${row.id}">放货</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link">日志</button></td>
     </tr>`).join("");
   document.querySelectorAll(".row-check").forEach((check) => {
     check.addEventListener("change", () => {
@@ -175,6 +264,7 @@ function renderRows() {
 }
 
 function updateSummary() {
+  if (isRequestTableView()) return;
   const rows = inventoryRows.filter((row) => selected.has(row.id));
   $("#selectedPallets").textContent = rows.length;
   $("#selectedBoxes").textContent = rows.reduce((sum, row) => sum + row.boxes, 0);
@@ -186,11 +276,13 @@ function updateSummary() {
 function applyFilters() {
   const keyword = filters.keyword.value.trim().toLowerCase();
   const inboundTerms = filters.inbound.value.split(/[;；]/).map((term) => term.trim()).filter(Boolean);
-  visibleRows = inventoryRows.filter((row) => {
+  const sourceRows = getActiveStatusRows();
+  visibleRows = sourceRows.filter((row) => {
     const haystack = [row.customer, row.container, row.system, row.inbound, row.pallet].join(" ").toLowerCase();
     return row.status === activeStatus
       && (!keyword || haystack.includes(keyword))
       && (!filters.customer.value || row.customer === filters.customer.value)
+      && (!filters.request.value || (row.applicationNo || "").toLowerCase().includes(filters.request.value.trim().toLowerCase()))
       && (!inboundTerms.length || inboundTerms.includes(row.inbound))
       && (!filters.transfer.value || row.transfer === filters.transfer.value)
       && (!filters.fba.value || row.destination === filters.fba.value)
@@ -200,22 +292,16 @@ function applyFilters() {
       && (!filters.blocked.value || row.blocked === filters.blocked.value);
   });
   renderRows();
-  updateStatusDisplay();
 }
 $("#searchButton").addEventListener("click", applyFilters);
 $("#resetButton").addEventListener("click", () => {
   Object.values(filters).forEach((control) => { control.value = ""; });
   $("#dateFrom").value = ""; $("#dateTo").value = "";
-  visibleRows = inventoryRows.filter((row) => row.status === activeStatus);
+  visibleRows = getActiveStatusRows().filter((row) => row.status === activeStatus);
   renderRows();
-  updateStatusDisplay();
 });
 Object.values(filters).forEach((control) => {
   control.addEventListener("keydown", (event) => { if (event.key === "Enter") applyFilters(); });
-});
-selectAll.addEventListener("change", () => {
-  visibleRows.forEach((row) => selectAll.checked ? selected.add(row.id) : selected.delete(row.id));
-  renderRows();
 });
 document.querySelectorAll(".status-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -223,31 +309,160 @@ document.querySelectorAll(".status-tab").forEach((tab) => {
     tab.classList.add("active");
     activeStatus = tab.dataset.status;
     selected.clear();
+    $("#filterCard").classList.toggle("approval-filter", isRequestTableView());
+    $("#filterCard").classList.remove("approval-expanded", "collapsed");
+    $("#collapseButton").innerHTML = isRequestTableView() ? "<span>⌄</span> 展开" : "<span>⌃</span> 收起";
     applyFilters();
   });
 });
 $("#collapseButton").addEventListener("click", () => {
   const card = $("#filterCard");
+  if (isRequestTableView()) {
+    const expanded = card.classList.toggle("approval-expanded");
+    $("#collapseButton").innerHTML = expanded ? "<span>⌃</span> 收起" : "<span>⌄</span> 展开";
+    return;
+  }
   const collapsed = card.classList.toggle("collapsed");
   $("#collapseButton").innerHTML = collapsed ? "<span>⌄</span> 展开" : "<span>⌃</span> 收起";
 });
 $("#densityButton").addEventListener("click", () => {
   document.querySelector(".inventory-card").classList.toggle("compact");
 });
+$("#approvalDensityButton").addEventListener("click", () => {
+  document.querySelector(".inventory-card").classList.toggle("compact");
+});
+document.querySelectorAll(".approval-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".approval-tab").forEach((item) => item.classList.remove("active"));
+    tab.classList.add("active");
+    const stage = tab.textContent.startsWith("待初审") ? "待初审" : tab.textContent.startsWith("待仓库审批") ? "待仓库审批" : "全部";
+    visibleRows = stage === "全部" ? [...approvalRows] : approvalRows.filter((row) => row.approvalStage === stage);
+    selected.clear();
+    renderRows();
+  });
+});
 $(".menu-toggle").addEventListener("click", () => {
   document.body.classList.toggle("sidebar-collapsed");
 });
 $("#exportButton").addEventListener("click", () => {
-  const header = ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
-  const lines = [header, ...visibleRows.map((r) => [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent])];
+  const header = isRequestTableView()
+    ? ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签","入库时间","申请箱数","申请箱数总体积","收费托数"]
+    : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
+  const lines = [header, ...visibleRows.map((r) => isRequestTableView()
+    ? [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet,r.inboundTime,r.appliedBoxes,r.appliedVolume,r.chargedPallets]
+    : [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent])];
   const csv = "\ufeff" + lines.map((line) => line.map((cell) => `"${String(cell).replaceAll('"','""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a"); link.href = url; link.download = "暂存库存.csv"; link.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = isApprovalView() ? "待审批.csv" : isInstructionView() ? "指令处理.csv" : isShippedView() ? "已出库.csv" : isOutboundView() ? "待出库.csv" : isRejectedView() ? "审批拒绝.csv" : "暂存库存.csv";
+  link.click();
   URL.revokeObjectURL(url);
 });
 
+const approvalReviewOverlay = $("#approvalReviewOverlay");
+const approvalReviewBody = $("#approvalReviewBody");
+let activeApprovalReviewRow = null;
+let approvalReviewStatus = "pending";
+let approvalReviewDecision = "";
+
+function updateApprovalReviewTabCounts() {
+  const counts = {
+    pending: approvalReviewDecision ? 0 : 1,
+    passed: approvalReviewDecision === "passed" ? 1 : 0,
+    rejected: approvalReviewDecision === "rejected" ? 1 : 0,
+    first: 0
+  };
+  const labels = { pending: "待审核", passed: "已通过", rejected: "已拒绝", first: "初审" };
+  document.querySelectorAll("#approvalReviewTabs button").forEach((tab) => {
+    tab.textContent = `${labels[tab.dataset.reviewStatus]}(${counts[tab.dataset.reviewStatus]})`;
+  });
+}
+
+function renderApprovalReviewRows() {
+  const shouldShow = approvalReviewStatus === "pending"
+    ? !approvalReviewDecision
+    : approvalReviewStatus === approvalReviewDecision;
+  if (!shouldShow || approvalReviewStatus === "first") {
+    approvalReviewBody.innerHTML = '<tr class="approval-review-empty"><td colspan="12">暂无数据</td></tr>';
+    return;
+  }
+  approvalReviewBody.innerHTML = `<tr>
+    <td class="review-check"><input class="approval-review-check" type="checkbox" /></td><td class="review-index">1</td>
+    <td>Truck-Amazon</td><td>ABE3</td><td>1</td><td>2024-04-11 10:53:20</td><td>2024-04-04 10:32:05</td>
+    <td></td><td></td><td>1</td><td class="review-marker"></td>
+    <td class="review-operation">${approvalReviewStatus === "pending"
+      ? '<button class="review-pass" type="button">通过</button><button class="review-reject" type="button">拒绝</button><button class="review-log" type="button">日志</button>'
+      : '<button class="review-log" type="button">日志</button>'}</td>
+  </tr>`;
+  $("#approvalReviewSelectAll").checked = false;
+}
+
+function setApprovalReviewStatus(status) {
+  approvalReviewStatus = status;
+  document.querySelectorAll("#approvalReviewTabs button").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.reviewStatus === status);
+  });
+  renderApprovalReviewRows();
+}
+
+function openApprovalReview(row) {
+  activeApprovalReviewRow = row;
+  approvalReviewStatus = "pending";
+  approvalReviewDecision = "";
+  $("#approvalInfoContainer").textContent = row.container || "-";
+  $("#approvalInfoPallet").textContent = row.pallet || "-";
+  $("#approvalInfoDispatch").textContent = row.dispatch || "-";
+  $("#approvalInfoCustomer").textContent = row.customer || "-";
+  $("#approvalInfoLocation").textContent = "-";
+  updateApprovalReviewTabCounts();
+  setApprovalReviewStatus("pending");
+  approvalReviewOverlay.hidden = false;
+  document.body.classList.add("approval-review-open");
+}
+
+function closeApprovalReview() {
+  approvalReviewOverlay.hidden = true;
+  document.body.classList.remove("approval-review-open");
+  activeApprovalReviewRow = null;
+}
+
+body.addEventListener("click", (event) => {
+  const button = event.target.closest(".review-button");
+  if (!button) return;
+  const row = approvalRows[0];
+  if (row) openApprovalReview(row);
+});
+$("#approvalReviewTabs").addEventListener("click", (event) => {
+  const tab = event.target.closest("button[data-review-status]");
+  if (tab) setApprovalReviewStatus(tab.dataset.reviewStatus);
+});
+approvalReviewBody.addEventListener("click", (event) => {
+  if (event.target.closest(".review-pass")) {
+    approvalReviewDecision = "passed";
+    updateApprovalReviewTabCounts();
+    setApprovalReviewStatus("passed");
+  } else if (event.target.closest(".review-reject")) {
+    approvalReviewDecision = "rejected";
+    updateApprovalReviewTabCounts();
+    setApprovalReviewStatus("rejected");
+  }
+});
+$("#approvalReviewSelectAll").addEventListener("change", (event) => {
+  document.querySelectorAll(".approval-review-check").forEach((checkbox) => {
+    checkbox.checked = event.target.checked;
+  });
+});
+$("#approvalReviewClose").addEventListener("click", closeApprovalReview);
+$("#approvalToolbarCancel").addEventListener("click", closeApprovalReview);
+$("#approvalReviewCancel").addEventListener("click", closeApprovalReview);
+$("#approvalReviewConfirm").addEventListener("click", closeApprovalReview);
+approvalReviewOverlay.addEventListener("click", (event) => {
+  if (event.target === approvalReviewOverlay) closeApprovalReview();
+});
+
 function getCargoBoxRows(row) {
-  if (row.id === 1) {
+  if (row.id === 1 && row.status === "暂存") {
     return [
       { boxNo: "FBA19DNZH02MU000319U0001", customerTracking: "YT2507100001_0710_2U0001", customerData: ["44 KG", "50*50*50 CM"], systemWeight: ["44 / 44 KG", "50*50*50 CM"], carrier: "美森正班13日达-卡派包税", transferNo: "1Z0VV966030992", warehouseReturnNo: "1Z0VV966030992", networkStatus: "已下单", status: "查看" },
       { boxNo: "FBA19DNZH02MU000319U0002", customerTracking: "YT2507100001_0710_2U0002", customerData: ["44 KG", "50*50*50 CM"], systemWeight: ["44 / 44 KG", "50*50*50 CM"], carrier: "美森正班13日达-卡派包税", transferNo: "1321636632", warehouseReturnNo: "1321636632", networkStatus: "已下单", status: "查看" }
@@ -287,217 +502,27 @@ function renderCargoBoxRows(row) {
   </tr>`).join("");
 }
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  })[character]);
-}
-
-function getLocalTimestamp() {
-  const now = new Date();
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-
-function getActiveInstructions() {
+function getActiveInstructionRows() {
   if (!activeReleaseRow) return [];
-  return instructionRecordsByInventory.get(activeReleaseRow.id) || [];
-}
-
-function getInstructionById(instructionId) {
-  return getActiveInstructions().find((instruction) => instruction.id === instructionId);
-}
-
-function getFeeRowsForContext(context) {
-  if (!context) return [];
-  if (context.mode === "create") return instructionCreateDraftFees;
-  return getInstructionById(context.instructionId)?.fees || [];
-}
-
-function setFeeRowsForContext(context, fees) {
-  if (!context) return;
-  if (context.mode === "create") {
-    instructionCreateDraftFees = fees;
-    renderInstructionCreateFees();
-    return;
-  }
-  const instruction = getInstructionById(context.instructionId);
-  if (!instruction || instruction.status !== "待处理") return;
-  instruction.fees = fees;
-  expandedInstructionIds.add(instruction.id);
-  renderInstructionList();
-}
-
-function makeFeeRow(catalogRow) {
-  return {
-    ...catalogRow,
-    quantity: "1",
-    addedAt: getLocalTimestamp(),
-    addedBy: "天朗（付豪）"
-  };
-}
-
-function getFeeSubtotal(fee) {
-  return Number(fee.price || 0) * Number(fee.quantity || 1);
-}
-
-function formatFeeTotals(fees) {
-  if (!fees.length) return '<span class="instruction-readonly-hint">无费用</span>';
-  const totals = new Map();
-  fees.forEach((fee) => {
-    totals.set(fee.currency, (totals.get(fee.currency) || 0) + getFeeSubtotal(fee));
-  });
-  return `<span class="instruction-fee-total">${[...totals.entries()].map(([currency, total]) =>
-    `<span>${escapeHtml(currency)} ${Number(total.toFixed(2))}</span>`
-  ).join("")}</span>`;
-}
-
-function renderInstructionFeeRows(instruction) {
-  if (!instruction.fees.length) {
-    return '<tr class="fee-empty"><td colspan="11">暂无费用明细</td></tr>';
-  }
-  const editable = instruction.status === "待处理";
-  return instruction.fees.map((fee) => `<tr>
-    <td title="${escapeHtml(fee.code)}">${escapeHtml(fee.name)}</td>
-    <td>${escapeHtml(fee.type)}</td>
-    <td>${escapeHtml(fee.unit)}</td>
-    <td>${escapeHtml(fee.price)}</td>
-    <td>${escapeHtml(fee.quantity || "1")}</td>
-    <td>${escapeHtml(fee.currency)}</td>
-    <td>${Number(getFeeSubtotal(fee).toFixed(2))}</td>
-    <td>${escapeHtml(fee.addedAt)}</td>
-    <td>${escapeHtml(fee.addedBy)}</td>
-    <td><span class="instruction-fee-description" title="${escapeHtml(fee.description)}">${escapeHtml(fee.description)}</span></td>
-    <td>${editable
-      ? `<button class="fee-edit" data-instruction-id="${escapeHtml(instruction.id)}" data-code="${escapeHtml(fee.code)}" type="button">编辑</button><button class="fee-delete" data-instruction-id="${escapeHtml(instruction.id)}" data-code="${escapeHtml(fee.code)}" type="button">删除</button>`
-      : '<span class="instruction-readonly-hint">只读</span>'}</td>
-  </tr>`).join("");
-}
-
-function renderInstructionTabs() {
-  const rows = getActiveInstructions();
-  const counts = {
-    "全部": rows.length,
-    "待处理": rows.filter((row) => row.status === "待处理").length,
-    "已处理": rows.filter((row) => row.status === "已处理").length
-  };
-  document.querySelectorAll("#instructionStatusTabs button").forEach((button) => {
-    const status = button.dataset.instructionStatus;
-    const active = status === activeInstructionStatus;
-    button.textContent = `${status}（${counts[status]}）`;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-selected", String(active));
-  });
+  return instructionRowsByInventory.get(activeReleaseRow.id) || [];
 }
 
 function renderInstructionList() {
   const target = $("#instructionBody");
-  renderInstructionTabs();
-  const rows = getActiveInstructions().filter((row) =>
-    activeInstructionStatus === "全部" || row.status === activeInstructionStatus
-  );
+  const rows = getActiveInstructionRows();
+  const instructionEditable = instructionEditableStatuses.has(activeReleaseStatus);
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="10"><i>▤</i>当前筛选下暂无指令</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="11"><i>▤</i>暂无数据</td></tr>';
     return;
   }
-  target.innerHTML = rows.map((instruction) => {
-    const expanded = expandedInstructionIds.has(instruction.id);
-    const processedInfo = instruction.status === "已处理"
-      ? `<span>${escapeHtml(instruction.processedBy || "—")}</span><small>${escapeHtml(instruction.processedAt || "—")}</small><small>${escapeHtml(instruction.processMethod || "—")}</small>`
-      : '<span class="instruction-readonly-hint">尚未处理</span>';
-    const addFeeButton = instruction.status === "待处理"
-      ? `<button class="instruction-fee-add" data-instruction-id="${escapeHtml(instruction.id)}" type="button">新增费用</button>`
-      : "";
-    return `<tr class="instruction-main-row">
-      <td><span class="instruction-code">${escapeHtml(instruction.id)}</span></td>
-      <td><span class="instruction-box-no" title="${escapeHtml(instruction.boxNo)}">${escapeHtml(instruction.boxNo)}</span></td>
-      <td><span class="instruction-name">${escapeHtml(instruction.type)}</span><span class="instruction-dimension">${escapeHtml(instruction.scope)}</span></td>
-      <td><span class="instruction-description" title="${escapeHtml(instruction.description)}">${escapeHtml(instruction.description)}</span></td>
-      <td><b class="instruction-state ${instruction.status === "待处理" ? "pending" : "processed"}">${escapeHtml(instruction.status)}</b></td>
-      <td><span class="instruction-priority ${instruction.priority === "紧急" ? "urgent" : ""}">${escapeHtml(instruction.priority)}</span></td>
-      <td>${formatFeeTotals(instruction.fees)}</td>
-      <td><span class="instruction-meta"><span>${escapeHtml(instruction.createdBy)}</span><small>${escapeHtml(instruction.createdAt)}</small></span></td>
-      <td><span class="instruction-meta">${processedInfo}</span></td>
-      <td><span class="instruction-actions"><button class="instruction-fee-toggle" data-instruction-id="${escapeHtml(instruction.id)}" type="button" aria-expanded="${expanded}">${expanded ? "收起费用" : "查看费用"}</button>${addFeeButton}</span></td>
-    </tr>
-    <tr class="instruction-fee-detail" ${expanded ? "" : "hidden"}>
-      <td colspan="10">
-        <div class="instruction-fee-panel">
-          <div class="instruction-fee-head"><strong>费用明细（${instruction.fees.length}）</strong>${addFeeButton}</div>
-          <div class="instruction-fee-wrap">
-            <table class="instruction-fee-table">
-              <thead><tr><th>费用名称</th><th>类型</th><th>单位</th><th>单价</th><th>数量</th><th>币种</th><th>小计</th><th>添加时间</th><th>添加人</th><th>描述</th><th>操作</th></tr></thead>
-              <tbody>${renderInstructionFeeRows(instruction)}</tbody>
-            </table>
-          </div>
-        </div>
-      </td>
+  target.innerHTML = rows.map((row) => {
+    const total = Number(row.price || 0) * Number(row.quantity || 1);
+    return `<tr>
+      <td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
+      <td>${row.currency}</td><td>${Number(total.toFixed(2))}</td><td>${row.addedAt}</td><td>${row.addedBy}</td>
+      <td>${row.description}</td><td>${instructionEditable ? `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>` : "-"}</td>
     </tr>`;
   }).join("");
-}
-
-function showInstructionNotice(message) {
-  const notice = $("#instructionNotice");
-  notice.textContent = message;
-  notice.hidden = false;
-  clearTimeout(instructionNoticeTimer);
-  instructionNoticeTimer = setTimeout(() => { notice.hidden = true; }, 4200);
-}
-
-function renderInstructionCreateFees() {
-  const target = $("#instructionCreateFeeBody");
-  if (!instructionCreateDraftFees.length) {
-    target.innerHTML = '<tr class="fee-empty"><td colspan="9">暂未添加费用，可直接新增指令</td></tr>';
-    return;
-  }
-  target.innerHTML = instructionCreateDraftFees.map((fee) => `<tr>
-    <td title="${escapeHtml(fee.code)}">${escapeHtml(fee.name)}</td><td>${escapeHtml(fee.type)}</td><td>${escapeHtml(fee.unit)}</td>
-    <td>${escapeHtml(fee.price)}</td><td>${escapeHtml(fee.quantity || "1")}</td><td>${escapeHtml(fee.currency)}</td>
-    <td>${Number(getFeeSubtotal(fee).toFixed(2))}</td>
-    <td><span class="instruction-fee-description" title="${escapeHtml(fee.description)}">${escapeHtml(fee.description)}</span></td>
-    <td><button class="fee-edit" data-code="${escapeHtml(fee.code)}" type="button">编辑</button><button class="fee-delete" data-code="${escapeHtml(fee.code)}" type="button">删除</button></td>
-  </tr>`).join("");
-}
-
-function renderInstructionBoxOptions() {
-  if (!activeReleaseRow) return;
-  $("#instructionBoxOptions").innerHTML = getCargoBoxRows(activeReleaseRow).map((box) =>
-    `<label title="${escapeHtml(box.boxNo)}"><input type="checkbox" value="${escapeHtml(box.boxNo)}" /><span>${escapeHtml(box.boxNo)}</span></label>`
-  ).join("");
-}
-
-function resetInstructionCreateForm() {
-  $("#instructionCreateForm").reset();
-  $("#createInstructionCustomType").hidden = true;
-  $("#createInstructionCustomType").disabled = true;
-  $("#createInstructionCustomType").required = false;
-  $("#createInstructionCustomType").setCustomValidity("");
-  $("#instructionBoxField").hidden = true;
-  $("#createInstructionBoxError").textContent = "";
-  $("#instructionCreateError").hidden = true;
-  $("#instructionCreateError").textContent = "";
-  $("#instructionCreateSubmit").disabled = false;
-  isCreatingInstruction = false;
-  instructionCreateDraftFees = [];
-  renderInstructionCreateFees();
-}
-
-function openInstructionCreate() {
-  if (!activeReleaseRow || releaseDrawerMode !== "detail") return;
-  resetInstructionCreateForm();
-  renderInstructionBoxOptions();
-  $("#instructionCreateOverlay").hidden = false;
-  requestAnimationFrame(() => $("#createInstructionType").focus());
-}
-
-function closeInstructionCreate() {
-  $("#instructionCreateOverlay").hidden = true;
-  if (!$("#instructionOverlay").hidden) closeInstructionPicker();
-  resetInstructionCreateForm();
 }
 
 function getFilteredInstructionCatalog() {
@@ -509,279 +534,142 @@ function getFilteredInstructionCatalog() {
   );
 }
 
-function getExistingFeeCodesForPicker() {
-  if (feePickerContext?.mode !== "record") return new Set();
-  return new Set(getFeeRowsForContext(feePickerContext).map((fee) => fee.code));
-}
-
 function renderInstructionPicker() {
   const rows = getFilteredInstructionCatalog();
-  const existingCodes = getExistingFeeCodesForPicker();
   const displayRows = [...rows, ...Array(Math.max(0, 18 - rows.length)).fill(null)].slice(0, 18);
-  $("#instructionPickerBody").innerHTML = displayRows.map((row) => {
-    const alreadyAdded = row && existingCodes.has(row.code);
-    const checked = row && (instructionDraftCodes.has(row.code) || alreadyAdded);
-    return `<tr>
-      <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${escapeHtml(row.code)}"` : "disabled"} ${alreadyAdded || !row ? "disabled" : ""} ${checked ? "checked" : ""} /></td>
-      <td>${escapeHtml(row?.code || "")}</td><td>${escapeHtml(row?.name || "")}</td><td>${escapeHtml(row?.type || "")}</td><td>${escapeHtml(row?.unit || "")}</td>
-      <td>${escapeHtml(row?.price || "")}</td><td>${escapeHtml(row?.currency || "")}</td><td>${escapeHtml(row?.description || "")}</td>
-    </tr>`;
-  }).join("");
-  const availableCodes = instructionCatalog.filter((row) => !existingCodes.has(row.code)).map((row) => row.code);
-  $("#instructionSelectAll").checked = availableCodes.length > 0 && availableCodes.every((code) => instructionDraftCodes.has(code));
-  $("#instructionSelectedCount").textContent = `本次选中${instructionDraftCodes.size}条`;
+  $("#instructionPickerBody").innerHTML = displayRows.map((row) => `<tr>
+    <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${row.code}"` : "disabled"} ${row && instructionDraftCodes.has(row.code) ? "checked" : ""} /></td>
+    <td>${row?.code || ""}</td><td>${row?.name || ""}</td><td>${row?.type || ""}</td><td>${row?.unit || ""}</td>
+    <td>${row?.price || ""}</td><td>${row?.currency || ""}</td><td>${row?.description || ""}</td>
+  </tr>`).join("");
+  $("#instructionSelectAll").checked = instructionDraftCodes.size === instructionCatalog.length;
+  $("#instructionSelectedCount").textContent = `已选中${instructionDraftCodes.size}条`;
 }
 
-function openInstructionPicker(context) {
-  feePickerContext = context;
-  instructionDraftCodes = context.mode === "create"
-    ? new Set(instructionCreateDraftFees.map((row) => row.code))
-    : new Set();
+function openInstructionPicker() {
+  const existing = getActiveInstructionRows();
+  instructionDraftCodes = new Set(existing.length ? existing.map((row) => row.code) : instructionCatalog.slice(0, 3).map((row) => row.code));
   $("#instructionSearchName").value = "";
   $("#instructionSearchType").value = "";
-  $("#instructionDrawerTitle").textContent = context.mode === "create" ? "选择费用明细" : "新增费用";
   $("#instructionOverlay").hidden = false;
   renderInstructionPicker();
 }
 
 function closeInstructionPicker() {
   $("#instructionOverlay").hidden = true;
-  feePickerContext = null;
-  instructionDraftCodes = new Set();
-}
-
-function generateInstructionId() {
-  const now = new Date();
-  const pad = (value) => String(value).padStart(2, "0");
-  const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-  return `CZ${date}${String(instructionSequence++).padStart(4, "0")}`;
-}
-
-function openFeeEdit(context, feeCode) {
-  const fee = getFeeRowsForContext(context).find((row) => row.code === feeCode);
-  if (!fee) return;
-  editingFeeContext = { ...context, code: feeCode };
-  $("#editInstructionCode").value = fee.code;
-  $("#editInstructionName").value = fee.name;
-  $("#editInstructionType").value = fee.type;
-  $("#editInstructionUnit").value = fee.unit;
-  $("#editInstructionPrice").value = fee.price;
-  $("#editInstructionQuantity").value = fee.quantity || "1";
-  $("#editInstructionCurrency").value = fee.currency;
-  $("#editInstructionDescription").value = fee.description || "";
-  $("#instructionEditOverlay").hidden = false;
-}
-
-function openFeeDelete(context, feeCode) {
-  const fee = getFeeRowsForContext(context).find((row) => row.code === feeCode);
-  if (!fee) return;
-  deletingFeeContext = { ...context, code: feeCode };
-  $("#deleteInstructionName").textContent = fee.name;
-  $("#instructionDeleteOverlay").hidden = false;
 }
 
 const releaseOverlay = $("#releaseOverlay");
 const releaseForm = $("#releaseForm");
 let activeReleaseRow = null;
-let releaseDrawerMode = "release";
+let activeReleaseReadOnly = false;
+let activeReleaseStatus = "暂存";
+const instructionEditableStatuses = new Set(["暂存", "待审批", "指令待处理", "指令处理中"]);
 
-const releaseReadonlyInputSelectors = [
-  "#releaseShipment",
-  "#releaseReference",
-  "#releaseBoxes",
-  "#releaseDate",
-  "#releaseRemark"
-];
-const releaseDisabledSelectSelectors = ["#releaseDestination", "#releaseMethod"];
-
-function setReleaseFormReadonly(readonly) {
-  releaseReadonlyInputSelectors.forEach((selector) => { $(selector).readOnly = readonly; });
-  releaseDisabledSelectSelectors.forEach((selector) => { $(selector).disabled = readonly; });
-  document.querySelectorAll('input[name="application"]').forEach((radio) => { radio.disabled = readonly; });
-  $("#releaseFile").disabled = readonly;
-  $("#uploadButton").hidden = readonly;
-  $("#releaseSubmit").hidden = readonly;
-  $("#releaseSubmit").disabled = readonly;
-  $("#releaseModeBadge").hidden = !readonly;
-  $("#releaseCancel").textContent = readonly ? "关闭" : "取消";
-  releaseForm.classList.toggle("detail-mode", readonly);
-  document.querySelector(".release-drawer").classList.toggle("detail-wide", readonly);
+function normalizeReleaseRow(row) {
+  const pallet = row.pallet || "-";
+  const palletDestination = ["ABE2", "ABE3", "ABE8", "BWI9", "FEDEX"].find((code) => pallet.includes(code));
+  const boxes = Number(row.unsent ?? row.appliedBoxes ?? row.boxes ?? 0);
+  return {
+    ...row,
+    customer: row.customer || "-",
+    container: row.container || "-",
+    system: row.system || "/",
+    inbound: row.inbound || "-",
+    blocked: row.blocked || "否",
+    transfer: row.transfer || "拆转",
+    destination: row.destination || palletDestination || (row.applicationType === "其他地址" ? "FEDEX" : "ABE2"),
+    dispatch: row.dispatch || "Truck-Amazon",
+    pallet,
+    time: row.time || row.inboundTime || "",
+    weight: Number(row.weight || 0),
+    volume: Number(row.volume ?? row.appliedVolume ?? 0),
+    boxes,
+    pending: Number(row.pending || 0),
+    unsent: boxes,
+    sent: Number(row.sent || 0),
+    shipmentId: row.shipmentId || "",
+    referenceId: row.referenceId || ""
+  };
 }
 
-function populateReleaseFields(row, details) {
-  const data = details || {};
-  const application = data.application || "FBA";
-  document.querySelectorAll('input[name="application"]').forEach((radio) => {
-    radio.checked = radio.value === application;
+function setReleaseDrawerMode(readOnly, status) {
+  activeReleaseReadOnly = readOnly;
+  activeReleaseStatus = status;
+  document.querySelectorAll("#releaseForm > .release-fields input, #releaseForm > .release-fields select, #releaseForm > .release-fields button").forEach((control) => {
+    control.disabled = readOnly;
   });
-  $("#releaseDestination").value = data.destination || "";
-  $("#releaseShipment").value = data.shipment || "";
-  $("#releaseMethod").value = data.method || "Truck-Amazon";
-  $("#releaseReference").value = data.reference || "";
-  $("#releaseBoxes").value = data.boxes || "";
-  $("#releaseDate").value = data.date || "";
-  $("#releaseRemark").value = data.remark || "";
-  $("#releaseFile").value = "";
-  $("#uploadName").textContent = data.attachment || (releaseDrawerMode === "detail" ? "—" : "");
-  $("#releaseBoxes").max = Math.max(1, row.unsent);
-  $("#releaseBoxes").placeholder = "请输入";
+  $("#releaseConfirm").hidden = readOnly;
+  $("#releaseCancel").textContent = readOnly ? "关闭" : "取消";
+  const instructionEditable = instructionEditableStatuses.has(status);
+  $("#instructionAdd").hidden = !instructionEditable;
+  releaseForm.classList.toggle("release-readonly", readOnly);
 }
 
-function openReleaseDrawer(row, requestedMode) {
+function openReleaseDrawer(sourceRow, options = {}) {
+  const row = normalizeReleaseRow(sourceRow);
+  const readOnly = Boolean(options.readOnly);
+  const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
-  releaseDrawerMode = requestedMode === "detail" || row.status === "待审批" ? "detail" : "release";
   releaseForm.reset();
   $("#releaseContainer").textContent = row.container;
   $("#releaseDispatch").textContent = row.dispatch;
   $("#releasePallet").textContent = row.pallet;
   $("#releaseTransfer").textContent = row.transfer;
   $("#releaseUnsent").textContent = row.unsent;
-  $("#releaseTitle").textContent = releaseDrawerMode === "detail" ? "放货详情" : "放货";
-  populateReleaseFields(row, releaseDetailsByInventory.get(row.id));
-  setReleaseFormReadonly(releaseDrawerMode === "detail");
-  $("#instructionSection").hidden = releaseDrawerMode !== "detail";
+  $("#releaseBoxes").max = Math.max(1, row.unsent);
+  $("#releaseBoxes").placeholder = "请输入";
+  $("#releaseBoxes").setCustomValidity("");
+  $("#releaseMethod").value = [...$("#releaseMethod").options].some((option) => option.value === row.dispatch) ? row.dispatch : "Truck-Amazon";
   const destination = $("#releaseDestination");
+  destination.value = [...destination.options].some((option) => option.value === row.destination) ? row.destination : "";
+  $("#releaseShipment").value = row.shipmentId;
+  $("#releaseReference").value = row.referenceId;
+  $("#releaseBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
+  $("#releaseDate").value = (row.scheduledShippingTime || row.time || "").slice(0, 10);
+  $("#releaseRemark").value = row.customerRemark || "";
+  $("#uploadName").textContent = "";
+  setReleaseDrawerMode(readOnly, sourceStatus);
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
   renderCargoBoxRows(row);
-  if (releaseDrawerMode === "detail") {
-    activeInstructionStatus = "全部";
-    $("#instructionNotice").hidden = true;
-    renderInstructionList();
-  }
-  requestAnimationFrame(() => releaseDrawerMode === "detail" ? $("#releaseClose").focus() : destination.focus());
+  renderInstructionList();
+  if (!readOnly) requestAnimationFrame(() => destination.focus());
 }
 
 function closeReleaseDrawer() {
   releaseOverlay.hidden = true;
-  $("#instructionCreateOverlay").hidden = true;
   $("#instructionOverlay").hidden = true;
   $("#instructionEditOverlay").hidden = true;
   $("#instructionDeleteOverlay").hidden = true;
-  $("#instructionSection").hidden = true;
-  feePickerContext = null;
-  editingFeeContext = null;
-  deletingFeeContext = null;
-  resetInstructionCreateForm();
   document.body.classList.remove("release-open");
-  setReleaseFormReadonly(false);
-  releaseDrawerMode = "release";
   activeReleaseRow = null;
+  activeReleaseReadOnly = false;
+  activeReleaseStatus = "暂存";
   releaseForm.reset();
   $("#uploadName").textContent = "";
 }
 
 body.addEventListener("click", (event) => {
+  const detailButton = event.target.closest(".detail-button");
+  if (!detailButton) return;
+  const row = visibleRows.find((item) => item.id === Number(detailButton.dataset.id));
+  if (row) openReleaseDrawer(row, { readOnly: true, status: activeStatus });
+});
+body.addEventListener("click", (event) => {
   const button = event.target.closest(".release-button");
   if (!button) return;
   const row = inventoryRows.find((item) => item.id === Number(button.dataset.id));
-  if (row) openReleaseDrawer(row, button.dataset.mode);
+  if (row) openReleaseDrawer(row, { readOnly: false, status: "暂存" });
 });
 $("#releaseClose").addEventListener("click", closeReleaseDrawer);
 $("#releaseCancel").addEventListener("click", closeReleaseDrawer);
 releaseOverlay.addEventListener("click", (event) => {
   if (event.target === releaseOverlay) closeReleaseDrawer();
 });
-$("#instructionAdd").addEventListener("click", openInstructionCreate);
-$("#instructionStatusTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-instruction-status]");
-  if (!button) return;
-  activeInstructionStatus = button.dataset.instructionStatus;
-  renderInstructionList();
-});
-$("#instructionCreateClose").addEventListener("click", closeInstructionCreate);
-$("#instructionCreateCancel").addEventListener("click", closeInstructionCreate);
-$("#instructionCreateOverlay").addEventListener("click", (event) => {
-  if (event.target === $("#instructionCreateOverlay")) closeInstructionCreate();
-});
-$("#createInstructionType").addEventListener("change", (event) => {
-  const customInput = $("#createInstructionCustomType");
-  const custom = event.target.value === "自定义";
-  customInput.hidden = !custom;
-  customInput.disabled = !custom;
-  customInput.required = custom;
-  if (!custom) customInput.value = "";
-  if (custom) requestAnimationFrame(() => customInput.focus());
-});
-$("#createInstructionCustomType").addEventListener("input", (event) => {
-  event.target.setCustomValidity("");
-});
-document.querySelectorAll('input[name="instructionScope"]').forEach((radio) => {
-  radio.addEventListener("change", () => {
-    const byBox = document.querySelector('input[name="instructionScope"]:checked')?.value === "按箱";
-    $("#instructionBoxField").hidden = !byBox;
-    $("#createInstructionBoxError").textContent = "";
-    if (!byBox) {
-      document.querySelectorAll("#instructionBoxOptions input").forEach((checkbox) => { checkbox.checked = false; });
-    }
-  });
-});
-$("#instructionBoxOptions").addEventListener("change", () => {
-  $("#createInstructionBoxError").textContent = "";
-  $("#instructionCreateError").hidden = true;
-});
-$("#createInstructionAddFee").addEventListener("click", () => openInstructionPicker({ mode: "create" }));
-$("#instructionCreateFeeBody").addEventListener("click", (event) => {
-  const editButton = event.target.closest(".fee-edit");
-  const deleteButton = event.target.closest(".fee-delete");
-  if (editButton) openFeeEdit({ mode: "create" }, editButton.dataset.code);
-  if (deleteButton) openFeeDelete({ mode: "create" }, deleteButton.dataset.code);
-});
-$("#instructionCreateForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  if (!activeReleaseRow || releaseDrawerMode !== "detail" || isCreatingInstruction || !form.reportValidity()) return;
-  const scope = document.querySelector('input[name="instructionScope"]:checked')?.value || "整票";
-  const selectedBoxNos = [...document.querySelectorAll("#instructionBoxOptions input:checked")].map((checkbox) => checkbox.value);
-  if (scope === "按箱" && !selectedBoxNos.length) {
-    $("#createInstructionBoxError").textContent = "按箱新增时请至少选择一个关联箱号";
-    $("#instructionCreateError").textContent = "请选择需要执行该指令的箱号。";
-    $("#instructionCreateError").hidden = false;
-    $("#instructionBoxOptions input")?.focus();
-    return;
-  }
-  isCreatingInstruction = true;
-  $("#instructionCreateSubmit").disabled = true;
-  const selectedType = $("#createInstructionType").value;
-  const type = selectedType === "自定义" ? $("#createInstructionCustomType").value.trim() : selectedType;
-  if (!type) {
-    $("#createInstructionCustomType").setCustomValidity("请输入自定义指令类型");
-    $("#createInstructionCustomType").reportValidity();
-    isCreatingInstruction = false;
-    $("#instructionCreateSubmit").disabled = false;
-    return;
-  }
-  const createdAt = getLocalTimestamp();
-  const boxNos = scope === "按箱" ? selectedBoxNos : ["整票"];
-  const newInstructions = boxNos.map((boxNo) => ({
-    id: generateInstructionId(),
-    boxNo,
-    scope,
-    type,
-    description: $("#createInstructionDescription").value.trim(),
-    status: "待处理",
-    priority: $("#createInstructionPriority").value,
-    remark: $("#createInstructionRemark").value.trim(),
-    createdBy: "天朗（付豪）",
-    createdAt,
-    processedBy: "",
-    processedAt: "",
-    processMethod: "",
-    fees: instructionCreateDraftFees.map((fee) => ({ ...fee }))
-  }));
-  instructionRecordsByInventory.set(activeReleaseRow.id, [...getActiveInstructions(), ...newInstructions]);
-  newInstructions.forEach((instruction) => expandedInstructionIds.add(instruction.id));
-  activeInstructionStatus = "待处理";
-  $("#instructionCreateOverlay").hidden = true;
-  resetInstructionCreateForm();
-  renderInstructionList();
-  showInstructionNotice(`已新增 ${newInstructions.length} 条待处理指令${newInstructions.length > 1 ? "，多箱已拆分为独立记录" : ""}`);
-});
+$("#instructionAdd").addEventListener("click", openInstructionPicker);
 $("#instructionClose").addEventListener("click", closeInstructionPicker);
 $("#instructionCancel").addEventListener("click", closeInstructionPicker);
-$("#instructionOverlay").addEventListener("click", (event) => {
-  if (event.target === $("#instructionOverlay")) closeInstructionPicker();
-});
 $("#instructionSearch").addEventListener("click", renderInstructionPicker);
 $("#instructionReset").addEventListener("click", () => {
   $("#instructionSearchName").value = "";
@@ -798,98 +686,88 @@ $("#instructionPickerBody").addEventListener("change", (event) => {
   renderInstructionPicker();
 });
 $("#instructionSelectAll").addEventListener("change", (event) => {
-  const existingCodes = getExistingFeeCodesForPicker();
-  const availableCodes = instructionCatalog.filter((row) => !existingCodes.has(row.code)).map((row) => row.code);
-  instructionDraftCodes = event.target.checked ? new Set(availableCodes) : new Set();
+  instructionDraftCodes = event.target.checked ? new Set(instructionCatalog.map((row) => row.code)) : new Set();
   renderInstructionPicker();
 });
 $("#instructionConfirm").addEventListener("click", () => {
-  if (!activeReleaseRow || !feePickerContext) return;
-  const targetContext = { ...feePickerContext };
-  const currentRows = getFeeRowsForContext(targetContext);
-  const currentByCode = new Map(currentRows.map((row) => [row.code, row]));
-  const selectedRows = instructionCatalog
+  if (!activeReleaseRow) return;
+  const rows = instructionCatalog
     .filter((row) => instructionDraftCodes.has(row.code))
-    .map((row) => currentByCode.get(row.code) || makeFeeRow(row));
-  const rows = targetContext.mode === "create"
-    ? selectedRows
-    : [...currentRows, ...selectedRows.filter((row) => !currentByCode.has(row.code))];
-  setFeeRowsForContext(targetContext, rows);
+    .map((row) => ({ ...row, quantity: "1", addedAt: "2026-07-08 18:30:00", addedBy: "天朗（付豪）" }));
+  instructionRowsByInventory.set(activeReleaseRow.id, rows);
   closeInstructionPicker();
-  if (targetContext.mode === "record" && selectedRows.length) {
-    showInstructionNotice(`已为指令 ${targetContext.instructionId} 新增 ${selectedRows.length} 条费用`);
-  }
+  renderInstructionList();
 });
 
 $("#instructionBody").addEventListener("click", (event) => {
-  const toggleButton = event.target.closest(".instruction-fee-toggle");
-  const addButton = event.target.closest(".instruction-fee-add");
-  const editButton = event.target.closest(".fee-edit");
-  const deleteButton = event.target.closest(".fee-delete");
-  if (toggleButton) {
-    const instructionId = toggleButton.dataset.instructionId;
-    expandedInstructionIds.has(instructionId) ? expandedInstructionIds.delete(instructionId) : expandedInstructionIds.add(instructionId);
-    renderInstructionList();
-    return;
-  }
-  if (addButton) {
-    openInstructionPicker({ mode: "record", instructionId: addButton.dataset.instructionId });
-    return;
-  }
+  const editButton = event.target.closest(".instruction-edit");
+  const deleteButton = event.target.closest(".instruction-delete");
   if (editButton) {
-    openFeeEdit({ mode: "record", instructionId: editButton.dataset.instructionId }, editButton.dataset.code);
-    return;
+    const row = getActiveInstructionRows().find((item) => item.code === editButton.dataset.code);
+    if (!row) return;
+    editingInstructionCode = row.code;
+    $("#editInstructionCode").value = row.code;
+    $("#editInstructionName").value = row.name;
+    $("#editInstructionType").value = row.type;
+    $("#editInstructionUnit").value = row.unit;
+    $("#editInstructionPrice").value = row.price;
+    $("#editInstructionQuantity").value = row.quantity || "1";
+    $("#editInstructionCurrency").value = row.currency;
+    $("#instructionEditOverlay").hidden = false;
   }
   if (deleteButton) {
-    openFeeDelete({ mode: "record", instructionId: deleteButton.dataset.instructionId }, deleteButton.dataset.code);
+    const row = getActiveInstructionRows().find((item) => item.code === deleteButton.dataset.code);
+    if (!row) return;
+    deletingInstructionCode = row.code;
+    $("#deleteInstructionName").textContent = row.name;
+    $("#instructionDeleteOverlay").hidden = false;
   }
 });
 
 $("#instructionEditCancel").addEventListener("click", () => {
   $("#instructionEditOverlay").hidden = true;
-  editingFeeContext = null;
+  editingInstructionCode = "";
 });
 $("#instructionEditForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!activeReleaseRow || !editingFeeContext || !event.currentTarget.reportValidity()) return;
-  const context = { ...editingFeeContext };
-  const rows = getFeeRowsForContext(context).map((row) => row.code === context.code ? {
+  if (!activeReleaseRow || !editingInstructionCode || !event.currentTarget.reportValidity()) return;
+  const rows = getActiveInstructionRows().map((row) => row.code === editingInstructionCode ? {
     ...row,
     type: $("#editInstructionType").value,
     unit: $("#editInstructionUnit").value,
     price: $("#editInstructionPrice").value,
     quantity: $("#editInstructionQuantity").value,
-    currency: $("#editInstructionCurrency").value,
-    description: $("#editInstructionDescription").value.trim()
+    currency: $("#editInstructionCurrency").value
   } : row);
-  setFeeRowsForContext(context, rows);
+  instructionRowsByInventory.set(activeReleaseRow.id, rows);
   $("#instructionEditOverlay").hidden = true;
-  editingFeeContext = null;
+  editingInstructionCode = "";
+  renderInstructionList();
 });
 $("#instructionDeleteCancel").addEventListener("click", () => {
   $("#instructionDeleteOverlay").hidden = true;
-  deletingFeeContext = null;
+  deletingInstructionCode = "";
 });
 $("#instructionDeleteConfirm").addEventListener("click", () => {
-  if (!activeReleaseRow || !deletingFeeContext) return;
-  const context = { ...deletingFeeContext };
-  setFeeRowsForContext(context, getFeeRowsForContext(context).filter((row) => row.code !== context.code));
+  if (!activeReleaseRow || !deletingInstructionCode) return;
+  instructionRowsByInventory.set(activeReleaseRow.id, getActiveInstructionRows().filter((row) => row.code !== deletingInstructionCode));
   $("#instructionDeleteOverlay").hidden = true;
-  deletingFeeContext = null;
+  deletingInstructionCode = "";
+  renderInstructionList();
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  if (!$("#instructionEditOverlay").hidden) {
+  if (!approvalReviewOverlay.hidden) {
+    closeApprovalReview();
+  } else if (!$("#instructionEditOverlay").hidden) {
     $("#instructionEditOverlay").hidden = true;
-    editingFeeContext = null;
+    editingInstructionCode = "";
   } else if (!$("#instructionDeleteOverlay").hidden) {
     $("#instructionDeleteOverlay").hidden = true;
-    deletingFeeContext = null;
+    deletingInstructionCode = "";
   } else if (!$("#instructionOverlay").hidden) {
     closeInstructionPicker();
-  } else if (!$("#instructionCreateOverlay").hidden) {
-    closeInstructionCreate();
   } else if (!releaseOverlay.hidden) {
     closeReleaseDrawer();
   }
@@ -900,7 +778,11 @@ $("#releaseFile").addEventListener("change", (event) => {
 });
 releaseForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (releaseDrawerMode !== "release" || !activeReleaseRow || !releaseForm.reportValidity()) return;
+  if (activeReleaseReadOnly) {
+    closeReleaseDrawer();
+    return;
+  }
+  if (!releaseForm.reportValidity() || !activeReleaseRow) return;
   const boxes = Number($("#releaseBoxes").value);
   if (boxes > activeReleaseRow.unsent) {
     $("#releaseBoxes").setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
@@ -908,28 +790,7 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   $("#releaseBoxes").setCustomValidity("");
-  const submittedRow = activeReleaseRow;
-  const previousStatus = submittedRow.status;
-  releaseDetailsByInventory.set(submittedRow.id, {
-    application: document.querySelector('input[name="application"]:checked')?.value || "FBA",
-    destination: $("#releaseDestination").value,
-    shipment: $("#releaseShipment").value.trim(),
-    method: $("#releaseMethod").value,
-    reference: $("#releaseReference").value.trim(),
-    boxes: String(boxes),
-    date: $("#releaseDate").value,
-    remark: $("#releaseRemark").value.trim(),
-    attachment: $("#releaseFile").files[0]?.name || ""
-  });
-  submittedRow.status = "待审批";
-  submittedRow.pending = boxes;
-  selected.delete(submittedRow.id);
-  if (previousStatus === "暂存") {
-    statusCounts["暂存"] = Math.max(0, statusCounts["暂存"] - 1);
-    statusCounts["待审批"] += 1;
-  }
   closeReleaseDrawer();
-  document.querySelector('.status-tab[data-status="待审批"]').click();
 });
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
 
@@ -942,7 +803,7 @@ function buildWatermarks() {
     for (let x = -35; x < width + 150; x += 195) {
       const mark = document.createElement("span");
       mark.className = "watermark";
-      mark.textContent = "admin2026-07-22";
+      mark.textContent = "admin2026-07-23";
       mark.style.left = `${x + ((y / 82) % 2) * 72}px`;
       mark.style.top = `${y}px`;
       fragment.appendChild(mark);
@@ -955,5 +816,5 @@ window.addEventListener("resize", () => {
   clearTimeout(watermarkTimer);
   watermarkTimer = setTimeout(buildWatermarks, 120);
 });
-applyFilters();
+renderRows();
 buildWatermarks();
