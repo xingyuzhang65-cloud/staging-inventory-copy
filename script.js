@@ -106,7 +106,13 @@ const approvalRows = [
       { text: "120 CNY 托盘操作费 (30/托)", completed: false }
     ]
   }
-].map((row, index) => ({ id: index + 1, ...approvalBase, ...row, status: "待审批" }));
+].map((row, index) => ({
+  id: index + 1,
+  ...approvalBase,
+  ...row,
+  financialAudit: ["已审核", "部分审核", "未审核"][index % 3],
+  status: "待审批"
+}));
 const instructionPendingBase = {
   blocked: "是",
   applicationType: "FBA仓库",
@@ -201,7 +207,13 @@ const instructionPendingRows = [
       { text: "80 CNY 销毁处理费 (20/箱)", completed: false }
     ]
   }
-].map((row, index) => ({ id: index + 1, ...instructionPendingBase, ...row, status: "指令待处理" }));
+].map((row, index) => ({
+  id: index + 1,
+  ...instructionPendingBase,
+  ...row,
+  instructions: row.instructions.map((instruction) => ({ ...instruction, completed: false })),
+  status: "指令待处理"
+}));
 const instructionProcessingRows = [
   {
     customer: "23", applicationNo: "20260722001", container: "8889990", system: "8889990-250623", inbound: "88",
@@ -212,7 +224,7 @@ const instructionProcessingRows = [
       { text: "3 CNY 仓储渠道-免仓30天 (3/票)", completed: true },
       { text: "4 CNY 仓储渠道-31-90天 (4/票)", completed: true },
       { text: "3.5 CNY 更换标签费 (0.5/件)", completed: true },
-      { text: "10 CNY 重新打包费 (10/票)", completed: true }
+      { text: "10 CNY 重新打包费 (10/票)", completed: false }
     ]
   },
   {
@@ -234,7 +246,7 @@ const instructionProcessingRows = [
     instructions: [
       { text: "979.4 CNY 基础运费 (5.9/KG)", completed: true },
       { text: "50 CNY 拍照服务费 (10/箱)", completed: true },
-      { text: "120 CNY 托盘操作费 (30/托)", completed: true }
+      { text: "120 CNY 托盘操作费 (30/托)", completed: false }
     ]
   },
   {
@@ -259,7 +271,7 @@ const instructionProcessingRows = [
       { text: "900 CNY 国外拦截费 (900/票)", completed: true },
       { text: "20 CNY 换标服务费 (0.5/件)", completed: true },
       { text: "45 CNY 重新打包费 (15/箱)", completed: true },
-      { text: "120 CNY 托盘操作费 (30/托)", completed: true }
+      { text: "120 CNY 托盘操作费 (30/托)", completed: false }
     ]
   },
   {
@@ -268,7 +280,7 @@ const instructionProcessingRows = [
     shipmentId: "FBA19TEST001", referenceId: "REF20260722006", pallet: "MSCU7654321-US0601-1", inboundTime: "2026-07-20 09:12:36",
     appliedBoxes: 2, appliedVolume: 0.56, financialAudit: "未审核", instructionAudit: "审核中",
     instructions: [
-      { text: "30 CNY 清点服务费 (15/箱)", completed: false },
+      { text: "30 CNY 清点服务费 (15/箱)", completed: true },
       { text: "60 CNY 加固服务费 (30/箱)", completed: false }
     ]
   },
@@ -333,7 +345,16 @@ const outboundRows = Array.from({ length: 95 }, (_, index) => {
   };
 });
 const shippedRows = outboundRows.slice(0, 30).map((row) => ({ ...row, status: "已出库" }));
-const rejectedRows = outboundRows.slice(0, 36).map((row) => ({ ...row, status: "审批拒绝" }));
+const destroyedRows = outboundRows.slice(0, 36).map((row) => ({
+  ...row,
+  instructions: row.instructions.map((instruction) => ({ ...instruction, completed: true })),
+  status: "销毁"
+}));
+const rejectedRows = outboundRows.slice(0, 36).map((row) => ({
+  ...row,
+  instructions: row.instructions.map((instruction) => ({ ...instruction, completed: false })),
+  status: "审批拒绝"
+}));
 const instructionCatalog = [
   { code: "FY202509260001", name: "仓储渠道-免仓30天", type: "仓储费", unit: "票", price: "3", currency: "人民币", description: "提柜入仓当天起算" },
   { code: "FY202509260002", name: "仓储渠道-31-90天", type: "仓储费", unit: "票", price: "4", currency: "人民币", description: "按1级单价收取" },
@@ -345,11 +366,130 @@ const instructionCatalog = [
 ];
 const instructionRowsByInventory = new Map();
 let instructionDraftCodes = new Set(instructionCatalog.slice(0, 3).map((row) => row.code));
+let instructionExistingCatalogCodes = new Set();
 let editingInstructionCode = "";
+let editingRemarkInstructionCode = "";
 let deletingInstructionCode = "";
 const selected = new Set();
+const instructionStatusDrafts = new Map();
 let activeStatus = "待审批";
 let visibleRows = [...approvalRows];
+
+const instructionWorkflowRows = [
+  approvalRows,
+  instructionPendingRows,
+  instructionProcessingRows,
+  outboundRows,
+  shippedRows,
+  destroyedRows,
+  rejectedRows
+];
+
+function getInstructionDetailKey(row) {
+  return row.applicationNo || `${row.container || ""}::${row.pallet || row.id || ""}`;
+}
+
+function getInstructionName(text, fallback) {
+  const normalized = String(text || "").replace(/^\s*[\d.]+\s+[A-Z]{3}\s+/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return normalized || fallback;
+}
+
+function parseInstructionText(text, fallback) {
+  const match = String(text || "").match(/^\s*([\d.]+)\s+([A-Z]{3})\s+(.+?)\s*\(([\d.]+)\/([^)]+)\)\s*$/);
+  if (!match) {
+    return {
+      name: getInstructionName(text, fallback.name),
+      price: fallback.price,
+      unit: fallback.unit,
+      quantity: "1",
+      currency: fallback.currency,
+      description: text || fallback.description
+    };
+  }
+  const total = Number(match[1]);
+  const unitPrice = Number(match[4]);
+  const quantity = unitPrice > 0 ? Number((total / unitPrice).toFixed(2)) : 1;
+  return {
+    name: match[3].trim(),
+    price: String(unitPrice),
+    unit: match[5].trim(),
+    quantity: String(quantity),
+    currency: match[2] === "CNY" ? "人民币" : match[2],
+    description: text
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function ensureInstructionDetailRows(row) {
+  const key = getInstructionDetailKey(row);
+  if (!instructionRowsByInventory.has(key)) {
+    const sourceInstructions = row.instructions || [];
+    const detailRows = sourceInstructions.map((instruction, index) => {
+      const template = instructionCatalog[index % instructionCatalog.length] || {};
+      const parsed = parseInstructionText(instruction.text, template);
+      return {
+        ...template,
+        ...parsed,
+        catalogCode: template.code,
+        code: `${key}-ZL-${String(index + 1).padStart(2, "0")}`,
+        rawText: instruction.text,
+        addedAt: row.inboundTime || "2026-07-08 18:30:00",
+        addedBy: "天朗（付豪）",
+        remark: "",
+        images: [],
+        status: instruction.completed ? "已处理" : "待处理"
+      };
+    });
+    instructionRowsByInventory.set(key, detailRows);
+  }
+  const detailRows = instructionRowsByInventory.get(key);
+  detailRows.forEach((instruction) => {
+    if (typeof instruction.remark !== "string") instruction.remark = "";
+    if (!Array.isArray(instruction.images)) instruction.images = [];
+  });
+  if (["指令待处理", "指令处理中", "待出库"].includes(row.status) && detailRows.length === (row.instructions?.length || 0)) {
+    detailRows.forEach((instruction, index) => {
+      instruction.status = row.instructions[index].completed ? "已处理" : "待处理";
+    });
+  }
+  return detailRows;
+}
+
+function syncInstructionStatus(detailKey, instructionIndex, status) {
+  instructionWorkflowRows.forEach((rows) => {
+    rows.forEach((row) => {
+      if (getInstructionDetailKey(row) !== detailKey || !row.instructions?.[instructionIndex]) return;
+      row.instructions[instructionIndex].completed = status === "已处理";
+    });
+  });
+}
+
+function buildInstructionText(row) {
+  const total = Number(row.price || 0) * Number(row.quantity || 1);
+  const currency = row.currency === "人民币" ? "CNY" : row.currency || "CNY";
+  return `${Number(total.toFixed(2))} ${currency} ${row.name} (${row.price || 0}/${row.unit || "票"})`;
+}
+
+function syncInstructionDetails(detailKey, detailRows) {
+  instructionWorkflowRows.forEach((rows) => {
+    rows.forEach((row) => {
+      if (getInstructionDetailKey(row) !== detailKey) return;
+      row.instructions = detailRows.map((instruction) => ({
+        text: buildInstructionText(instruction),
+        completed: instruction.status === "已处理"
+      }));
+    });
+  });
+}
 
 const $ = (selector) => document.querySelector(selector);
 const body = $("#inventoryBody");
@@ -360,7 +500,7 @@ const filters = {
   keyword: $("#keywordFilter"), customer: $("#customerFilter"), request: $("#requestFilter"), inbound: $("#inboundFilter"),
   transfer: $("#transferFilter"), fba: $("#fbaFilter"), dispatch: $("#dispatchFilter"),
   location: $("#locationFilter"), container: $("#containerFilter"), pallet: $("#palletFilter"),
-  blocked: $("#blockedFilter")
+  blocked: $("#blockedFilter"), financialAudit: $("#financialAuditFilter")
 };
 
 function addOptions(select, values) {
@@ -386,6 +526,10 @@ function isInstructionPendingView() {
   return activeStatus === "指令待处理";
 }
 
+function isInstructionProcessingView() {
+  return activeStatus === "指令处理中";
+}
+
 function isOutboundView() {
   return activeStatus === "待出库" || activeStatus === "已出库";
 }
@@ -398,12 +542,20 @@ function isRejectedView() {
   return activeStatus === "审批拒绝";
 }
 
+function isDestroyedView() {
+  return activeStatus === "销毁";
+}
+
+function isTerminalRequestView() {
+  return isRejectedView() || isDestroyedView();
+}
+
 function getOutboundViewRows() {
   return isShippedView() ? shippedRows : outboundRows;
 }
 
 function isRequestTableView() {
-  return isApprovalView() || isInstructionView() || isOutboundView() || isRejectedView();
+  return isApprovalView() || isInstructionView() || isOutboundView() || isTerminalRequestView();
 }
 
 function getInstructionViewRows() {
@@ -414,6 +566,7 @@ function getActiveStatusRows() {
   if (isApprovalView()) return approvalRows;
   if (isInstructionView()) return getInstructionViewRows();
   if (isOutboundView()) return getOutboundViewRows();
+  if (isDestroyedView()) return destroyedRows;
   if (isRejectedView()) return rejectedRows;
   return inventoryRows;
 }
@@ -441,27 +594,80 @@ function renderInstructionAudit(status) {
 function getInstructionProgress(row) {
   const total = row.instructions?.length || 0;
   const completed = row.instructions?.filter((instruction) => instruction.completed).length || 0;
-  const status = total > 0 && completed === total ? "已处理" : completed > 0 ? "部分处理" : "待处理";
-  return { total, completed, status };
+  return { total, completed };
 }
 
-function renderInstructionStatus(row) {
+function getInstructionCount(row) {
   const progress = getInstructionProgress(row);
-  const tone = progress.status === "已处理" ? "status-success" : progress.status === "部分处理" ? "status-partial" : "status-pending";
-  return `<div class="instruction-status-summary" title="${progress.completed} 条已完成，${progress.total - progress.completed} 条未完成">
-    <div class="instruction-status-top"><span class="workflow-status ${tone}">${progress.status}</span><span class="instruction-progress-count">${progress.completed}/${progress.total}</span></div>
-  </div>`;
+  return `${progress.completed}/${progress.total}`;
+}
+
+function renderInstructionCount(row) {
+  const progress = getInstructionProgress(row);
+  const completeClass = progress.total > 0 && progress.completed === progress.total ? " is-complete" : "";
+  return `<span class="instruction-count${completeClass}" title="${progress.completed} 条已处理，${progress.total - progress.completed} 条待处理">${progress.completed}/${progress.total}</span>`;
 }
 
 function renderInstructionLines(row) {
   if (!row.instructions?.length) return '<span class="instruction-empty">-</span>';
-  return `<div class="instruction-lines">${row.instructions.map((instruction) =>
-    `<div class="instruction-line ${instruction.completed ? "status-success" : "status-pending"}" title="${instruction.completed ? "已完成" : "未完成"}：${instruction.text}"><span class="instruction-state-dot"></span><span class="instruction-line-text">${instruction.text}</span></div>`
-  ).join("")}</div>`;
+  return `<div class="instruction-lines">${row.instructions.map((instruction) => {
+    const status = instruction.completed ? "已处理" : "待处理";
+    return `<div class="instruction-line ${instruction.completed ? "status-success" : "status-pending"}" title="${status}：${instruction.text}"><span class="instruction-state-label">${status}</span><span class="instruction-line-text">${instruction.text}</span></div>`;
+  }).join("")}</div>`;
 }
 
 function getInstructionText(row) {
-  return row.instructions?.map((instruction) => `[${instruction.completed ? "已完成" : "未完成"}] ${instruction.text}`).join("；") || "";
+  return row.instructions?.map((instruction) => `[${instruction.completed ? "已处理" : "待处理"}] ${instruction.text}`).join("；") || "";
+}
+
+function getInstructionDraftChangeCount() {
+  let count = 0;
+  instructionStatusDrafts.forEach(({ row, completed }) => {
+    row.instructions.forEach((instruction, index) => {
+      if (instruction.completed !== completed[index]) count += 1;
+    });
+  });
+  return count;
+}
+
+function updateInstructionDraftBar() {
+  const count = getInstructionDraftChangeCount();
+  $("#instructionDraftCount").textContent = String(count);
+  $("#instructionDraftBar").hidden = count === 0;
+}
+
+function captureInstructionStatusDraft(row) {
+  if (instructionStatusDrafts.has(row.id)) return;
+  instructionStatusDrafts.set(row.id, {
+    row,
+    completed: row.instructions.map((instruction) => instruction.completed)
+  });
+}
+
+function syncInstructionStatusDraft(row) {
+  const draft = instructionStatusDrafts.get(row.id);
+  if (!draft) return;
+  const unchanged = row.instructions.every((instruction, index) => instruction.completed === draft.completed[index]);
+  if (unchanged) instructionStatusDrafts.delete(row.id);
+  updateInstructionDraftBar();
+}
+
+function discardInstructionStatusDrafts() {
+  instructionStatusDrafts.forEach(({ row, completed }) => {
+    row.instructions.forEach((instruction, index) => {
+      instruction.completed = completed[index];
+    });
+  });
+  instructionStatusDrafts.clear();
+  updateInstructionDraftBar();
+  renderRows();
+}
+
+function confirmDiscardInstructionStatusDrafts() {
+  if (!instructionStatusDrafts.size) return true;
+  if (!window.confirm("当前有未保存的指令修改，确认放弃吗？")) return false;
+  discardInstructionStatusDrafts();
+  return true;
 }
 
 function renderTableChrome() {
@@ -471,25 +677,24 @@ function renderTableChrome() {
   document.body.classList.toggle("instruction-view", isInstructionView());
   document.body.classList.toggle("instruction-pending-view", isInstructionPendingView());
   document.body.classList.toggle("outbound-view", isOutboundView());
-  document.body.classList.toggle("rejection-view", isRejectedView());
+  document.body.classList.toggle("rejection-view", isTerminalRequestView());
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
-  $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionView() ? "开始处理" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
-  $("#contextAction").hidden = isRejectedView();
-  $("#countdownAction").hidden = !isInstructionView();
-  $("#approvalDensityButton").hidden = isRejectedView();
+  $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
+  $("#contextAction").hidden = isTerminalRequestView();
+  $("#countdownAction").hidden = !isInstructionPendingView();
+  $("#approvalDensityButton").hidden = isTerminalRequestView();
+  $("#financialAuditField").hidden = !isRequestTableView();
 
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
     <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
+    ${(isApprovalView() || isTerminalRequestView())
+      ? '<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
+      : (isInstructionView() || isOutboundView())
+        ? '<th class="financial-audit-col">财务审核</th><th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
+        : ""}
     <th class="sortable">入库时间</th><th class="sortable">申请箱数</th><th>申请箱数总体积</th><th>收费托数</th>
-    ${isApprovalView()
-      ? '<th class="instruction-list-col">指令</th>'
-      : isInstructionPendingView()
-        ? '<th class="financial-audit-col">财务审核</th><th class="instruction-status-col">指令状态</th><th class="instruction-list-col">指令</th>'
-        : (isInstructionView() || isOutboundView())
-          ? '<th class="financial-audit-col">财务审核</th><th class="instruction-audit-col">指令审核</th><th class="instruction-list-col">指令</th>'
-          : ""}
     <th class="operation-col">操作</th>
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
@@ -514,7 +719,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    body.innerHTML = `<tr><td class="empty-row" colspan="${(isInstructionView() || isOutboundView()) ? 22 : isApprovalView() ? 20 : 19}">暂无匹配库存记录</td></tr>`;
+    body.innerHTML = `<tr><td class="empty-row" colspan="${(isInstructionView() || isOutboundView()) ? 22 : (isApprovalView() || isTerminalRequestView()) ? 21 : 19}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
     return;
@@ -529,19 +734,16 @@ function renderRows() {
       <td>${row.system}</td><td>${row.inbound}</td><td class="${row.blocked === "是" ? "blocked" : ""}">${row.blocked === "是" ? "拦截" : row.blocked}</td>
       <td>${row.applicationType}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
       <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
-      <td>${row.inboundTime}</td><td>${row.appliedBoxes}</td><td>${row.appliedVolume}</td><td>${row.chargedPallets}</td>
-      ${isApprovalView()
-        ? `<td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
-        : isInstructionPendingView()
+      ${(isApprovalView() || isTerminalRequestView())
+        ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
+           <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
+        : (isInstructionView() || isOutboundView())
           ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
-             <td class="instruction-status-col">${renderInstructionStatus(row)}</td>
+             <td class="instruction-count-col">${renderInstructionCount(row)}</td>
              <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
-          : (isInstructionView() || isOutboundView())
-            ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
-               <td class="instruction-audit-col">${renderInstructionAudit(row.instructionAudit)}</td>
-               <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
-            : ""}
-      <td class="operation-col approval-actions">${isRejectedView()
+          : ""}
+      <td>${row.inboundTime}</td><td>${row.appliedBoxes}</td><td>${row.appliedVolume}</td><td>${row.chargedPallets}</td>
+      <td class="operation-col approval-actions">${isTerminalRequestView()
         ? `<button class="action-link detail-button" data-id="${row.id}">详情</button>`
         : isOutboundView()
           ? `<button class="action-link receivable-button">应收费用</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
@@ -589,6 +791,7 @@ function updateSummary() {
 }
 
 function applyFilters() {
+  selected.clear();
   const keyword = filters.keyword.value.trim().toLowerCase();
   const inboundTerms = filters.inbound.value.split(/[;；]/).map((term) => term.trim()).filter(Boolean);
   const sourceRows = getActiveStatusRows();
@@ -604,12 +807,14 @@ function applyFilters() {
       && (!filters.dispatch.value || row.dispatch === filters.dispatch.value)
       && (!filters.container.value || row.container.toLowerCase().includes(filters.container.value.trim().toLowerCase()))
       && (!filters.pallet.value || row.pallet.toLowerCase().includes(filters.pallet.value.trim().toLowerCase()))
+      && (!isRequestTableView() || !filters.financialAudit.value || row.financialAudit === filters.financialAudit.value)
       && (!filters.blocked.value || row.blocked === filters.blocked.value);
   });
   renderRows();
 }
 $("#searchButton").addEventListener("click", applyFilters);
 $("#resetButton").addEventListener("click", () => {
+  selected.clear();
   Object.values(filters).forEach((control) => { control.value = ""; });
   $("#dateFrom").value = ""; $("#dateTo").value = "";
   visibleRows = getActiveStatusRows().filter((row) => row.status === activeStatus);
@@ -618,8 +823,94 @@ $("#resetButton").addEventListener("click", () => {
 Object.values(filters).forEach((control) => {
   control.addEventListener("keydown", (event) => { if (event.key === "Enter") applyFilters(); });
 });
+
+function updateStatusTabCount(status, count) {
+  const tab = document.querySelector(`.status-tab[data-status="${status}"]`);
+  if (!tab) return;
+  tab.textContent = `${tab.textContent.replace(/\(\d+\)$/, "")}(${count})`;
+}
+
+$("#contextAction").addEventListener("click", () => {
+  if (isInstructionPendingView()) {
+    const startingRows = instructionPendingRows.filter((row) => selected.has(row.id));
+    if (!startingRows.length) {
+      window.alert("请先选择需要开始处理的记录");
+      return;
+    }
+    const nextProcessingId = instructionProcessingRows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+    instructionProcessingRows.unshift(...startingRows.map((row, index) => ({
+      ...row,
+      id: nextProcessingId + index,
+      instructionAudit: "审核中",
+      instructions: row.instructions.map((instruction) => ({ ...instruction, completed: false })),
+      status: "指令处理中"
+    })));
+    for (let index = instructionPendingRows.length - 1; index >= 0; index -= 1) {
+      if (selected.has(instructionPendingRows[index].id)) instructionPendingRows.splice(index, 1);
+    }
+    selected.clear();
+    updateStatusTabCount("指令待处理", instructionPendingRows.length);
+    updateStatusTabCount("指令处理中", instructionProcessingRows.length);
+    applyFilters();
+    return;
+  }
+
+  if (!isInstructionProcessingView()) return;
+  if (instructionStatusDrafts.size) {
+    window.alert("请先保存指令修改，再执行处理完成");
+    return;
+  }
+  const completedRows = instructionProcessingRows.filter((row) => selected.has(row.id));
+  if (!completedRows.length) {
+    window.alert("请先选择需要处理完成的记录");
+    return;
+  }
+  const incompleteRows = completedRows.filter((row) => {
+    const progress = getInstructionProgress(row);
+    return progress.total === 0 || progress.completed !== progress.total;
+  });
+  if (incompleteRows.length) {
+    const details = incompleteRows.slice(0, 4).map((row) => `${row.applicationNo}（${getInstructionCount(row)}）`).join("\n");
+    const suffix = incompleteRows.length > 4 ? `\n等 ${incompleteRows.length} 条记录` : "";
+    window.alert(`以下记录仍有未处理指令，不能处理完成：\n${details}${suffix}`);
+    return;
+  }
+  if (!window.confirm(`确认将选中的 ${completedRows.length} 条记录流转至“指令处理完成，待出库”吗？`)) return;
+
+  const nextOutboundId = outboundRows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  outboundRows.unshift(...completedRows.map((row, index) => ({
+    ...row,
+    id: nextOutboundId + index,
+    instructionAudit: "已审核",
+    instructions: row.instructions.map((instruction) => ({ ...instruction })),
+    status: "待出库"
+  })));
+
+  for (let index = instructionProcessingRows.length - 1; index >= 0; index -= 1) {
+    if (selected.has(instructionProcessingRows[index].id)) instructionProcessingRows.splice(index, 1);
+  }
+
+  selected.clear();
+  updateStatusTabCount("指令处理中", instructionProcessingRows.length);
+  updateStatusTabCount("待出库", outboundRows.length);
+  applyFilters();
+});
+
+$("#instructionDraftDiscard").addEventListener("click", discardInstructionStatusDrafts);
+$("#instructionDraftSave").addEventListener("click", () => {
+  instructionStatusDrafts.clear();
+  updateInstructionDraftBar();
+  renderRows();
+});
+window.addEventListener("beforeunload", (event) => {
+  if (!instructionStatusDrafts.size) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 document.querySelectorAll(".status-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
+    if (tab.dataset.status !== activeStatus && !confirmDiscardInstructionStatusDrafts()) return;
     document.querySelectorAll(".status-tab").forEach((item) => item.classList.remove("active"));
     tab.classList.add("active");
     activeStatus = tab.dataset.status;
@@ -660,10 +951,14 @@ $(".menu-toggle").addEventListener("click", () => {
   document.body.classList.toggle("sidebar-collapsed");
 });
 $("#exportButton").addEventListener("click", () => {
-  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签","入库时间","申请箱数","申请箱数总体积","收费托数"];
-  if (isApprovalView()) requestHeader.push("指令");
-  else if (isInstructionPendingView()) requestHeader.push("财务审核", "指令状态", "指令");
-  else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令审核", "指令");
+  if (instructionStatusDrafts.size) {
+    window.alert("请先保存或放弃指令修改，再执行导出");
+    return;
+  }
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
+  if (isApprovalView() || isTerminalRequestView()) requestHeader.push("指令数量", "指令");
+  else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令数量", "指令");
+  requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
   const header = isRequestTableView()
     ? requestHeader
     : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
@@ -671,17 +966,17 @@ $("#exportButton").addEventListener("click", () => {
     if (!isRequestTableView()) {
       return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
     }
-    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet,r.inboundTime,r.appliedBoxes,r.appliedVolume,r.chargedPallets];
-    if (isApprovalView()) requestRow.push(getInstructionText(r));
-    else if (isInstructionPendingView()) requestRow.push(r.financialAudit, getInstructionProgress(r).status, getInstructionText(r));
-    else if (isInstructionView() || isOutboundView()) requestRow.push(r.financialAudit, r.instructionAudit, getInstructionText(r));
+    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
+    if (isApprovalView() || isTerminalRequestView()) requestRow.push(getInstructionCount(r), getInstructionText(r));
+    else if (isInstructionView() || isOutboundView()) requestRow.push(r.financialAudit, getInstructionCount(r), getInstructionText(r));
+    requestRow.push(r.inboundTime, r.appliedBoxes, r.appliedVolume, r.chargedPallets);
     return requestRow;
   })];
   const csv = "\ufeff" + lines.map((line) => line.map((cell) => `"${String(cell).replaceAll('"','""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = isApprovalView() ? "待审批.csv" : isInstructionView() ? "指令处理.csv" : isShippedView() ? "已出库.csv" : isOutboundView() ? "待出库.csv" : isRejectedView() ? "审批拒绝.csv" : "暂存库存.csv";
+  link.download = isApprovalView() ? "待审批.csv" : isInstructionView() ? "指令处理.csv" : isShippedView() ? "已出库.csv" : isOutboundView() ? "待出库.csv" : isDestroyedView() ? "销毁.csv" : isRejectedView() ? "审批拒绝.csv" : "暂存库存.csv";
   link.click();
   URL.revokeObjectURL(url);
 });
@@ -830,23 +1125,63 @@ function renderCargoBoxRows(row) {
 
 function getActiveInstructionRows() {
   if (!activeReleaseRow) return [];
-  return instructionRowsByInventory.get(activeReleaseRow.id) || [];
+  return ensureInstructionDetailRows(activeReleaseRow);
+}
+
+function renderInstructionImages(row) {
+  const images = row.images || [];
+  const thumbnails = images.map((image, index) => `<span class="instruction-image-item">
+    <a href="${escapeHtml(image.url)}" target="_blank" rel="noopener" title="查看${escapeHtml(image.name)}"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.name)}" /></a>
+    <button class="instruction-image-remove" data-code="${escapeHtml(row.code)}" data-image-index="${index}" type="button" aria-label="删除${escapeHtml(image.name)}">×</button>
+  </span>`).join("");
+  return `<div class="instruction-image-cell">
+    <div class="instruction-image-list">${thumbnails || '<span class="instruction-image-empty">暂无图片</span>'}</div>
+    <div class="instruction-image-actions">
+      <button class="instruction-image-upload" data-code="${escapeHtml(row.code)}" type="button" ${images.length >= 9 ? "disabled" : ""}>上传图片</button>
+      <input class="instruction-image-input" data-code="${escapeHtml(row.code)}" type="file" accept="image/*" multiple hidden />
+      <span>${images.length}/9</span>
+    </div>
+  </div>`;
 }
 
 function renderInstructionList() {
   const target = $("#instructionBody");
   const rows = getActiveInstructionRows();
-  const instructionEditable = instructionEditableStatuses.has(activeReleaseStatus);
+  const statusAdjustable = ["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus);
+  const rowCodes = new Set(rows.map((row) => row.code));
+  selectedDetailInstructionCodes.forEach((code) => {
+    if (!rowCodes.has(code)) selectedDetailInstructionCodes.delete(code);
+  });
+  const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
+  const selectedPendingRows = statusAdjustable ? selectedRows.filter((row) => (row.status || "待处理") === "待处理") : [];
+  const selectAllControl = $("#instructionDetailSelectAll");
+  selectAllControl.disabled = rows.length === 0;
+  selectAllControl.checked = rows.length > 0 && rows.every((row) => selectedDetailInstructionCodes.has(row.code));
+  selectAllControl.indeterminate = !selectAllControl.checked && selectedRows.length > 0;
+  $("#instructionBatchRemark").disabled = selectedRows.length === 0;
+  $("#instructionDownloadImages").disabled = !selectedRows.some((row) => row.images?.length);
+  $("#instructionBatchComplete").hidden = !statusAdjustable;
+  $("#instructionBatchComplete").disabled = selectedPendingRows.length === 0;
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="11"><i>▤</i>暂无数据</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="15"><i>▤</i>暂无数据</td></tr>';
     return;
   }
-  target.innerHTML = rows.map((row) => {
+  target.innerHTML = rows.map((row, index) => {
     const total = Number(row.price || 0) * Number(row.quantity || 1);
+    const status = row.status || "待处理";
+    const statusDisplay = statusAdjustable
+      ? `<select class="instruction-detail-status ${status === "已处理" ? "is-complete" : "is-pending"}" data-instruction-index="${index}" aria-label="调整${row.name}的指令状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
+      : `<span class="instruction-detail-status-tag ${status === "已处理" ? "is-complete" : "is-pending"}">${status}</span>`;
+    const operationControl = `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>`;
+    const remarkControl = row.remark
+      ? `<div class="instruction-remark-display"><span title="${escapeHtml(row.remark)}">${escapeHtml(row.remark)}</span><button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">修改</button></div>`
+      : `<button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">备注</button>`;
+    const instructionCheck = `<input class="instruction-row-status-check" type="checkbox" data-code="${row.code}" aria-label="选择${row.name}" ${selectedDetailInstructionCodes.has(row.code) ? "checked" : ""} />`;
     return `<tr>
-      <td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
+      <td class="instruction-check-col">${instructionCheck}</td><td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
       <td>${row.currency}</td><td>${Number(total.toFixed(2))}</td><td>${row.addedAt}</td><td>${row.addedBy}</td>
-      <td>${row.description}</td><td>${instructionEditable ? `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>` : "-"}</td>
+      <td>${row.description}</td><td>${remarkControl}</td>
+      <td>${renderInstructionImages(row)}</td><td>${statusDisplay}</td><td>${operationControl}</td>
     </tr>`;
   }).join("");
 }
@@ -863,18 +1198,24 @@ function getFilteredInstructionCatalog() {
 function renderInstructionPicker() {
   const rows = getFilteredInstructionCatalog();
   const displayRows = [...rows, ...Array(Math.max(0, 18 - rows.length)).fill(null)].slice(0, 18);
-  $("#instructionPickerBody").innerHTML = displayRows.map((row) => `<tr>
-    <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${row.code}"` : "disabled"} ${row && instructionDraftCodes.has(row.code) ? "checked" : ""} /></td>
+  $("#instructionPickerBody").innerHTML = displayRows.map((row) => {
+    const alreadyAdded = row && instructionExistingCatalogCodes.has(row.code);
+    return `<tr>
+    <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${row.code}"` : "disabled"} ${row && (instructionDraftCodes.has(row.code) || alreadyAdded) ? "checked" : ""} ${alreadyAdded ? 'disabled title="已添加"' : ""} /></td>
     <td>${row?.code || ""}</td><td>${row?.name || ""}</td><td>${row?.type || ""}</td><td>${row?.unit || ""}</td>
     <td>${row?.price || ""}</td><td>${row?.currency || ""}</td><td>${row?.description || ""}</td>
-  </tr>`).join("");
-  $("#instructionSelectAll").checked = instructionDraftCodes.size === instructionCatalog.length;
+  </tr>`;
+  }).join("");
+  const availableCodes = instructionCatalog.filter((row) => !instructionExistingCatalogCodes.has(row.code)).map((row) => row.code);
+  $("#instructionSelectAll").checked = availableCodes.length > 0 && availableCodes.every((code) => instructionDraftCodes.has(code));
+  $("#instructionSelectAll").disabled = availableCodes.length === 0;
   $("#instructionSelectedCount").textContent = `已选中${instructionDraftCodes.size}条`;
 }
 
 function openInstructionPicker() {
   const existing = getActiveInstructionRows();
-  instructionDraftCodes = new Set(existing.length ? existing.map((row) => row.code) : instructionCatalog.slice(0, 3).map((row) => row.code));
+  instructionExistingCatalogCodes = new Set(existing.map((row) => row.catalogCode).filter(Boolean));
+  instructionDraftCodes = new Set();
   $("#instructionSearchName").value = "";
   $("#instructionSearchType").value = "";
   $("#instructionOverlay").hidden = false;
@@ -890,7 +1231,7 @@ const releaseForm = $("#releaseForm");
 let activeReleaseRow = null;
 let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
-const instructionEditableStatuses = new Set(["暂存", "待审批", "指令待处理", "指令处理中"]);
+const selectedDetailInstructionCodes = new Set();
 
 function normalizeReleaseRow(row) {
   const pallet = row.pallet || "-";
@@ -919,16 +1260,50 @@ function normalizeReleaseRow(row) {
   };
 }
 
+const marketplaceReleaseTypes = new Set(["Walmart", "Tiktok"]);
+
+function isMarketplaceRelease() {
+  return marketplaceReleaseTypes.has($("#releaseApplication").value);
+}
+
+function isPrivateAddressRelease() {
+  return $("#releaseApplication").value === "私人地址";
+}
+
+function updateReleaseTextCount(inputSelector, countSelector) {
+  $(countSelector).textContent = String($(inputSelector).value.length);
+}
+
+function updateReleaseApplicationFields() {
+  const marketplace = isMarketplaceRelease();
+  const privateAddress = isPrivateAddressRelease();
+  $("#marketplaceAddressTitle").hidden = !marketplace;
+  document.querySelectorAll(".fba-release-field").forEach((field) => { field.hidden = marketplace || privateAddress; });
+  document.querySelectorAll(".marketplace-release-field").forEach((field) => { field.hidden = !marketplace; });
+  document.querySelectorAll(".private-release-field").forEach((field) => { field.hidden = !privateAddress; });
+  $("#releaseApplication").disabled = activeReleaseReadOnly;
+  document.querySelectorAll(".fba-release-field input, .fba-release-field select, .fba-release-field button").forEach((control) => {
+    control.disabled = activeReleaseReadOnly || marketplace || privateAddress;
+  });
+  document.querySelectorAll(".marketplace-release-field input, .marketplace-release-field select, .marketplace-release-field button").forEach((control) => {
+    control.disabled = activeReleaseReadOnly || !marketplace;
+  });
+  document.querySelectorAll(".private-release-field input, .private-release-field select, .private-release-field button, .private-release-field textarea").forEach((control) => {
+    control.disabled = activeReleaseReadOnly || !privateAddress;
+  });
+  releaseOverlay.classList.toggle("private-address-mode", privateAddress);
+  $("#instructionSection").hidden = false;
+}
+
 function setReleaseDrawerMode(readOnly, status) {
   activeReleaseReadOnly = readOnly;
   activeReleaseStatus = status;
-  document.querySelectorAll("#releaseForm > .release-fields input, #releaseForm > .release-fields select, #releaseForm > .release-fields button").forEach((control) => {
-    control.disabled = readOnly;
-  });
+  updateReleaseApplicationFields();
   $("#releaseConfirm").hidden = readOnly;
   $("#releaseCancel").textContent = readOnly ? "关闭" : "取消";
-  const instructionEditable = instructionEditableStatuses.has(status);
-  $("#instructionAdd").hidden = !instructionEditable;
+  $("#instructionAdd").hidden = false;
+  $("#instructionBatchComplete").hidden = !["指令待处理", "指令处理中", "待出库"].includes(status);
+  $("#cargoBoxSection").hidden = !readOnly && status === "暂存";
   releaseForm.classList.toggle("release-readonly", readOnly);
 }
 
@@ -937,15 +1312,22 @@ function openReleaseDrawer(sourceRow, options = {}) {
   const readOnly = Boolean(options.readOnly);
   const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
+  selectedDetailInstructionCodes.clear();
+  ensureInstructionDetailRows(sourceRow);
   releaseForm.reset();
+  const sourceApplication = row.releaseApplication || row.applicationType;
+  const mappedApplication = sourceApplication === "其他地址" ? "私人地址" : sourceApplication;
+  $("#releaseApplication").value = marketplaceReleaseTypes.has(mappedApplication) || mappedApplication === "私人地址" ? mappedApplication : "FBA";
   $("#releaseContainer").textContent = row.container;
   $("#releaseDispatch").textContent = row.dispatch;
   $("#releasePallet").textContent = row.pallet;
   $("#releaseTransfer").textContent = row.transfer;
   $("#releaseUnsent").textContent = row.unsent;
   $("#releaseBoxes").max = Math.max(1, row.unsent);
+  $("#releasePrivateBoxes").max = Math.max(1, row.unsent);
   $("#releaseBoxes").placeholder = "请输入";
   $("#releaseBoxes").setCustomValidity("");
+  $("#releasePrivateBoxes").setCustomValidity("");
   $("#releaseMethod").value = [...$("#releaseMethod").options].some((option) => option.value === row.dispatch) ? row.dispatch : "Truck-Amazon";
   const destination = $("#releaseDestination");
   destination.value = [...destination.options].some((option) => option.value === row.destination) ? row.destination : "";
@@ -953,14 +1335,19 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseReference").value = row.referenceId;
   $("#releaseBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
   $("#releaseDate").value = (row.scheduledShippingTime || row.time || "").slice(0, 10);
+  $("#releasePrivateDate").value = (row.scheduledShippingTime || "").slice(0, 10);
   $("#releaseRemark").value = row.customerRemark || "";
   $("#uploadName").textContent = "";
+  $("#privateUploadName").textContent = "";
+  updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount");
+  updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount");
   setReleaseDrawerMode(readOnly, sourceStatus);
+  $("#releaseTitle").textContent = readOnly ? "运单详情" : "放货";
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
   renderCargoBoxRows(row);
   renderInstructionList();
-  if (!readOnly) requestAnimationFrame(() => destination.focus());
+  if (!readOnly) requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : destination).focus());
 }
 
 function closeReleaseDrawer() {
@@ -968,8 +1355,11 @@ function closeReleaseDrawer() {
   $("#instructionOverlay").hidden = true;
   $("#instructionEditOverlay").hidden = true;
   $("#instructionDeleteOverlay").hidden = true;
+  $("#instructionBatchRemarkOverlay").hidden = true;
+  $("#instructionRemarkOverlay").hidden = true;
   document.body.classList.remove("release-open");
   activeReleaseRow = null;
+  selectedDetailInstructionCodes.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
   releaseForm.reset();
@@ -1012,22 +1402,72 @@ $("#instructionPickerBody").addEventListener("change", (event) => {
   renderInstructionPicker();
 });
 $("#instructionSelectAll").addEventListener("change", (event) => {
-  instructionDraftCodes = event.target.checked ? new Set(instructionCatalog.map((row) => row.code)) : new Set();
+  instructionDraftCodes = event.target.checked
+    ? new Set(instructionCatalog.filter((row) => !instructionExistingCatalogCodes.has(row.code)).map((row) => row.code))
+    : new Set();
   renderInstructionPicker();
 });
 $("#instructionConfirm").addEventListener("click", () => {
   if (!activeReleaseRow) return;
-  const rows = instructionCatalog
+  if (!instructionDraftCodes.size) {
+    window.alert("请先选择需要新增的指令");
+    return;
+  }
+  const existingRows = getActiveInstructionRows();
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  const createdAt = Date.now();
+  const addedRows = instructionCatalog
     .filter((row) => instructionDraftCodes.has(row.code))
-    .map((row) => ({ ...row, quantity: "1", addedAt: "2026-07-08 18:30:00", addedBy: "天朗（付豪）" }));
-  instructionRowsByInventory.set(activeReleaseRow.id, rows);
+    .map((row, index) => ({
+      ...row,
+      catalogCode: row.code,
+      code: `${detailKey}-NEW-${createdAt}-${index + 1}`,
+      quantity: "1",
+      addedAt: "2026-07-25 14:00:00",
+      addedBy: "天朗（付豪）",
+      remark: "",
+      images: [],
+      status: "待处理"
+    }));
+  const rows = [...existingRows, ...addedRows];
+  instructionRowsByInventory.set(detailKey, rows);
+  syncInstructionDetails(detailKey, rows);
   closeInstructionPicker();
   renderInstructionList();
+  renderRows();
 });
 
 $("#instructionBody").addEventListener("click", (event) => {
+  const uploadButton = event.target.closest(".instruction-image-upload");
+  const removeImageButton = event.target.closest(".instruction-image-remove");
+  const remarkButton = event.target.closest(".instruction-remark-edit");
   const editButton = event.target.closest(".instruction-edit");
   const deleteButton = event.target.closest(".instruction-delete");
+  if (uploadButton) {
+    const input = event.target.closest("td")?.querySelector(`.instruction-image-input[data-code="${CSS.escape(uploadButton.dataset.code)}"]`);
+    input?.click();
+    return;
+  }
+  if (removeImageButton) {
+    const row = getActiveInstructionRows().find((item) => item.code === removeImageButton.dataset.code);
+    const imageIndex = Number(removeImageButton.dataset.imageIndex);
+    const image = row?.images?.[imageIndex];
+    if (!row || !image) return;
+    if (String(image.url).startsWith("blob:")) URL.revokeObjectURL(image.url);
+    row.images.splice(imageIndex, 1);
+    renderInstructionList();
+    return;
+  }
+  if (remarkButton) {
+    const row = getActiveInstructionRows().find((item) => item.code === remarkButton.dataset.code);
+    if (!row) return;
+    editingRemarkInstructionCode = row.code;
+    $("#instructionRemarkTitle").textContent = row.remark ? "修改备注" : "备注";
+    $("#instructionRemarkText").value = row.remark || "";
+    $("#instructionRemarkOverlay").hidden = false;
+    requestAnimationFrame(() => $("#instructionRemarkText").focus());
+    return;
+  }
   if (editButton) {
     const row = getActiveInstructionRows().find((item) => item.code === editButton.dataset.code);
     if (!row) return;
@@ -1050,6 +1490,123 @@ $("#instructionBody").addEventListener("click", (event) => {
   }
 });
 
+$("#instructionBody").addEventListener("change", (event) => {
+  const imageInput = event.target.closest(".instruction-image-input");
+  if (imageInput) {
+    const row = getActiveInstructionRows().find((item) => item.code === imageInput.dataset.code);
+    if (!row) return;
+    const files = [...(imageInput.files || [])];
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length !== files.length) window.alert("只能上传图片文件");
+    const remaining = Math.max(0, 9 - row.images.length);
+    if (imageFiles.length > remaining) window.alert(`每条指令最多上传9张图片，本次仅添加前${remaining}张`);
+    imageFiles.slice(0, remaining).forEach((file) => {
+      row.images.push({ name: file.name, url: URL.createObjectURL(file) });
+    });
+    imageInput.value = "";
+    renderInstructionList();
+    return;
+  }
+  const checkbox = event.target.closest(".instruction-row-status-check");
+  if (checkbox) {
+    checkbox.checked ? selectedDetailInstructionCodes.add(checkbox.dataset.code) : selectedDetailInstructionCodes.delete(checkbox.dataset.code);
+    renderInstructionList();
+    return;
+  }
+  const control = event.target.closest(".instruction-detail-status");
+  if (!control || !activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus)) return;
+  const instructionIndex = Number(control.dataset.instructionIndex);
+  const rows = getActiveInstructionRows();
+  const instruction = rows[instructionIndex];
+  if (!instruction) return;
+  instruction.status = control.value;
+  if (control.value === "已处理") selectedDetailInstructionCodes.delete(instruction.code);
+  syncInstructionStatus(getInstructionDetailKey(activeReleaseRow), instructionIndex, control.value);
+  renderInstructionList();
+  renderRows();
+});
+
+$("#instructionDetailSelectAll").addEventListener("change", (event) => {
+  getActiveInstructionRows().forEach((row) => {
+    event.target.checked ? selectedDetailInstructionCodes.add(row.code) : selectedDetailInstructionCodes.delete(row.code);
+  });
+  renderInstructionList();
+});
+
+$("#instructionBatchRemark").addEventListener("click", () => {
+  if (!selectedDetailInstructionCodes.size) return;
+  $("#instructionBatchRemarkCount").textContent = String(selectedDetailInstructionCodes.size);
+  $("#instructionBatchRemarkText").value = "";
+  document.querySelector('input[name="instructionBatchRemarkMode"][value="append"]').checked = true;
+  $("#instructionBatchRemarkOverlay").hidden = false;
+  requestAnimationFrame(() => $("#instructionBatchRemarkText").focus());
+});
+
+$("#instructionBatchRemarkCancel").addEventListener("click", () => {
+  $("#instructionBatchRemarkOverlay").hidden = true;
+});
+
+$("#instructionBatchRemarkConfirm").addEventListener("click", () => {
+  const remark = $("#instructionBatchRemarkText").value.trim();
+  const mode = document.querySelector('input[name="instructionBatchRemarkMode"]:checked')?.value || "append";
+  if (mode === "append" && !remark) {
+    window.alert("请输入需要追加的备注内容");
+    return;
+  }
+  getActiveInstructionRows().forEach((row) => {
+    if (!selectedDetailInstructionCodes.has(row.code)) return;
+    row.remark = mode === "append" && row.remark ? `${row.remark}\n${remark}` : remark;
+  });
+  $("#instructionBatchRemarkOverlay").hidden = true;
+  renderInstructionList();
+});
+
+$("#instructionRemarkCancel").addEventListener("click", () => {
+  $("#instructionRemarkOverlay").hidden = true;
+  editingRemarkInstructionCode = "";
+});
+
+$("#instructionRemarkConfirm").addEventListener("click", () => {
+  const row = getActiveInstructionRows().find((item) => item.code === editingRemarkInstructionCode);
+  if (!row) return;
+  row.remark = $("#instructionRemarkText").value.trim();
+  $("#instructionRemarkOverlay").hidden = true;
+  editingRemarkInstructionCode = "";
+  renderInstructionList();
+});
+
+$("#instructionDownloadImages").addEventListener("click", () => {
+  const images = getActiveInstructionRows().flatMap((row) => selectedDetailInstructionCodes.has(row.code)
+    ? (row.images || []).map((image, index) => ({ ...image, code: row.code, index }))
+    : []);
+  if (!images.length) {
+    window.alert("所选指令暂无可下载图片");
+    return;
+  }
+  images.forEach((image) => {
+    const link = document.createElement("a");
+    link.href = image.url;
+    link.download = `${image.code}-${image.index + 1}-${image.name}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
+});
+
+$("#instructionBatchComplete").addEventListener("click", () => {
+  if (!activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus) || !selectedDetailInstructionCodes.size) return;
+  const rows = getActiveInstructionRows();
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  rows.forEach((instruction, index) => {
+    if (!selectedDetailInstructionCodes.has(instruction.code) || instruction.status === "已处理") return;
+    instruction.status = "已处理";
+    syncInstructionStatus(detailKey, index, "已处理");
+  });
+  selectedDetailInstructionCodes.clear();
+  renderInstructionList();
+  renderRows();
+});
+
 $("#instructionEditCancel").addEventListener("click", () => {
   $("#instructionEditOverlay").hidden = true;
   editingInstructionCode = "";
@@ -1065,10 +1622,13 @@ $("#instructionEditForm").addEventListener("submit", (event) => {
     quantity: $("#editInstructionQuantity").value,
     currency: $("#editInstructionCurrency").value
   } : row);
-  instructionRowsByInventory.set(activeReleaseRow.id, rows);
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  instructionRowsByInventory.set(detailKey, rows);
+  syncInstructionDetails(detailKey, rows);
   $("#instructionEditOverlay").hidden = true;
   editingInstructionCode = "";
   renderInstructionList();
+  renderRows();
 });
 $("#instructionDeleteCancel").addEventListener("click", () => {
   $("#instructionDeleteOverlay").hidden = true;
@@ -1076,10 +1636,18 @@ $("#instructionDeleteCancel").addEventListener("click", () => {
 });
 $("#instructionDeleteConfirm").addEventListener("click", () => {
   if (!activeReleaseRow || !deletingInstructionCode) return;
-  instructionRowsByInventory.set(activeReleaseRow.id, getActiveInstructionRows().filter((row) => row.code !== deletingInstructionCode));
+  const deletingRow = getActiveInstructionRows().find((row) => row.code === deletingInstructionCode);
+  deletingRow?.images?.forEach((image) => {
+    if (String(image.url).startsWith("blob:")) URL.revokeObjectURL(image.url);
+  });
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  const remainingRows = getActiveInstructionRows().filter((row) => row.code !== deletingInstructionCode);
+  instructionRowsByInventory.set(detailKey, remainingRows);
+  syncInstructionDetails(detailKey, remainingRows);
   $("#instructionDeleteOverlay").hidden = true;
   deletingInstructionCode = "";
   renderInstructionList();
+  renderRows();
 });
 
 document.addEventListener("keydown", (event) => {
@@ -1092,6 +1660,11 @@ document.addEventListener("keydown", (event) => {
   } else if (!$("#instructionDeleteOverlay").hidden) {
     $("#instructionDeleteOverlay").hidden = true;
     deletingInstructionCode = "";
+  } else if (!$("#instructionBatchRemarkOverlay").hidden) {
+    $("#instructionBatchRemarkOverlay").hidden = true;
+  } else if (!$("#instructionRemarkOverlay").hidden) {
+    $("#instructionRemarkOverlay").hidden = true;
+    editingRemarkInstructionCode = "";
   } else if (!$("#instructionOverlay").hidden) {
     closeInstructionPicker();
   } else if (!releaseOverlay.hidden) {
@@ -1102,6 +1675,16 @@ $("#uploadButton").addEventListener("click", () => $("#releaseFile").click());
 $("#releaseFile").addEventListener("change", (event) => {
   $("#uploadName").textContent = event.target.files[0]?.name || "";
 });
+$("#releaseApplication").addEventListener("change", () => {
+  updateReleaseApplicationFields();
+  requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : $("#releaseDestination")).focus());
+});
+$("#releaseAddressDetail").addEventListener("input", () => updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount"));
+$("#releaseOverseasRemark").addEventListener("input", () => updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount"));
+$("#privateUploadButton").addEventListener("click", () => $("#releasePrivateFile").click());
+$("#releasePrivateFile").addEventListener("change", (event) => {
+  $("#privateUploadName").textContent = event.target.files[0]?.name || "";
+});
 releaseForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (activeReleaseReadOnly) {
@@ -1109,16 +1692,20 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   if (!releaseForm.reportValidity() || !activeReleaseRow) return;
-  const boxes = Number($("#releaseBoxes").value);
-  if (boxes > activeReleaseRow.unsent) {
-    $("#releaseBoxes").setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
-    $("#releaseBoxes").reportValidity();
-    return;
+  if (!isMarketplaceRelease()) {
+    const boxesControl = isPrivateAddressRelease() ? $("#releasePrivateBoxes") : $("#releaseBoxes");
+    const boxes = Number(boxesControl.value);
+    if (boxes > activeReleaseRow.unsent) {
+      boxesControl.setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
+      boxesControl.reportValidity();
+      return;
+    }
+    boxesControl.setCustomValidity("");
   }
-  $("#releaseBoxes").setCustomValidity("");
   closeReleaseDrawer();
 });
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
+$("#releasePrivateBoxes").addEventListener("input", () => $("#releasePrivateBoxes").setCustomValidity(""));
 
 function buildWatermarks() {
   const layer = $("#watermarks");
