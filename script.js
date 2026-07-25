@@ -616,6 +616,27 @@ function renderInstructionLines(row) {
   }).join("")}</div>`;
 }
 
+function getListInstructionRows(row) {
+  return ensureInstructionDetailRows(row);
+}
+
+function renderInstructionRemarkSummary(row) {
+  const remarks = getListInstructionRows(row).map((instruction) => instruction.remark).filter(Boolean);
+  return remarks.length ? `<span class="list-instruction-remark" title="${escapeHtml(remarks.join("；"))}">${escapeHtml(remarks.join("；"))}</span>` : '<span class="list-instruction-empty">备注</span>';
+}
+
+function renderInstructionImageSummary(row) {
+  const count = getListInstructionRows(row).reduce((total, instruction) => total + (instruction.images?.length || 0), 0);
+  return `<span class="list-instruction-images">${count ? `${count} 张` : "暂无图片"}</span>`;
+}
+
+function renderInstructionStatusSummary(row) {
+  const instructions = getListInstructionRows(row);
+  const completed = instructions.filter((instruction) => instruction.status === "已处理").length;
+  const pending = Math.max(0, instructions.length - completed);
+  return `<span class="list-instruction-status ${pending === 0 && instructions.length ? "is-complete" : "is-pending"}">${completed}/${instructions.length} 已处理</span>`;
+}
+
 function getInstructionText(row) {
   return row.instructions?.map((instruction) => `[${instruction.completed ? "已处理" : "待处理"}] ${instruction.text}`).join("；") || "";
 }
@@ -678,6 +699,7 @@ function renderTableChrome() {
   document.body.classList.toggle("instruction-pending-view", isInstructionPendingView());
   document.body.classList.toggle("outbound-view", isOutboundView());
   document.body.classList.toggle("rejection-view", isTerminalRequestView());
+  document.body.classList.toggle("staging-view", activeStatus === "暂存");
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
   $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
   $("#contextAction").hidden = isTerminalRequestView();
@@ -690,7 +712,7 @@ function renderTableChrome() {
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
     <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
-      ? '<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
+      ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>${isApprovalView() ? '<th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th>' : ""}`
       : (isInstructionView() || isOutboundView())
         ? '<th class="financial-audit-col">财务审核</th><th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
         : ""}
@@ -699,7 +721,7 @@ function renderTableChrome() {
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
+    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th>${activeStatus === "暂存" ? '<th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th>' : ""}<th class="sortable">入库时间</th>
     <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
     <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
   </tr>`;
@@ -719,7 +741,8 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    body.innerHTML = `<tr><td class="empty-row" colspan="${(isInstructionView() || isOutboundView()) ? 22 : (isApprovalView() || isTerminalRequestView()) ? 21 : 19}">暂无匹配库存记录</td></tr>`;
+    const emptyColumns = isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 24 : isTerminalRequestView() ? 21 : activeStatus === "暂存" ? 22 : 19;
+    body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
     return;
@@ -736,7 +759,8 @@ function renderRows() {
       <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       ${(isApprovalView() || isTerminalRequestView())
         ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
-           <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
+           <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>
+           ${isApprovalView() ? `<td class="instruction-remark-col">${renderInstructionRemarkSummary(row)}</td><td class="instruction-image-col">${renderInstructionImageSummary(row)}</td><td class="instruction-status-col">${renderInstructionStatusSummary(row)}</td>` : ""}`
         : (isInstructionView() || isOutboundView())
           ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
              <td class="instruction-count-col">${renderInstructionCount(row)}</td>
@@ -763,6 +787,7 @@ function renderRows() {
       <td title="${row.destination}">${row.destination}</td>
       <td title="${row.dispatch}">${row.dispatch}</td>
       <td title="${row.pallet}">${row.pallet}</td>
+      ${activeStatus === "暂存" ? `<td class="instruction-remark-col">${renderInstructionRemarkSummary(row)}</td><td class="instruction-image-col">${renderInstructionImageSummary(row)}</td><td class="instruction-status-col">${renderInstructionStatusSummary(row)}</td>` : ""}
       <td>${row.time}</td>
       <td>${row.weight || 0}</td><td>${row.volume || 0}</td><td>${row.boxes}</td>
       <td>${row.pending}</td><td>${row.unsent}</td><td>${row.sent}</td>

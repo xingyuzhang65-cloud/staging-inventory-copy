@@ -554,7 +554,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .outbound-view .inventory-table .instruction-list-col { width: 340px; }
 .instruction-view:not(.instruction-pending-view) .inventory-table th.instruction-list-col,
 .outbound-view .inventory-table th.instruction-list-col { text-align: left; }
-.approval-view .inventory-table,
+.approval-view .inventory-table { min-width: 3200px; }
 .rejection-view .inventory-table { min-width: 2790px; }
 .approval-view .inventory-table td,
 .rejection-view .inventory-table td { height: 88px; }
@@ -564,6 +564,22 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .rejection-view .inventory-table .instruction-list-col { width: 340px; }
 .approval-view .inventory-table th.instruction-list-col,
 .rejection-view .inventory-table th.instruction-list-col { text-align: left; }
+.approval-view .inventory-table .instruction-remark-col,
+.staging-view .inventory-table .instruction-remark-col { width: 180px; }
+.approval-view .inventory-table .instruction-image-col,
+.staging-view .inventory-table .instruction-image-col { width: 100px; }
+.approval-view .inventory-table .instruction-status-col,
+.staging-view .inventory-table .instruction-status-col { width: 110px; }
+.staging-view .inventory-table { min-width: 1500px; }
+.list-instruction-remark,
+.list-instruction-images,
+.list-instruction-status { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.list-instruction-remark { color: #4b5965; }
+.list-instruction-images { color: #1682e6; }
+.list-instruction-status { min-width: 72px; padding: 3px 7px; border-radius: 999px; color: #b7791f; background: #fff7e6; font-size: 11px; }
+.list-instruction-status.is-complete { color: #1d8a56; background: #eaf8f0; }
+.list-instruction-status.is-pending { color: #b7791f; background: #fff7e6; }
+.list-instruction-empty { color: #a7aeb5; }
 .request-view .inventory-table th.financial-audit-col,
 .request-view .inventory-table td.financial-audit-col { width: 96px; }
 .request-view .inventory-table th.instruction-count-col,
