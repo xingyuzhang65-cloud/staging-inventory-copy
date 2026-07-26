@@ -185,13 +185,14 @@
         <label class="release-field fba-release-field"><span>备注</span><input id="releaseRemark" placeholder="请输入" /></label>
         <label class="release-field upload-field fba-release-field"><span>附件上传</span><span><input id="releaseFile" type="file" hidden /><button class="upload-button" id="uploadButton" type="button">↥&nbsp; 上传</button><em id="uploadName"></em></span></label>
 
-        <label class="release-field marketplace-release-field" hidden><span class="required">仓库代码</span><input id="releaseWarehouseCode" required placeholder="请输入仓库代码" /></label>
-        <label class="release-field marketplace-release-field" hidden><span class="required">邮编</span><input id="releasePostalCode" required placeholder="请输入邮编" /></label>
+        <label class="release-field marketplace-release-field" hidden><span class="required">目的地</span><input id="releaseWarehouseCode" required placeholder="请输入目的地" /></label>
+        <label class="release-field marketplace-release-field" hidden><span class="required">箱数</span><input id="releaseMarketplaceBoxes" type="number" min="1" required placeholder="请输入" /></label>
+        <label class="release-field marketplace-release-field" hidden><span>邮编</span><input id="releasePostalCode" placeholder="请输入邮编" /></label>
         <label class="release-field marketplace-release-field" hidden><span>收件人</span><input id="releaseRecipient" placeholder="请输入收件人" /></label>
-        <label class="release-field marketplace-release-field" hidden><span class="required">城市</span><input id="releaseCity" required placeholder="请输入城市" /></label>
+        <label class="release-field marketplace-release-field" hidden><span>城市</span><input id="releaseCity" placeholder="请输入城市" /></label>
         <label class="release-field marketplace-release-field" hidden><span>州</span><input id="releaseState" placeholder="请输入州" /></label>
         <label class="release-field marketplace-release-field" hidden><span>公司</span><input id="releaseCompany" placeholder="请输入公司" /></label>
-        <label class="release-field marketplace-release-field counted-field" hidden><span class="required">地址详情</span><span class="counted-input"><input id="releaseAddressDetail" maxlength="100" required placeholder="请输入地址详情" /><em><b id="releaseAddressCount">0</b>/100</em></span></label>
+        <label class="release-field marketplace-release-field counted-field" hidden><span>地址详情</span><span class="counted-input"><input id="releaseAddressDetail" maxlength="100" placeholder="请输入地址详情" /><em><b id="releaseAddressCount">0</b>/100</em></span></label>
         <label class="release-field marketplace-release-field" hidden><span class="required">预约发货时间</span><span class="release-date"><input id="releaseMarketplaceDate" type="datetime-local" required /><i>□</i></span></label>
         <label class="release-field marketplace-release-field" hidden><span class="required">派送方式</span><select id="releaseMarketplaceDispatch" required><option value="">请选择派送方式</option><option>Truck-Walmart</option><option>Truck-Other</option><option>FEDEX</option><option>UPS</option></select></label>
         <label class="release-field marketplace-release-field counted-field" hidden><span>海外仓备注</span><span class="counted-input"><input id="releaseOverseasRemark" maxlength="500" placeholder="请输入海外仓备注" /><em><b id="releaseRemarkCount">0</b>/500</em></span></label>
@@ -246,7 +247,7 @@
     <table class="instruction-table">
       <thead><tr>
         <th class="instruction-check-col"><input id="instructionDetailSelectAll" type="checkbox" aria-label="全选操作指令" /></th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*计费单价（元）</th><th>*计费数量</th>
-        <th>*币种</th><th>总价（元）</th><th>添加时间</th><th>添加人</th><th>描述</th><th>备注</th><th>图片</th><th>指令状态</th><th>操作</th>
+        <th>*币种</th><th>总价（元）</th><th>添加时间</th><th>添加人</th><th>描述</th><th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th>指令状态</th><th>操作</th>
       </tr></thead>
       <tbody id="instructionBody"></tbody>
     </table>

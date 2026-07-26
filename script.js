@@ -1179,16 +1179,22 @@ function renderInstructionList() {
   });
   const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
   const selectedPendingRows = statusAdjustable ? selectedRows.filter((row) => (row.status || "待处理") === "待处理") : [];
+  const hasInstructionRows = rows.length > 0;
   const selectAllControl = $("#instructionDetailSelectAll");
   selectAllControl.disabled = rows.length === 0;
   selectAllControl.checked = rows.length > 0 && rows.every((row) => selectedDetailInstructionCodes.has(row.code));
   selectAllControl.indeterminate = !selectAllControl.checked && selectedRows.length > 0;
+  $("#instructionBatchRemark").hidden = !hasInstructionRows;
+  $("#instructionDownloadImages").hidden = !hasInstructionRows;
+  document.querySelectorAll(".instruction-table .instruction-remark-col, .instruction-table .instruction-image-col").forEach((column) => {
+    column.hidden = !hasInstructionRows;
+  });
   $("#instructionBatchRemark").disabled = selectedRows.length === 0;
   $("#instructionDownloadImages").disabled = !selectedRows.some((row) => row.images?.length);
   $("#instructionBatchComplete").hidden = !statusAdjustable;
   $("#instructionBatchComplete").disabled = selectedPendingRows.length === 0;
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="15"><i>▤</i>暂无数据</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="13"><i>▤</i>暂无数据</td></tr>';
     return;
   }
   target.innerHTML = rows.map((row, index) => {
@@ -1349,9 +1355,11 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseTransfer").textContent = row.transfer;
   $("#releaseUnsent").textContent = row.unsent;
   $("#releaseBoxes").max = Math.max(1, row.unsent);
+  $("#releaseMarketplaceBoxes").max = Math.max(1, row.unsent);
   $("#releasePrivateBoxes").max = Math.max(1, row.unsent);
   $("#releaseBoxes").placeholder = "请输入";
   $("#releaseBoxes").setCustomValidity("");
+  $("#releaseMarketplaceBoxes").setCustomValidity("");
   $("#releasePrivateBoxes").setCustomValidity("");
   $("#releaseMethod").value = [...$("#releaseMethod").options].some((option) => option.value === row.dispatch) ? row.dispatch : "Truck-Amazon";
   const destination = $("#releaseDestination");
@@ -1359,6 +1367,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseShipment").value = row.shipmentId;
   $("#releaseReference").value = row.referenceId;
   $("#releaseBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
+  $("#releaseMarketplaceBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
   $("#releaseDate").value = (row.scheduledShippingTime || row.time || "").slice(0, 10);
   $("#releasePrivateDate").value = (row.scheduledShippingTime || "").slice(0, 10);
   $("#releaseRemark").value = row.customerRemark || "";
@@ -1717,19 +1726,22 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   if (!releaseForm.reportValidity() || !activeReleaseRow) return;
-  if (!isMarketplaceRelease()) {
-    const boxesControl = isPrivateAddressRelease() ? $("#releasePrivateBoxes") : $("#releaseBoxes");
-    const boxes = Number(boxesControl.value);
-    if (boxes > activeReleaseRow.unsent) {
-      boxesControl.setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
-      boxesControl.reportValidity();
-      return;
-    }
-    boxesControl.setCustomValidity("");
+  const boxesControl = isPrivateAddressRelease()
+    ? $("#releasePrivateBoxes")
+    : isMarketplaceRelease()
+      ? $("#releaseMarketplaceBoxes")
+      : $("#releaseBoxes");
+  const boxes = Number(boxesControl.value);
+  if (boxes > activeReleaseRow.unsent) {
+    boxesControl.setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
+    boxesControl.reportValidity();
+    return;
   }
+  boxesControl.setCustomValidity("");
   closeReleaseDrawer();
 });
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
+$("#releaseMarketplaceBoxes").addEventListener("input", () => $("#releaseMarketplaceBoxes").setCustomValidity(""));
 $("#releasePrivateBoxes").addEventListener("input", () => $("#releasePrivateBoxes").setCustomValidity(""));
 
 function buildWatermarks() {
