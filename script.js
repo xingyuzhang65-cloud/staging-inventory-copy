@@ -1167,7 +1167,7 @@ function renderReleaseAttachments() {
   $("#uploadName").textContent = attachments.length ? `已上传 ${attachments.length} 个附件` : "";
   target.innerHTML = attachments.length
     ? attachments.map((attachment) => `<div class="release-attachment-item"><span class="release-attachment-name">${attachment.kind === "image" ? "PDA图片：" : "附件："}${escapeHtml(attachment.name)}</span><a class="release-attachment-download" href="${escapeHtml(attachment.url)}" download="${escapeHtml(attachment.name)}">下载</a></div>`).join("")
-    : '<span class="release-attachment-hint">PDA 回传的图片将自动归档到此处</span>';
+    : "";
 }
 
 function renderInstructionList() {
