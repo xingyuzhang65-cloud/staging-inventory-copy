@@ -365,6 +365,7 @@ const instructionCatalog = [
   { code: "FY202509260007", name: "扣货-无免仓期", type: "仓储费", unit: "票", price: "2", currency: "人民币", description: "按1级单价收取" }
 ];
 const instructionRowsByInventory = new Map();
+const attachmentRowsByInventory = new Map();
 let instructionDraftCodes = new Set(instructionCatalog.slice(0, 3).map((row) => row.code));
 let instructionExistingCatalogCodes = new Set();
 let editingInstructionCode = "";
@@ -712,7 +713,7 @@ function renderTableChrome() {
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
     <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
-      ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>${isApprovalView() ? '<th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th>' : ""}`
+      ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
         ? '<th class="financial-audit-col">财务审核</th><th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
         : ""}
@@ -721,7 +722,7 @@ function renderTableChrome() {
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th>${activeStatus === "暂存" ? '<th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th>' : ""}<th class="sortable">入库时间</th>
+    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
     <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
     <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
   </tr>`;
@@ -741,7 +742,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    const emptyColumns = isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 24 : isTerminalRequestView() ? 21 : activeStatus === "暂存" ? 22 : 19;
+    const emptyColumns = isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 21 : isTerminalRequestView() ? 21 : 19;
     body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
@@ -759,8 +760,7 @@ function renderRows() {
       <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       ${(isApprovalView() || isTerminalRequestView())
         ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
-           <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>
-           ${isApprovalView() ? `<td class="instruction-remark-col">${renderInstructionRemarkSummary(row)}</td><td class="instruction-image-col">${renderInstructionImageSummary(row)}</td><td class="instruction-status-col">${renderInstructionStatusSummary(row)}</td>` : ""}`
+           <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
         : (isInstructionView() || isOutboundView())
           ? `<td class="financial-audit-col">${renderFinancialAudit(row.financialAudit)}</td>
              <td class="instruction-count-col">${renderInstructionCount(row)}</td>
@@ -787,7 +787,6 @@ function renderRows() {
       <td title="${row.destination}">${row.destination}</td>
       <td title="${row.dispatch}">${row.dispatch}</td>
       <td title="${row.pallet}">${row.pallet}</td>
-      ${activeStatus === "暂存" ? `<td class="instruction-remark-col">${renderInstructionRemarkSummary(row)}</td><td class="instruction-image-col">${renderInstructionImageSummary(row)}</td><td class="instruction-status-col">${renderInstructionStatusSummary(row)}</td>` : ""}
       <td>${row.time}</td>
       <td>${row.weight || 0}</td><td>${row.volume || 0}</td><td>${row.boxes}</td>
       <td>${row.pending}</td><td>${row.unsent}</td><td>${row.sent}</td>
@@ -1153,20 +1152,22 @@ function getActiveInstructionRows() {
   return ensureInstructionDetailRows(activeReleaseRow);
 }
 
-function renderInstructionImages(row) {
-  const images = row.images || [];
-  const thumbnails = images.map((image, index) => `<span class="instruction-image-item">
-    <a href="${escapeHtml(image.url)}" target="_blank" rel="noopener" title="查看${escapeHtml(image.name)}"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.name)}" /></a>
-    <button class="instruction-image-remove" data-code="${escapeHtml(row.code)}" data-image-index="${index}" type="button" aria-label="删除${escapeHtml(image.name)}">×</button>
-  </span>`).join("");
-  return `<div class="instruction-image-cell">
-    <div class="instruction-image-list">${thumbnails || '<span class="instruction-image-empty">暂无图片</span>'}</div>
-    <div class="instruction-image-actions">
-      <button class="instruction-image-upload" data-code="${escapeHtml(row.code)}" type="button" ${images.length >= 9 ? "disabled" : ""}>上传图片</button>
-      <input class="instruction-image-input" data-code="${escapeHtml(row.code)}" type="file" accept="image/*" multiple hidden />
-      <span>${images.length}/9</span>
-    </div>
-  </div>`;
+function getReleaseAttachments() {
+  if (!activeReleaseRow) return [];
+  const attachmentKey = getInstructionDetailKey(activeReleaseRow);
+  if (!attachmentRowsByInventory.has(attachmentKey)) {
+    attachmentRowsByInventory.set(attachmentKey, [...(activeReleaseRow.attachments || [])]);
+  }
+  return attachmentRowsByInventory.get(attachmentKey);
+}
+
+function renderReleaseAttachments() {
+  const target = $("#releaseAttachmentList");
+  const attachments = getReleaseAttachments();
+  $("#uploadName").textContent = attachments.length ? `已上传 ${attachments.length} 个附件` : "";
+  target.innerHTML = attachments.length
+    ? attachments.map((attachment) => `<div class="release-attachment-item"><span class="release-attachment-name">${attachment.kind === "image" ? "PDA图片：" : "附件："}${escapeHtml(attachment.name)}</span><a class="release-attachment-download" href="${escapeHtml(attachment.url)}" download="${escapeHtml(attachment.name)}">下载</a></div>`).join("")
+    : '<span class="release-attachment-hint">PDA 回传的图片将自动归档到此处</span>';
 }
 
 function renderInstructionList() {
@@ -1179,18 +1180,10 @@ function renderInstructionList() {
   });
   const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
   const selectedPendingRows = statusAdjustable ? selectedRows.filter((row) => (row.status || "待处理") === "待处理") : [];
-  const hasInstructionRows = rows.length > 0;
   const selectAllControl = $("#instructionDetailSelectAll");
   selectAllControl.disabled = rows.length === 0;
   selectAllControl.checked = rows.length > 0 && rows.every((row) => selectedDetailInstructionCodes.has(row.code));
   selectAllControl.indeterminate = !selectAllControl.checked && selectedRows.length > 0;
-  $("#instructionBatchRemark").hidden = !hasInstructionRows;
-  $("#instructionDownloadImages").hidden = !hasInstructionRows;
-  document.querySelectorAll(".instruction-table .instruction-remark-col, .instruction-table .instruction-image-col").forEach((column) => {
-    column.hidden = !hasInstructionRows;
-  });
-  $("#instructionBatchRemark").disabled = selectedRows.length === 0;
-  $("#instructionDownloadImages").disabled = !selectedRows.some((row) => row.images?.length);
   $("#instructionBatchComplete").hidden = !statusAdjustable;
   $("#instructionBatchComplete").disabled = selectedPendingRows.length === 0;
   if (!rows.length) {
@@ -1204,15 +1197,11 @@ function renderInstructionList() {
       ? `<select class="instruction-detail-status ${status === "已处理" ? "is-complete" : "is-pending"}" data-instruction-index="${index}" aria-label="调整${row.name}的指令状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
       : `<span class="instruction-detail-status-tag ${status === "已处理" ? "is-complete" : "is-pending"}">${status}</span>`;
     const operationControl = `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>`;
-    const remarkControl = row.remark
-      ? `<div class="instruction-remark-display"><span title="${escapeHtml(row.remark)}">${escapeHtml(row.remark)}</span><button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">修改</button></div>`
-      : `<button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">备注</button>`;
     const instructionCheck = `<input class="instruction-row-status-check" type="checkbox" data-code="${row.code}" aria-label="选择${row.name}" ${selectedDetailInstructionCodes.has(row.code) ? "checked" : ""} />`;
     return `<tr>
       <td class="instruction-check-col">${instructionCheck}</td><td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
       <td>${row.currency}</td><td>${Number(total.toFixed(2))}</td><td>${row.addedAt}</td><td>${row.addedBy}</td>
-      <td>${row.description}</td><td>${remarkControl}</td>
-      <td>${renderInstructionImages(row)}</td><td>${statusDisplay}</td><td>${operationControl}</td>
+      <td>${row.description}</td><td>${statusDisplay}</td><td>${operationControl}</td>
     </tr>`;
   }).join("");
 }
@@ -1371,7 +1360,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseDate").value = (row.scheduledShippingTime || row.time || "").slice(0, 10);
   $("#releasePrivateDate").value = (row.scheduledShippingTime || "").slice(0, 10);
   $("#releaseRemark").value = row.customerRemark || "";
-  $("#uploadName").textContent = "";
+  $("#releaseWarehouseRemark").value = row.warehouseRemark || "";
   $("#privateUploadName").textContent = "";
   updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount");
   updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount");
@@ -1380,6 +1369,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
   renderCargoBoxRows(row);
+  renderReleaseAttachments();
   renderInstructionList();
   if (!readOnly) requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : destination).focus());
 }
@@ -1389,15 +1379,13 @@ function closeReleaseDrawer() {
   $("#instructionOverlay").hidden = true;
   $("#instructionEditOverlay").hidden = true;
   $("#instructionDeleteOverlay").hidden = true;
-  $("#instructionBatchRemarkOverlay").hidden = true;
-  $("#instructionRemarkOverlay").hidden = true;
   document.body.classList.remove("release-open");
   activeReleaseRow = null;
   selectedDetailInstructionCodes.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
   releaseForm.reset();
-  $("#uploadName").textContent = "";
+  $("#releaseAttachmentList").replaceChildren();
 }
 
 body.addEventListener("click", (event) => {
@@ -1567,7 +1555,7 @@ $("#instructionDetailSelectAll").addEventListener("change", (event) => {
   renderInstructionList();
 });
 
-$("#instructionBatchRemark").addEventListener("click", () => {
+$("#instructionBatchRemark")?.addEventListener("click", () => {
   if (!selectedDetailInstructionCodes.size) return;
   $("#instructionBatchRemarkCount").textContent = String(selectedDetailInstructionCodes.size);
   $("#instructionBatchRemarkText").value = "";
@@ -1609,7 +1597,7 @@ $("#instructionRemarkConfirm").addEventListener("click", () => {
   renderInstructionList();
 });
 
-$("#instructionDownloadImages").addEventListener("click", () => {
+$("#instructionDownloadImages")?.addEventListener("click", () => {
   const images = getActiveInstructionRows().flatMap((row) => selectedDetailInstructionCodes.has(row.code)
     ? (row.images || []).map((image, index) => ({ ...image, code: row.code, index }))
     : []);
@@ -1707,7 +1695,16 @@ document.addEventListener("keydown", (event) => {
 });
 $("#uploadButton").addEventListener("click", () => $("#releaseFile").click());
 $("#releaseFile").addEventListener("change", (event) => {
-  $("#uploadName").textContent = event.target.files[0]?.name || "";
+  const files = [...(event.target.files || [])];
+  if (!files.length || !activeReleaseRow) return;
+  const attachments = getReleaseAttachments();
+  files.forEach((file) => attachments.push({
+    name: file.name,
+    url: URL.createObjectURL(file),
+    kind: file.type.startsWith("image/") ? "image" : "file"
+  }));
+  event.target.value = "";
+  renderReleaseAttachments();
 });
 $("#releaseApplication").addEventListener("change", () => {
   updateReleaseApplicationFields();
@@ -1738,6 +1735,8 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   boxesControl.setCustomValidity("");
+  activeReleaseRow.customerRemark = $("#releaseRemark").value.trim();
+  activeReleaseRow.warehouseRemark = $("#releaseWarehouseRemark").value.trim();
   closeReleaseDrawer();
 });
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260725-list-instruction-fields" />
+  <link rel="stylesheet" href="styles.css?v=20260727-waybill-attachments" />
 </head>
 <body>
 
@@ -183,7 +183,9 @@
         <label class="release-field fba-release-field"><span class="required">箱数</span><input id="releaseBoxes" type="number" min="1" required placeholder="请输入" /></label>
         <label class="release-field fba-release-field"><span class="required">预约发货时间</span><span class="release-date"><input id="releaseDate" type="date" required /><i>□</i></span></label>
         <label class="release-field fba-release-field"><span>备注</span><input id="releaseRemark" placeholder="请输入" /></label>
-        <label class="release-field upload-field fba-release-field"><span>附件上传</span><span><input id="releaseFile" type="file" hidden /><button class="upload-button" id="uploadButton" type="button">↥&nbsp; 上传</button><em id="uploadName"></em></span></label>
+        <label class="release-field fba-release-field"><span>仓库备注</span><input id="releaseWarehouseRemark" placeholder="请输入仓库备注" /></label>
+        <label class="release-field upload-field waybill-attachment-field"><span>附件上传</span><span><input id="releaseFile" type="file" multiple hidden /><button class="upload-button" id="uploadButton" type="button">↥&nbsp; 上传</button><em id="uploadName"></em></span></label>
+        <div class="release-attachment-list waybill-attachment-field" id="releaseAttachmentList" aria-live="polite"></div>
 
         <label class="release-field marketplace-release-field" hidden><span class="required">目的地</span><input id="releaseWarehouseCode" required placeholder="请输入目的地" /></label>
         <label class="release-field marketplace-release-field" hidden><span class="required">箱数</span><input id="releaseMarketplaceBoxes" type="number" min="1" required placeholder="请输入" /></label>
@@ -237,8 +239,6 @@
   <div class="instruction-section-heading">
     <h3>操作指令</h3>
     <div class="instruction-section-actions">
-      <button class="instruction-toolbar-button" id="instructionBatchRemark" type="button" disabled>批量备注</button>
-      <button class="instruction-toolbar-button" id="instructionDownloadImages" type="button" disabled>下载图片</button>
       <button class="instruction-batch-complete" id="instructionBatchComplete" type="button" hidden disabled>已处理</button>
       <button class="instruction-add" id="instructionAdd" type="button">新增</button>
     </div>
@@ -247,7 +247,7 @@
     <table class="instruction-table">
       <thead><tr>
         <th class="instruction-check-col"><input id="instructionDetailSelectAll" type="checkbox" aria-label="全选操作指令" /></th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*计费单价（元）</th><th>*计费数量</th>
-        <th>*币种</th><th>总价（元）</th><th>添加时间</th><th>添加人</th><th>描述</th><th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th>指令状态</th><th>操作</th>
+        <th>*币种</th><th>总价（元）</th><th>添加时间</th><th>添加人</th><th>描述</th><th>指令状态</th><th>操作</th>
       </tr></thead>
       <tbody id="instructionBody"></tbody>
     </table>
@@ -335,6 +335,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260725-list-instruction-fields"></script>
+<script src="script.js?v=20260727-waybill-attachments"></script>
 </body>
 </html>

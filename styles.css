@@ -1042,6 +1042,44 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.release-attachment-list {
+  display: flex;
+  min-height: 20px;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -11px 0 0 78px;
+}
+.release-attachment-item {
+  max-width: 240px;
+  overflow: hidden;
+  padding: 2px 7px;
+  border: 1px solid #d8e8f7;
+  border-radius: 2px;
+  background: #f4f9fe;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.release-attachment-name {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  color: #4e5963;
+  vertical-align: bottom;
+  text-overflow: ellipsis;
+}
+.release-attachment-download {
+  margin-left: 7px;
+  color: #1677c8;
+  text-decoration: none;
+}
+.release-attachment-download:hover {
+  text-decoration: underline;
+}
+.release-attachment-hint {
+  color: #98a4ae;
+  font-size: 12px;
+}
 .release-readonly .release-fields input:disabled,
 .release-readonly .release-fields select:disabled,
 .release-readonly .release-fields button:disabled,
