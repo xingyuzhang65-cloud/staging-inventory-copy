@@ -345,8 +345,17 @@ const outboundRows = Array.from({ length: 95 }, (_, index) => {
   };
 });
 const shippedRows = outboundRows.slice(0, 30).map((row) => ({ ...row, status: "已出库" }));
-const destroyedRows = outboundRows.slice(0, 36).map((row) => ({
+const destroyedRows = outboundRows.slice(0, 36).map((row, index) => ({
   ...row,
+  // 销毁记录沿用放货申请数据，并补齐销毁列表需要展示的申请及处理信息。
+  destination: row.destination || (row.dispatch === "Truck-Amazon" ? "GEU3" : row.dispatch === "USPS" ? "US" : "1420 Tamarind Ave, Rialto"),
+  appointmentDeliveryTime: `2026-07-${String(18 + (index % 7)).padStart(2, "0")} ${index % 2 ? "10:27:28" : "15:17:37"}`,
+  shippingApplicationAttachment: index % 3 === 2 ? "-" : `发货申请附件-${String(index + 1).padStart(2, "0")}.pdf`,
+  applicationTime: `2026-07-${String(16 + (index % 7)).padStart(2, "0")} ${index % 2 ? "10:27:52" : "17:54:28"}`,
+  processingStartedAt: `2026-07-${String(17 + (index % 7)).padStart(2, "0")} ${index % 2 ? "09:18:40" : "14:12:06"}`,
+  processingFinishedAt: `2026-07-${String(18 + (index % 7)).padStart(2, "0")} ${index % 2 ? "11:36:15" : "16:25:48"}`,
+  timeoutCount: index % 5,
+  applicationRemark: ["客户申请销毁，已确认无退运需求", "外箱破损，按客户指示销毁", "库存清理，已完成费用确认"][index % 3],
   instructions: row.instructions.map((instruction) => ({ ...instruction, completed: true })),
   status: "销毁"
 }));
@@ -700,6 +709,7 @@ function renderTableChrome() {
   document.body.classList.toggle("instruction-pending-view", isInstructionPendingView());
   document.body.classList.toggle("outbound-view", isOutboundView());
   document.body.classList.toggle("rejection-view", isTerminalRequestView());
+  document.body.classList.toggle("destroyed-view", isDestroyedView());
   document.body.classList.toggle("staging-view", activeStatus === "暂存");
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
   $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
@@ -711,13 +721,14 @@ function renderTableChrome() {
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>转运方式</th><th>派送方式</th><th>托盘标签</th>
+    <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
         ? '<th class="financial-audit-col">财务审核</th><th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>'
         : ""}
     <th class="sortable">入库时间</th><th class="sortable">申请箱数</th><th>申请箱数总体积</th><th>收费托数</th>
+    ${isDestroyedView() ? `<th class="destination-col">目的地</th><th class="appointment-delivery-col">预约发货时间</th><th class="shipping-attachment-col">发货申请附件</th><th class="application-time-col">申请时间</th><th class="processing-time-col">开始处理时间</th><th class="processing-time-col">结束处理时间</th><th class="timeout-count-col">超时次数</th><th class="application-remark-col">申请备注</th>` : ""}
     <th class="operation-col">操作</th>
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
@@ -742,7 +753,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    const emptyColumns = isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 21 : isTerminalRequestView() ? 21 : 19;
+    const emptyColumns = isDestroyedView() ? 29 : isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 21 : isTerminalRequestView() ? 21 : 19;
     body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
@@ -757,7 +768,7 @@ function renderRows() {
       <td title="${row.container}">${row.container}</td>
       <td>${row.system}</td><td>${row.inbound}</td><td class="${row.blocked === "是" ? "blocked" : ""}">${row.blocked === "是" ? "拦截" : row.blocked}</td>
       <td>${row.applicationType}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
-      <td>${row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
+      <td>${isDestroyedView() ? row.dispatch : row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       ${(isApprovalView() || isTerminalRequestView())
         ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
            <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
@@ -767,6 +778,7 @@ function renderRows() {
              <td class="instruction-list-col instruction-list-cell">${renderInstructionLines(row)}</td>`
           : ""}
       <td>${row.inboundTime}</td><td>${row.appliedBoxes}</td><td>${row.appliedVolume}</td><td>${row.chargedPallets}</td>
+      ${isDestroyedView() ? `<td class="destination-col" title="${row.destination}">${row.destination}</td><td class="appointment-delivery-col">${row.appointmentDeliveryTime}</td><td class="shipping-attachment-col">${row.shippingApplicationAttachment === "-" ? "-" : `<span class="attachment-link" title="${row.shippingApplicationAttachment}">${row.shippingApplicationAttachment}</span>`}</td><td class="application-time-col">${row.applicationTime}</td><td class="processing-time-col">${row.processingStartedAt}</td><td class="processing-time-col">${row.processingFinishedAt}</td><td class="timeout-count-col">${row.timeoutCount}</td><td class="application-remark-col" title="${row.applicationRemark}">${row.applicationRemark}</td>` : ""}
       <td class="operation-col approval-actions">${isTerminalRequestView()
         ? `<button class="action-link detail-button" data-id="${row.id}">详情</button>`
         : isOutboundView()
