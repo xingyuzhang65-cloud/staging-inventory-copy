@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-order-type" />
+  <link rel="stylesheet" href="styles.css?v=20260729-order-type-v2" />
 </head>
 <body>
 
@@ -53,7 +53,7 @@
           <label class="filter-field approval-primary"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
           <label class="filter-field approval-primary"><span>申请单号</span><input id="requestFilter" type="text" placeholder="申请单号" /></label>
           <label class="filter-field approval-primary"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
-          <label class="filter-field approval-primary" id="releaseTypeField"><span>下单类型</span><select id="releaseTypeFilter"><option value="">下单类型</option><option value="下单">下单</option><option value="不下单">不下单</option></select></label>
+          <label class="filter-field approval-primary" id="releaseTypeField"><span>下单类型</span><select id="releaseTypeFilter"><option value="">下单类型</option><option value="放货">放货</option><option value="不放货">不放货</option><option value="销毁">销毁</option></select></label>
           <label class="filter-field approval-primary" id="financialAuditField" hidden><span>财务审核</span><select id="financialAuditFilter"><option value="">财务审核</option><option value="已审核">已审核</option><option value="部分审核">部分审核</option><option value="未审核">未审核</option></select></label>
           <label class="filter-field staging-filter"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
           <label class="filter-field staging-filter"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
@@ -173,10 +173,11 @@
     <form class="release-form" id="releaseForm">
       <section class="release-fields" id="releaseFields">
         <div class="release-shipping-toggle" id="releaseShippingToggle">
-          <span>是否出货</span>
-          <div role="radiogroup" aria-label="是否出货">
-            <label><input type="radio" name="releaseShippingEnabled" value="yes" checked />是</label>
-            <label><input type="radio" name="releaseShippingEnabled" value="no" />否</label>
+          <span>下单类型</span>
+          <div role="radiogroup" aria-label="下单类型">
+            <label><input type="radio" name="releaseOrderType" value="放货" checked />放货</label>
+            <label><input type="radio" name="releaseOrderType" value="不放货" />不放货</label>
+            <label><input type="radio" name="releaseOrderType" value="销毁" />销毁</label>
           </div>
         </div>
         <label class="release-field ship-out-conditional" id="releaseShipOutBoxesField" hidden><span class="required">箱数</span><input id="releaseShipOutBoxes" type="number" min="1" placeholder="请输入箱数" /></label>
@@ -346,6 +347,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260729-order-type"></script>
+<script src="script.js?v=20260729-order-type-v2"></script>
 </body>
 </html>

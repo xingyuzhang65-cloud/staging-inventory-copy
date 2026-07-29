@@ -398,8 +398,8 @@ const instructionWorkflowRows = [
 
 instructionWorkflowRows.forEach((rows) => {
   rows.forEach((row, index) => {
-    if (row.releaseType !== "下单" && row.releaseType !== "不下单") {
-      row.releaseType = row.shippingEnabled === false || index % 3 === 2 ? "不下单" : "下单";
+    if (!["放货", "不放货", "销毁"].includes(row.releaseType)) {
+      row.releaseType = row.shippingEnabled === false || index % 3 === 2 ? "不放货" : index % 5 === 4 ? "销毁" : "放货";
     }
   });
 });
@@ -602,15 +602,16 @@ function renderFinancialAudit(status) {
 }
 
 function getReleaseType(row) {
-  if (row.releaseType === "下单" || row.releaseType === "不下单") return row.releaseType;
-  if (row.releaseType === "放货") return "下单";
-  if (row.releaseType === "不放货") return "不下单";
-  return row.shippingEnabled === false ? "不下单" : "下单";
+  if (row.status === "销毁") return "销毁";
+  if (["放货", "不放货", "销毁"].includes(row.releaseType)) return row.releaseType;
+  if (row.releaseType === "下单") return "放货";
+  if (row.releaseType === "不下单") return "不放货";
+  return row.shippingEnabled === false ? "不放货" : "放货";
 }
 
 function renderReleaseType(row) {
   const releaseType = getReleaseType(row);
-  return `<span class="release-type-tag ${releaseType === "下单" ? "is-release" : "is-no-release"}">${releaseType}</span>`;
+  return `<span class="release-type-tag ${releaseType === "放货" ? "is-release" : "is-no-release"}">${releaseType}</span>`;
 }
 
 const instructionAuditTone = {
@@ -1302,7 +1303,7 @@ let activeReleaseRow = null;
 let activeReleaseSourceRow = null;
 let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
-let activeReleaseShippingEnabled = true;
+let activeReleaseOrderType = "放货";
 const selectedDetailInstructionCodes = new Set();
 
 function normalizeReleaseRow(row) {
@@ -1371,14 +1372,14 @@ function updateReleaseApplicationFields() {
 function updateReleaseShippingState() {
   const shippingToggle = $("#releaseShippingToggle");
   const releaseFields = $("#releaseFields");
-  const shipOutDisabled = !activeReleaseReadOnly && !activeReleaseShippingEnabled;
+  const compactOrderMode = activeReleaseOrderType !== "放货" || activeReleaseStatus === "审批拒绝";
   shippingToggle.hidden = activeReleaseReadOnly;
-  releaseFields.classList.toggle("shipping-disabled", shipOutDisabled);
+  releaseFields.classList.toggle("shipping-disabled", compactOrderMode);
   shippingToggle.querySelectorAll("input").forEach((control) => {
     control.disabled = activeReleaseReadOnly;
   });
-  document.querySelectorAll(".ship-out-conditional").forEach((field) => { field.hidden = !shipOutDisabled; });
-  if (!shipOutDisabled) {
+  document.querySelectorAll(".ship-out-conditional").forEach((field) => { field.hidden = !compactOrderMode; });
+  if (!compactOrderMode) {
     $("#releaseShipOutBoxes").value = "";
     $("#releaseShipOutRemark").value = "";
     $("#shipOutUploadName").textContent = "";
@@ -1386,12 +1387,12 @@ function updateReleaseShippingState() {
   releaseFields.querySelectorAll("input, select, button, textarea").forEach((control) => {
     if (control.closest(".release-shipping-toggle")) return;
     if (control.closest(".ship-out-conditional")) {
-      control.disabled = activeReleaseReadOnly || !shipOutDisabled;
+      control.disabled = activeReleaseReadOnly || !compactOrderMode;
       return;
     }
-    if (shipOutDisabled) control.disabled = true;
+    if (compactOrderMode) control.disabled = true;
   });
-  $("#releaseShipOutBoxes").required = shipOutDisabled;
+  $("#releaseShipOutBoxes").required = compactOrderMode && !activeReleaseReadOnly;
 }
 
 function setReleaseDrawerMode(readOnly, status) {
@@ -1412,14 +1413,14 @@ function openReleaseDrawer(sourceRow, options = {}) {
   const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
   activeReleaseSourceRow = sourceRow;
-  activeReleaseShippingEnabled = row.shippingEnabled !== false;
+  activeReleaseOrderType = sourceStatus === "审批拒绝" ? "不放货" : getReleaseType(row);
   selectedDetailInstructionCodes.clear();
   ensureInstructionDetailRows(sourceRow);
   releaseForm.reset();
   const sourceApplication = row.releaseApplication || row.applicationType;
   const mappedApplication = sourceApplication === "其他地址" ? "私人地址" : sourceApplication;
   $("#releaseApplication").value = marketplaceReleaseTypes.has(mappedApplication) || mappedApplication === "私人地址" ? mappedApplication : "FBA";
-  document.querySelector(`input[name="releaseShippingEnabled"][value="${activeReleaseShippingEnabled ? "yes" : "no"}"]`).checked = true;
+  document.querySelector(`input[name="releaseOrderType"][value="${activeReleaseOrderType}"]`).checked = true;
   $("#releaseShipOutBoxes").value = row.shipOutBoxes || "";
   $("#releaseShipOutRemark").value = row.shipOutRemark || "";
   $("#shipOutUploadName").textContent = "";
@@ -1473,7 +1474,7 @@ function closeReleaseDrawer() {
   selectedDetailInstructionCodes.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
-  activeReleaseShippingEnabled = true;
+  activeReleaseOrderType = "放货";
   releaseForm.reset();
   $("#releaseAttachmentList").replaceChildren();
   $("#shipOutUploadName").textContent = "";
@@ -1842,11 +1843,11 @@ $("#releaseApplication").addEventListener("change", () => {
   updateReleaseApplicationFields();
   requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : $("#releaseDestination")).focus());
 });
-document.querySelectorAll('input[name="releaseShippingEnabled"]').forEach((control) => {
+document.querySelectorAll('input[name="releaseOrderType"]').forEach((control) => {
   control.addEventListener("change", (event) => {
-    activeReleaseShippingEnabled = event.target.value === "yes";
+    activeReleaseOrderType = event.target.value;
     updateReleaseApplicationFields();
-    if (activeReleaseShippingEnabled) {
+    if (activeReleaseOrderType === "放货") {
       requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : $("#releaseDestination")).focus());
     }
   });
@@ -1869,9 +1870,13 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   if (!releaseForm.reportValidity() || !activeReleaseRow) return;
-  activeReleaseRow.shippingEnabled = activeReleaseShippingEnabled;
-  if (activeReleaseSourceRow) activeReleaseSourceRow.shippingEnabled = activeReleaseShippingEnabled;
-  if (!activeReleaseShippingEnabled) {
+  activeReleaseRow.releaseType = activeReleaseOrderType;
+  activeReleaseRow.shippingEnabled = activeReleaseOrderType === "放货";
+  if (activeReleaseSourceRow) {
+    activeReleaseSourceRow.releaseType = activeReleaseOrderType;
+    activeReleaseSourceRow.shippingEnabled = activeReleaseOrderType === "放货";
+  }
+  if (activeReleaseOrderType !== "放货") {
     const boxesControl = $("#releaseShipOutBoxes");
     const boxes = Number(boxesControl.value);
     if (boxes > activeReleaseRow.unsent) {
@@ -1882,6 +1887,10 @@ releaseForm.addEventListener("submit", (event) => {
     boxesControl.setCustomValidity("");
     activeReleaseRow.shipOutBoxes = boxesControl.value;
     activeReleaseRow.shipOutRemark = $("#releaseShipOutRemark").value;
+    if (activeReleaseSourceRow) {
+      activeReleaseSourceRow.shipOutBoxes = boxesControl.value;
+      activeReleaseSourceRow.shipOutRemark = $("#releaseShipOutRemark").value;
+    }
     closeReleaseDrawer();
     return;
   }
