@@ -968,7 +968,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   padding: 0;
   accent-color: #168ff5;
 }
-.release-fields.shipping-disabled > :not(.release-shipping-toggle) { display: none !important; }
+.release-fields.shipping-disabled > :not(.release-shipping-toggle):not(.ship-out-conditional) { display: none !important; }
 .release-fields.shipping-disabled { row-gap: 0; padding-bottom: 14px; }
 .marketplace-address-title {
   grid-column: 1 / -1;

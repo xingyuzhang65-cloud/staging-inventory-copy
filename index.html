@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-release-type" />
+  <link rel="stylesheet" href="styles.css?v=20260729-order-type" />
 </head>
 <body>
 
@@ -53,7 +53,7 @@
           <label class="filter-field approval-primary"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
           <label class="filter-field approval-primary"><span>申请单号</span><input id="requestFilter" type="text" placeholder="申请单号" /></label>
           <label class="filter-field approval-primary"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
-          <label class="filter-field approval-primary" id="releaseTypeField"><span>放货类型</span><select id="releaseTypeFilter"><option value="">放货类型</option><option value="放货">放货</option><option value="不放货">不放货</option></select></label>
+          <label class="filter-field approval-primary" id="releaseTypeField"><span>下单类型</span><select id="releaseTypeFilter"><option value="">下单类型</option><option value="下单">下单</option><option value="不下单">不下单</option></select></label>
           <label class="filter-field approval-primary" id="financialAuditField" hidden><span>财务审核</span><select id="financialAuditFilter"><option value="">财务审核</option><option value="已审核">已审核</option><option value="部分审核">部分审核</option><option value="未审核">未审核</option></select></label>
           <label class="filter-field staging-filter"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
           <label class="filter-field staging-filter"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
@@ -161,7 +161,7 @@
   <aside class="release-drawer" role="dialog" aria-modal="true" aria-labelledby="releaseTitle">
     <header class="release-header">
       <button class="release-close" id="releaseClose" type="button" aria-label="关闭">×</button>
-      <h2 id="releaseTitle">放货</h2>
+      <h2 id="releaseTitle">下单</h2>
     </header>
     <div class="release-summary">
       <div><span>柜号：</span><b id="releaseContainer">-</b></div>
@@ -179,12 +179,12 @@
             <label><input type="radio" name="releaseShippingEnabled" value="no" />否</label>
           </div>
         </div>
-        <label class="release-field ship-out-conditional" id="releaseShipOutBoxesField" hidden><span>箱数</span><input id="releaseShipOutBoxes" type="number" min="0" placeholder="请输入箱数" /></label>
+        <label class="release-field ship-out-conditional" id="releaseShipOutBoxesField" hidden><span class="required">箱数</span><input id="releaseShipOutBoxes" type="number" min="1" placeholder="请输入箱数" /></label>
         <label class="release-field ship-out-conditional" id="releaseShipOutRemarkField" hidden><span>备注</span><input id="releaseShipOutRemark" placeholder="请输入备注" /></label>
         <label class="release-field upload-field ship-out-conditional" id="releaseShipOutAttachmentField" hidden><span>附件上传</span><span><input id="releaseShipOutFile" type="file" multiple hidden /><button class="upload-button" id="shipOutUploadButton" type="button">↥&nbsp; 上传</button><em id="shipOutUploadName"></em></span></label>
         <h3 class="marketplace-address-title" id="marketplaceAddressTitle" hidden>收件地址信息</h3>
         <label class="release-field">
-          <span class="required">发货申请</span>
+          <span class="required">下单类型</span>
           <select id="releaseApplication" required><option value="FBA" selected>FBA</option><option value="Walmart">Walmart</option><option value="Tiktok">Tiktok</option><option value="私人地址">私人地址</option></select>
         </label>
         <label class="release-field fba-release-field"><span class="required">目的地</span><select id="releaseDestination" required><option value="">请选择</option><option>ABE2</option><option>ABE3</option><option>ABE8</option><option>BWI9</option><option>FEDEX</option></select></label>
@@ -346,6 +346,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260729-release-type"></script>
+<script src="script.js?v=20260729-order-type"></script>
 </body>
 </html>

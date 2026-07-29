@@ -398,8 +398,8 @@ const instructionWorkflowRows = [
 
 instructionWorkflowRows.forEach((rows) => {
   rows.forEach((row, index) => {
-    if (row.releaseType !== "放货" && row.releaseType !== "不放货") {
-      row.releaseType = row.shippingEnabled === false || index % 3 === 2 ? "不放货" : "放货";
+    if (row.releaseType !== "下单" && row.releaseType !== "不下单") {
+      row.releaseType = row.shippingEnabled === false || index % 3 === 2 ? "不下单" : "下单";
     }
   });
 });
@@ -602,13 +602,15 @@ function renderFinancialAudit(status) {
 }
 
 function getReleaseType(row) {
-  if (row.releaseType === "放货" || row.releaseType === "不放货") return row.releaseType;
-  return row.shippingEnabled === false ? "不放货" : "放货";
+  if (row.releaseType === "下单" || row.releaseType === "不下单") return row.releaseType;
+  if (row.releaseType === "放货") return "下单";
+  if (row.releaseType === "不放货") return "不下单";
+  return row.shippingEnabled === false ? "不下单" : "下单";
 }
 
 function renderReleaseType(row) {
   const releaseType = getReleaseType(row);
-  return `<span class="release-type-tag ${releaseType === "放货" ? "is-release" : "is-no-release"}">${releaseType}</span>`;
+  return `<span class="release-type-tag ${releaseType === "下单" ? "is-release" : "is-no-release"}">${releaseType}</span>`;
 }
 
 const instructionAuditTone = {
@@ -732,7 +734,7 @@ function renderTableChrome() {
   document.body.classList.toggle("destroyed-view", isDestroyedView());
   document.body.classList.toggle("staging-view", activeStatus === "暂存");
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
-  $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "放货托盘标签导出" : "更换库位";
+  $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "下单托盘标签导出" : "更换库位";
   $("#contextAction").hidden = isTerminalRequestView();
   $("#countdownAction").hidden = !isInstructionPendingView();
   $("#approvalDensityButton").hidden = isTerminalRequestView();
@@ -742,7 +744,7 @@ function renderTableChrome() {
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>申请类型</th><th class="release-type-col">放货类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
+    <th>申请类型</th><th class="release-type-col">下单类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
@@ -823,7 +825,7 @@ function renderRows() {
       <td>${row.time}</td>
       <td>${row.weight || 0}</td><td>${row.volume || 0}</td><td>${row.boxes}</td>
       <td>${row.pending}</td><td>${row.unsent}</td><td>${row.sent}</td>
-      <td class="operation-col"><button class="action-link release-button" data-id="${row.id}">放货</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link">日志</button></td>
+      <td class="operation-col"><button class="action-link release-button" data-id="${row.id}">下单</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link">日志</button></td>
     </tr>`).join("");
   document.querySelectorAll(".row-check").forEach((check) => {
     check.addEventListener("change", () => {
@@ -1013,7 +1015,7 @@ $("#exportButton").addEventListener("click", () => {
     window.alert("请先保存或放弃指令修改，再执行导出");
     return;
   }
-  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
   if (isApprovalView() || isTerminalRequestView()) requestHeader.push("指令数量", "指令");
   else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令数量", "指令");
   requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
@@ -1024,7 +1026,7 @@ $("#exportButton").addEventListener("click", () => {
     if (!isRequestTableView()) {
       return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
     }
-    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
+    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,getReleaseType(r),r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
     if (isApprovalView() || isTerminalRequestView()) requestRow.push(getInstructionCount(r), getInstructionText(r));
     else if (isInstructionView() || isOutboundView()) requestRow.push(r.financialAudit, getInstructionCount(r), getInstructionText(r));
     requestRow.push(r.inboundTime, r.appliedBoxes, r.appliedVolume, r.chargedPallets);
@@ -1375,21 +1377,21 @@ function updateReleaseShippingState() {
   shippingToggle.querySelectorAll("input").forEach((control) => {
     control.disabled = activeReleaseReadOnly;
   });
-  if (shipOutDisabled) {
-    releaseFields.querySelectorAll("input, select, button, textarea").forEach((control) => {
-      if (!control.closest(".release-shipping-toggle") && !control.closest(".ship-out-conditional")) control.disabled = true;
-    });
-  }
-  // 是否出货条件字段切换
   document.querySelectorAll(".ship-out-conditional").forEach((field) => { field.hidden = !shipOutDisabled; });
   if (!shipOutDisabled) {
     $("#releaseShipOutBoxes").value = "";
     $("#releaseShipOutRemark").value = "";
     $("#shipOutUploadName").textContent = "";
   }
-  document.querySelectorAll(".ship-out-conditional input, .ship-out-conditional button").forEach((control) => {
-    control.disabled = activeReleaseReadOnly || !shipOutDisabled;
+  releaseFields.querySelectorAll("input, select, button, textarea").forEach((control) => {
+    if (control.closest(".release-shipping-toggle")) return;
+    if (control.closest(".ship-out-conditional")) {
+      control.disabled = activeReleaseReadOnly || !shipOutDisabled;
+      return;
+    }
+    if (shipOutDisabled) control.disabled = true;
   });
+  $("#releaseShipOutBoxes").required = shipOutDisabled;
 }
 
 function setReleaseDrawerMode(readOnly, status) {
@@ -1430,10 +1432,12 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseBoxes").max = Math.max(1, row.unsent);
   $("#releaseMarketplaceBoxes").max = Math.max(1, row.unsent);
   $("#releasePrivateBoxes").max = Math.max(1, row.unsent);
+  $("#releaseShipOutBoxes").max = Math.max(1, row.unsent);
   $("#releaseBoxes").placeholder = "请输入";
   $("#releaseBoxes").setCustomValidity("");
   $("#releaseMarketplaceBoxes").setCustomValidity("");
   $("#releasePrivateBoxes").setCustomValidity("");
+  $("#releaseShipOutBoxes").setCustomValidity("");
   $("#releaseMethod").value = [...$("#releaseMethod").options].some((option) => option.value === row.dispatch) ? row.dispatch : "Truck-Amazon";
   const destination = $("#releaseDestination");
   destination.value = [...destination.options].some((option) => option.value === row.destination) ? row.destination : "";
@@ -1449,7 +1453,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount");
   updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount");
   setReleaseDrawerMode(readOnly, sourceStatus);
-  $("#releaseTitle").textContent = readOnly ? "运单详情" : "放货";
+  $("#releaseTitle").textContent = readOnly ? "运单详情" : "下单";
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
   renderCargoBoxRows(row);
@@ -1868,7 +1872,15 @@ releaseForm.addEventListener("submit", (event) => {
   activeReleaseRow.shippingEnabled = activeReleaseShippingEnabled;
   if (activeReleaseSourceRow) activeReleaseSourceRow.shippingEnabled = activeReleaseShippingEnabled;
   if (!activeReleaseShippingEnabled) {
-    activeReleaseRow.shipOutBoxes = $("#releaseShipOutBoxes").value;
+    const boxesControl = $("#releaseShipOutBoxes");
+    const boxes = Number(boxesControl.value);
+    if (boxes > activeReleaseRow.unsent) {
+      boxesControl.setCustomValidity(`箱数不能超过未发货箱数 ${activeReleaseRow.unsent}`);
+      boxesControl.reportValidity();
+      return;
+    }
+    boxesControl.setCustomValidity("");
+    activeReleaseRow.shipOutBoxes = boxesControl.value;
     activeReleaseRow.shipOutRemark = $("#releaseShipOutRemark").value;
     closeReleaseDrawer();
     return;
@@ -1892,6 +1904,7 @@ releaseForm.addEventListener("submit", (event) => {
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
 $("#releaseMarketplaceBoxes").addEventListener("input", () => $("#releaseMarketplaceBoxes").setCustomValidity(""));
 $("#releasePrivateBoxes").addEventListener("input", () => $("#releasePrivateBoxes").setCustomValidity(""));
+$("#releaseShipOutBoxes").addEventListener("input", () => $("#releaseShipOutBoxes").setCustomValidity(""));
 
 function buildWatermarks() {
   const layer = $("#watermarks");
