@@ -1373,14 +1373,17 @@ function updateReleaseShippingState() {
   const shippingToggle = $("#releaseShippingToggle");
   const releaseFields = $("#releaseFields");
   const compactOrderMode = activeReleaseOrderType !== "放货" || activeReleaseStatus === "审批拒绝";
+  const destroyOrderMode = activeReleaseOrderType === "销毁";
   shippingToggle.hidden = activeReleaseReadOnly;
   releaseFields.classList.toggle("shipping-disabled", compactOrderMode);
   shippingToggle.querySelectorAll("input").forEach((control) => {
     control.disabled = activeReleaseReadOnly;
   });
   document.querySelectorAll(".ship-out-conditional").forEach((field) => { field.hidden = !compactOrderMode; });
+  $("#releaseDestroyBoxNoField").hidden = !compactOrderMode || !destroyOrderMode;
   if (!compactOrderMode) {
     $("#releaseShipOutBoxes").value = "";
+    $("#releaseDestroyBoxNo").value = "";
     $("#releaseShipOutRemark").value = "";
     $("#shipOutUploadName").textContent = "";
   }
@@ -1392,6 +1395,7 @@ function updateReleaseShippingState() {
     }
     if (compactOrderMode) control.disabled = true;
   });
+  $("#releaseDestroyBoxNo").disabled = activeReleaseReadOnly || !compactOrderMode || !destroyOrderMode;
   $("#releaseShipOutBoxes").required = compactOrderMode && !activeReleaseReadOnly;
 }
 
@@ -1422,6 +1426,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseApplication").value = marketplaceReleaseTypes.has(mappedApplication) || mappedApplication === "私人地址" ? mappedApplication : "FBA";
   document.querySelector(`input[name="releaseOrderType"][value="${activeReleaseOrderType}"]`).checked = true;
   $("#releaseShipOutBoxes").value = row.shipOutBoxes || "";
+  $("#releaseDestroyBoxNo").value = row.destroyBoxNo || "";
   $("#releaseShipOutRemark").value = row.shipOutRemark || "";
   $("#shipOutUploadName").textContent = "";
   $("#releaseShipOutFile").value = "";
@@ -1479,6 +1484,7 @@ function closeReleaseDrawer() {
   $("#releaseAttachmentList").replaceChildren();
   $("#shipOutUploadName").textContent = "";
   $("#releaseShipOutFile").value = "";
+  $("#releaseDestroyBoxNo").value = "";
 }
 
 body.addEventListener("click", (event) => {
@@ -1886,9 +1892,11 @@ releaseForm.addEventListener("submit", (event) => {
     }
     boxesControl.setCustomValidity("");
     activeReleaseRow.shipOutBoxes = boxesControl.value;
+    activeReleaseRow.destroyBoxNo = $("#releaseDestroyBoxNo").value.trim();
     activeReleaseRow.shipOutRemark = $("#releaseShipOutRemark").value;
     if (activeReleaseSourceRow) {
       activeReleaseSourceRow.shipOutBoxes = boxesControl.value;
+      activeReleaseSourceRow.destroyBoxNo = $("#releaseDestroyBoxNo").value.trim();
       activeReleaseSourceRow.shipOutRemark = $("#releaseShipOutRemark").value;
     }
     closeReleaseDrawer();

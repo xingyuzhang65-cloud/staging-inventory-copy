@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-order-type-v2" />
+  <link rel="stylesheet" href="styles.css?v=20260729-order-type-v3" />
 </head>
 <body>
 
@@ -181,6 +181,7 @@
           </div>
         </div>
         <label class="release-field ship-out-conditional" id="releaseShipOutBoxesField" hidden><span class="required">箱数</span><input id="releaseShipOutBoxes" type="number" min="1" placeholder="请输入箱数" /></label>
+        <label class="release-field ship-out-conditional destroy-order-field" id="releaseDestroyBoxNoField" hidden><span>箱号</span><input id="releaseDestroyBoxNo" placeholder="请输入箱号" /></label>
         <label class="release-field ship-out-conditional" id="releaseShipOutRemarkField" hidden><span>备注</span><input id="releaseShipOutRemark" placeholder="请输入备注" /></label>
         <label class="release-field upload-field ship-out-conditional" id="releaseShipOutAttachmentField" hidden><span>附件上传</span><span><input id="releaseShipOutFile" type="file" multiple hidden /><button class="upload-button" id="shipOutUploadButton" type="button">↥&nbsp; 上传</button><em id="shipOutUploadName"></em></span></label>
         <h3 class="marketplace-address-title" id="marketplaceAddressTitle" hidden>收件地址信息</h3>
@@ -347,6 +348,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260729-order-type-v2"></script>
+<script src="script.js?v=20260729-order-type-v3"></script>
 </body>
 </html>
