@@ -503,7 +503,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   content: "";
   background: var(--blue);
 }
-.request-view .inventory-table { min-width: 2330px; }
+.request-view .inventory-table { min-width: 2440px; }
 .request-view .inventory-table th { height: 30px; }
 .request-view .inventory-table td { height: 52px; }
 .request-view .inventory-table th:nth-child(3) { width: 105px; }
@@ -536,14 +536,14 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .instruction-view .approval-tabs,
 .outbound-view .approval-tabs,
 .rejection-view .approval-tabs { display: none; }
-.instruction-pending-view .inventory-table { min-width: 2840px; }
+.instruction-pending-view .inventory-table { min-width: 2950px; }
 .instruction-pending-view .inventory-table td { height: 96px; }
 .instruction-pending-view .inventory-table .financial-audit-col { width: 96px; }
 .instruction-pending-view .inventory-table .instruction-count-col { width: 120px; }
 .instruction-pending-view .inventory-table .instruction-list-col { width: 340px; }
 .instruction-pending-view .inventory-table th.instruction-list-col { text-align: left; }
 .instruction-view:not(.instruction-pending-view) .inventory-table,
-.outbound-view .inventory-table { min-width: 2840px; }
+.outbound-view .inventory-table { min-width: 2950px; }
 .instruction-view:not(.instruction-pending-view) .inventory-table td,
 .outbound-view .inventory-table td { height: 96px; }
 .instruction-view:not(.instruction-pending-view) .inventory-table .financial-audit-col,
@@ -554,9 +554,9 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .outbound-view .inventory-table .instruction-list-col { width: 340px; }
 .instruction-view:not(.instruction-pending-view) .inventory-table th.instruction-list-col,
 .outbound-view .inventory-table th.instruction-list-col { text-align: left; }
-.approval-view .inventory-table { min-width: 3200px; }
-.rejection-view .inventory-table { min-width: 2790px; }
-.destroyed-view .inventory-table { min-width: 3980px; }
+.approval-view .inventory-table { min-width: 3310px; }
+.rejection-view .inventory-table { min-width: 2900px; }
+.destroyed-view .inventory-table { min-width: 4090px; }
 .approval-view .inventory-table td,
 .rejection-view .inventory-table td { height: 88px; }
 .destroyed-view .inventory-table td { height: 88px; }
@@ -607,6 +607,20 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   font-weight: 700;
   line-height: 1.35;
 }
+.request-view .inventory-table .release-type-col { width: 92px; }
+.release-type-tag {
+  display: inline-flex;
+  min-width: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.release-type-tag.is-release { color: #2563eb; background: #eff6ff; }
+.release-type-tag.is-no-release { color: #64748b; background: #f1f5f9; }
 .status-success { color: #059669; background: #ecfdf5; }
 .status-partial { color: #2563eb; background: #eff6ff; }
 .status-pending { color: #d97706; background: #fffbeb; }
@@ -921,6 +935,41 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   padding-bottom: 28px;
   border-bottom: 1px solid #edf0f2;
 }
+.release-shipping-toggle {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 34px;
+  min-height: 34px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #edf0f2;
+}
+.release-shipping-toggle > span {
+  color: #14202b;
+  font-weight: 700;
+}
+.release-shipping-toggle > div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.release-shipping-toggle label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #39434b;
+  font-weight: 600;
+  cursor: pointer;
+}
+.release-shipping-toggle input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  accent-color: #168ff5;
+}
+.release-fields.shipping-disabled > :not(.release-shipping-toggle) { display: none !important; }
+.release-fields.shipping-disabled { row-gap: 0; padding-bottom: 14px; }
 .marketplace-address-title {
   grid-column: 1 / -1;
   margin: 0 0 2px;
@@ -1346,16 +1395,44 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .instruction-search input, .instruction-search select { width: 100%; height: 32px; }
 .instruction-search .btn { height: 32px; padding: 0 28px; font-weight: 700; }
 .instruction-picker-table-wrap { width: 100%; overflow-x: auto; }
-.instruction-picker-table { width: 100%; min-width: 920px; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+.instruction-picker-table { width: 100%; min-width: 1080px; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
 .instruction-picker-table th, .instruction-picker-table td { height: 32px; padding: 0 10px; border: 1px solid #e1e6eb; text-align: center; }
 .instruction-picker-table th { color: #15212c; background: #f8fafc; font-weight: 700; }
 .instruction-picker-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .instruction-picker-table .picker-check { width: 48px; }
 .instruction-picker-table th:nth-child(2) { width: 145px; }
 .instruction-picker-table th:nth-child(3) { width: 190px; }
-.instruction-picker-table th:nth-child(8) { width: 160px; }
+.instruction-picker-table th:nth-child(9) { width: 160px; }
 .instruction-picker-table input[type="checkbox"] { width: 14px; height: 14px; padding: 0; accent-color: #1682e6; }
 .instruction-picker-table input:disabled { opacity: .35; }
+.instruction-picker-table .instruction-draft-unit,
+.instruction-picker-table .instruction-draft-price,
+.instruction-picker-table .instruction-draft-quantity {
+  width: 100%;
+  height: 27px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid #dce1e5;
+  border-radius: 3px;
+  color: #39434b;
+  background: #fff;
+  font: inherit;
+  text-align: center;
+  outline: none;
+}
+.instruction-picker-table .instruction-draft-unit:focus,
+.instruction-picker-table .instruction-draft-price:focus,
+.instruction-picker-table .instruction-draft-quantity:focus {
+  border-color: #168ff5;
+  box-shadow: 0 0 0 2px rgba(22, 143, 245, .12);
+}
+.instruction-picker-table .instruction-draft-unit:disabled,
+.instruction-picker-table .instruction-draft-price:disabled,
+.instruction-picker-table .instruction-draft-quantity:disabled {
+  color: #7d8994;
+  background: #f4f6f8;
+  opacity: 1;
+}
 .instruction-pagination {
   display: flex; align-items: center; justify-content: space-between; margin-top: 16px; color: #64707a; font-size: 12px;
 }

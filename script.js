@@ -377,6 +377,7 @@ const instructionRowsByInventory = new Map();
 const attachmentRowsByInventory = new Map();
 let instructionDraftCodes = new Set(instructionCatalog.slice(0, 3).map((row) => row.code));
 let instructionExistingCatalogCodes = new Set();
+const instructionDraftValues = new Map();
 let editingInstructionCode = "";
 let editingRemarkInstructionCode = "";
 let deletingInstructionCode = "";
@@ -394,6 +395,14 @@ const instructionWorkflowRows = [
   destroyedRows,
   rejectedRows
 ];
+
+instructionWorkflowRows.forEach((rows) => {
+  rows.forEach((row, index) => {
+    if (row.releaseType !== "放货" && row.releaseType !== "不放货") {
+      row.releaseType = row.shippingEnabled === false || index % 3 === 2 ? "不放货" : "放货";
+    }
+  });
+});
 
 function getInstructionDetailKey(row) {
   return row.applicationNo || `${row.container || ""}::${row.pallet || row.id || ""}`;
@@ -508,6 +517,7 @@ const footer = $("#tableFooter");
 let selectAll = null;
 const filters = {
   keyword: $("#keywordFilter"), customer: $("#customerFilter"), request: $("#requestFilter"), inbound: $("#inboundFilter"),
+  releaseType: $("#releaseTypeFilter"),
   transfer: $("#transferFilter"), fba: $("#fbaFilter"), dispatch: $("#dispatchFilter"),
   location: $("#locationFilter"), container: $("#containerFilter"), pallet: $("#palletFilter"),
   blocked: $("#blockedFilter"), financialAudit: $("#financialAuditFilter")
@@ -589,6 +599,16 @@ const financialAuditTone = {
 
 function renderFinancialAudit(status) {
   return `<span class="workflow-status ${financialAuditTone[status] || "status-neutral"}">${status || "-"}</span>`;
+}
+
+function getReleaseType(row) {
+  if (row.releaseType === "放货" || row.releaseType === "不放货") return row.releaseType;
+  return row.shippingEnabled === false ? "不放货" : "放货";
+}
+
+function renderReleaseType(row) {
+  const releaseType = getReleaseType(row);
+  return `<span class="release-type-tag ${releaseType === "放货" ? "is-release" : "is-no-release"}">${releaseType}</span>`;
 }
 
 const instructionAuditTone = {
@@ -717,11 +737,12 @@ function renderTableChrome() {
   $("#countdownAction").hidden = !isInstructionPendingView();
   $("#approvalDensityButton").hidden = isTerminalRequestView();
   $("#financialAuditField").hidden = !isRequestTableView();
+  $("#releaseTypeField").hidden = activeStatus === "暂存";
 
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>申请类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
+    <th>申请类型</th><th class="release-type-col">放货类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
@@ -753,7 +774,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    const emptyColumns = isDestroyedView() ? 29 : isInstructionView() || isOutboundView() ? 22 : isApprovalView() ? 21 : isTerminalRequestView() ? 21 : 19;
+    const emptyColumns = isDestroyedView() ? 30 : isInstructionView() || isOutboundView() ? 23 : isApprovalView() ? 22 : isTerminalRequestView() ? 22 : 19;
     body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
@@ -767,7 +788,7 @@ function renderRows() {
       <td title="${row.applicationNo}">${row.applicationNo}</td>
       <td title="${row.container}">${row.container}</td>
       <td>${row.system}</td><td>${row.inbound}</td><td class="${row.blocked === "是" ? "blocked" : ""}">${row.blocked === "是" ? "拦截" : row.blocked}</td>
-      <td>${row.applicationType}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
+      <td>${row.applicationType}</td><td class="release-type-col">${renderReleaseType(row)}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
       <td>${isDestroyedView() ? row.dispatch : row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       ${(isApprovalView() || isTerminalRequestView())
         ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
@@ -838,6 +859,7 @@ function applyFilters() {
       && (!filters.customer.value || row.customer === filters.customer.value)
       && (!filters.request.value || (row.applicationNo || "").toLowerCase().includes(filters.request.value.trim().toLowerCase()))
       && (!inboundTerms.length || inboundTerms.includes(row.inbound))
+      && (activeStatus === "暂存" || !filters.releaseType.value || getReleaseType(row) === filters.releaseType.value)
       && (!filters.transfer.value || row.transfer === filters.transfer.value)
       && (!filters.fba.value || row.destination === filters.fba.value)
       && (!filters.dispatch.value || row.dispatch === filters.dispatch.value)
@@ -1232,10 +1254,15 @@ function renderInstructionPicker() {
   const displayRows = [...rows, ...Array(Math.max(0, 18 - rows.length)).fill(null)].slice(0, 18);
   $("#instructionPickerBody").innerHTML = displayRows.map((row) => {
     const alreadyAdded = row && instructionExistingCatalogCodes.has(row.code);
+    const draft = row ? (instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" }) : null;
+    const disabled = alreadyAdded ? "disabled" : "";
     return `<tr>
     <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${row.code}"` : "disabled"} ${row && (instructionDraftCodes.has(row.code) || alreadyAdded) ? "checked" : ""} ${alreadyAdded ? 'disabled title="已添加"' : ""} /></td>
-    <td>${row?.code || ""}</td><td>${row?.name || ""}</td><td>${row?.type || ""}</td><td>${row?.unit || ""}</td>
-    <td>${row?.price || ""}</td><td>${row?.currency || ""}</td><td>${row?.description || ""}</td>
+    <td>${row?.code || ""}</td><td>${row?.name || ""}</td><td>${row?.type || ""}</td>
+    <td>${row ? `<select class="instruction-draft-unit" data-code="${row.code}" aria-label="${escapeHtml(row.name)}计费单位" ${disabled}><option value="票" ${draft.unit === "票" ? "selected" : ""}>票</option><option value="箱" ${draft.unit === "箱" ? "selected" : ""}>箱</option><option value="KG" ${draft.unit === "KG" ? "selected" : ""}>KG</option></select>` : ""}</td>
+    <td>${row ? `<input class="instruction-draft-price" data-code="${row.code}" type="number" min="0" step="any" value="${escapeHtml(draft.price)}" aria-label="${escapeHtml(row.name)}计费单价" ${disabled} />` : ""}</td>
+    <td>${row ? `<input class="instruction-draft-quantity" data-code="${row.code}" type="number" min="0" step="any" value="${escapeHtml(draft.quantity)}" aria-label="${escapeHtml(row.name)}计费数量" ${disabled} />` : ""}</td>
+    <td>${row?.currency || ""}</td><td>${row?.description || ""}</td>
   </tr>`;
   }).join("");
   const availableCodes = instructionCatalog.filter((row) => !instructionExistingCatalogCodes.has(row.code)).map((row) => row.code);
@@ -1248,6 +1275,15 @@ function openInstructionPicker() {
   const existing = getActiveInstructionRows();
   instructionExistingCatalogCodes = new Set(existing.map((row) => row.catalogCode).filter(Boolean));
   instructionDraftCodes = new Set();
+  instructionDraftValues.clear();
+  instructionCatalog.forEach((row) => {
+    const existingRow = existing.find((item) => item.catalogCode === row.code);
+    instructionDraftValues.set(row.code, {
+      unit: existingRow?.unit || row.unit,
+      price: existingRow?.price || row.price,
+      quantity: existingRow?.quantity || "1"
+    });
+  });
   $("#instructionSearchName").value = "";
   $("#instructionSearchType").value = "";
   $("#instructionOverlay").hidden = false;
@@ -1261,8 +1297,10 @@ function closeInstructionPicker() {
 const releaseOverlay = $("#releaseOverlay");
 const releaseForm = $("#releaseForm");
 let activeReleaseRow = null;
+let activeReleaseSourceRow = null;
 let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
+let activeReleaseShippingEnabled = true;
 const selectedDetailInstructionCodes = new Set();
 
 function normalizeReleaseRow(row) {
@@ -1325,6 +1363,33 @@ function updateReleaseApplicationFields() {
   });
   releaseOverlay.classList.toggle("private-address-mode", privateAddress);
   $("#instructionSection").hidden = false;
+  updateReleaseShippingState();
+}
+
+function updateReleaseShippingState() {
+  const shippingToggle = $("#releaseShippingToggle");
+  const releaseFields = $("#releaseFields");
+  const shipOutDisabled = !activeReleaseReadOnly && !activeReleaseShippingEnabled;
+  shippingToggle.hidden = activeReleaseReadOnly;
+  releaseFields.classList.toggle("shipping-disabled", shipOutDisabled);
+  shippingToggle.querySelectorAll("input").forEach((control) => {
+    control.disabled = activeReleaseReadOnly;
+  });
+  if (shipOutDisabled) {
+    releaseFields.querySelectorAll("input, select, button, textarea").forEach((control) => {
+      if (!control.closest(".release-shipping-toggle") && !control.closest(".ship-out-conditional")) control.disabled = true;
+    });
+  }
+  // 是否出货条件字段切换
+  document.querySelectorAll(".ship-out-conditional").forEach((field) => { field.hidden = !shipOutDisabled; });
+  if (!shipOutDisabled) {
+    $("#releaseShipOutBoxes").value = "";
+    $("#releaseShipOutRemark").value = "";
+    $("#shipOutUploadName").textContent = "";
+  }
+  document.querySelectorAll(".ship-out-conditional input, .ship-out-conditional button").forEach((control) => {
+    control.disabled = activeReleaseReadOnly || !shipOutDisabled;
+  });
 }
 
 function setReleaseDrawerMode(readOnly, status) {
@@ -1344,12 +1409,19 @@ function openReleaseDrawer(sourceRow, options = {}) {
   const readOnly = Boolean(options.readOnly);
   const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
+  activeReleaseSourceRow = sourceRow;
+  activeReleaseShippingEnabled = row.shippingEnabled !== false;
   selectedDetailInstructionCodes.clear();
   ensureInstructionDetailRows(sourceRow);
   releaseForm.reset();
   const sourceApplication = row.releaseApplication || row.applicationType;
   const mappedApplication = sourceApplication === "其他地址" ? "私人地址" : sourceApplication;
   $("#releaseApplication").value = marketplaceReleaseTypes.has(mappedApplication) || mappedApplication === "私人地址" ? mappedApplication : "FBA";
+  document.querySelector(`input[name="releaseShippingEnabled"][value="${activeReleaseShippingEnabled ? "yes" : "no"}"]`).checked = true;
+  $("#releaseShipOutBoxes").value = row.shipOutBoxes || "";
+  $("#releaseShipOutRemark").value = row.shipOutRemark || "";
+  $("#shipOutUploadName").textContent = "";
+  $("#releaseShipOutFile").value = "";
   $("#releaseContainer").textContent = row.container;
   $("#releaseDispatch").textContent = row.dispatch;
   $("#releasePallet").textContent = row.pallet;
@@ -1393,11 +1465,15 @@ function closeReleaseDrawer() {
   $("#instructionDeleteOverlay").hidden = true;
   document.body.classList.remove("release-open");
   activeReleaseRow = null;
+  activeReleaseSourceRow = null;
   selectedDetailInstructionCodes.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
+  activeReleaseShippingEnabled = true;
   releaseForm.reset();
   $("#releaseAttachmentList").replaceChildren();
+  $("#shipOutUploadName").textContent = "";
+  $("#releaseShipOutFile").value = "";
 }
 
 body.addEventListener("click", (event) => {
@@ -1430,10 +1506,45 @@ $("#instructionSearchName").addEventListener("keydown", (event) => {
   if (event.key === "Enter") renderInstructionPicker();
 });
 $("#instructionPickerBody").addEventListener("change", (event) => {
+  const draftUnit = event.target.closest(".instruction-draft-unit");
+  const draftPrice = event.target.closest(".instruction-draft-price");
+  const draftQuantity = event.target.closest(".instruction-draft-quantity");
+  const draftControl = draftUnit || draftPrice || draftQuantity;
+  if (draftControl?.dataset.code) {
+    const row = instructionCatalog.find((item) => item.code === draftControl.dataset.code);
+    if (!row) return;
+    const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
+    if (draftUnit) draft.unit = draftUnit.value;
+    if (draftPrice) draft.price = draftPrice.value;
+    if (draftQuantity) draft.quantity = draftQuantity.value;
+    instructionDraftValues.set(row.code, draft);
+    return;
+  }
   const checkbox = event.target.closest(".instruction-pick");
   if (!checkbox || !checkbox.dataset.code) return;
   checkbox.checked ? instructionDraftCodes.add(checkbox.dataset.code) : instructionDraftCodes.delete(checkbox.dataset.code);
   renderInstructionPicker();
+});
+$("#instructionPickerBody").addEventListener("input", (event) => {
+  const control = event.target.closest(".instruction-draft-price, .instruction-draft-quantity");
+  if (!control?.dataset.code) return;
+  const row = instructionCatalog.find((item) => item.code === control.dataset.code);
+  if (!row) return;
+  const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
+  if (control.classList.contains("instruction-draft-price")) draft.price = control.value;
+  if (control.classList.contains("instruction-draft-quantity")) draft.quantity = control.value;
+  instructionDraftValues.set(row.code, draft);
+});
+$("#instructionPickerBody").addEventListener("focusout", (event) => {
+  const control = event.target.closest(".instruction-draft-price, .instruction-draft-quantity");
+  if (!control?.dataset.code || control.value.trim()) return;
+  const row = instructionCatalog.find((item) => item.code === control.dataset.code);
+  if (!row) return;
+  const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
+  if (control.classList.contains("instruction-draft-price")) draft.price = row.price;
+  if (control.classList.contains("instruction-draft-quantity")) draft.quantity = "1";
+  control.value = control.classList.contains("instruction-draft-price") ? draft.price : draft.quantity;
+  instructionDraftValues.set(row.code, draft);
 });
 $("#instructionSelectAll").addEventListener("change", (event) => {
   instructionDraftCodes = event.target.checked
@@ -1452,17 +1563,22 @@ $("#instructionConfirm").addEventListener("click", () => {
   const createdAt = Date.now();
   const addedRows = instructionCatalog
     .filter((row) => instructionDraftCodes.has(row.code))
-    .map((row, index) => ({
-      ...row,
-      catalogCode: row.code,
-      code: `${detailKey}-NEW-${createdAt}-${index + 1}`,
-      quantity: "1",
-      addedAt: "2026-07-25 14:00:00",
-      addedBy: "天朗（付豪）",
-      remark: "",
-      images: [],
-      status: "待处理"
-    }));
+    .map((row, index) => {
+      const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
+      return {
+        ...row,
+        catalogCode: row.code,
+        code: `${detailKey}-NEW-${createdAt}-${index + 1}`,
+        unit: draft.unit || row.unit,
+        price: String(draft.price).trim() || row.price,
+        quantity: String(draft.quantity).trim() || "1",
+        addedAt: "2026-07-25 14:00:00",
+        addedBy: "天朗（付豪）",
+        remark: "",
+        images: [],
+        status: "待处理"
+      };
+    });
   const rows = [...existingRows, ...addedRows];
   instructionRowsByInventory.set(detailKey, rows);
   syncInstructionDetails(detailKey, rows);
@@ -1722,11 +1838,25 @@ $("#releaseApplication").addEventListener("change", () => {
   updateReleaseApplicationFields();
   requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : $("#releaseDestination")).focus());
 });
+document.querySelectorAll('input[name="releaseShippingEnabled"]').forEach((control) => {
+  control.addEventListener("change", (event) => {
+    activeReleaseShippingEnabled = event.target.value === "yes";
+    updateReleaseApplicationFields();
+    if (activeReleaseShippingEnabled) {
+      requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : $("#releaseDestination")).focus());
+    }
+  });
+});
 $("#releaseAddressDetail").addEventListener("input", () => updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount"));
 $("#releaseOverseasRemark").addEventListener("input", () => updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount"));
 $("#privateUploadButton").addEventListener("click", () => $("#releasePrivateFile").click());
 $("#releasePrivateFile").addEventListener("change", (event) => {
   $("#privateUploadName").textContent = event.target.files[0]?.name || "";
+});
+$("#shipOutUploadButton").addEventListener("click", () => $("#releaseShipOutFile").click());
+$("#releaseShipOutFile").addEventListener("change", (event) => {
+  const files = [...(event.target.files || [])];
+  $("#shipOutUploadName").textContent = files.map((f) => f.name).join("、") || "";
 });
 releaseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1735,6 +1865,14 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   if (!releaseForm.reportValidity() || !activeReleaseRow) return;
+  activeReleaseRow.shippingEnabled = activeReleaseShippingEnabled;
+  if (activeReleaseSourceRow) activeReleaseSourceRow.shippingEnabled = activeReleaseShippingEnabled;
+  if (!activeReleaseShippingEnabled) {
+    activeReleaseRow.shipOutBoxes = $("#releaseShipOutBoxes").value;
+    activeReleaseRow.shipOutRemark = $("#releaseShipOutRemark").value;
+    closeReleaseDrawer();
+    return;
+  }
   const boxesControl = isPrivateAddressRelease()
     ? $("#releasePrivateBoxes")
     : isMarketplaceRelease()
