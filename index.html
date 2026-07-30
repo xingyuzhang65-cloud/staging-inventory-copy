@@ -81,7 +81,7 @@
             <button class="status-tab" data-status="指令处理中">指令处理中(8)</button>
             <button class="status-tab" data-status="待出库">指令处理完成，待出库(95)</button>
             <button class="status-tab" data-status="已出库">已出库(30)</button>
-            <button class="status-tab" data-status="销毁">销毁(36)</button>
+            <button class="status-tab" data-status="销毁">已完成(36)</button>
             <button class="status-tab" data-status="审批拒绝">审批拒绝(36)</button>
           </div>
           <div class="status-actions"><button class="btn context-action" id="contextAction">批量初审</button><button class="btn countdown-action" id="countdownAction" hidden>倒计时配置</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
@@ -181,12 +181,12 @@
           </div>
         </div>
         <label class="release-field ship-out-conditional" id="releaseShipOutBoxesField" hidden><span class="required">箱数</span><input id="releaseShipOutBoxes" type="number" min="1" placeholder="请输入箱数" /></label>
-        <label class="release-field ship-out-conditional destroy-order-field" id="releaseDestroyBoxNoField" hidden><span>箱号</span><input id="releaseDestroyBoxNo" placeholder="请输入箱号" /></label>
+        <label class="release-field ship-out-conditional destroy-order-field" id="releaseDestroyBoxNoField" hidden><span class="required">箱号</span><input id="releaseDestroyBoxNo" type="text" placeholder="请输入箱号" /></label>
         <label class="release-field ship-out-conditional" id="releaseShipOutRemarkField" hidden><span>备注</span><input id="releaseShipOutRemark" placeholder="请输入备注" /></label>
         <label class="release-field upload-field ship-out-conditional" id="releaseShipOutAttachmentField" hidden><span>附件上传</span><span><input id="releaseShipOutFile" type="file" multiple hidden /><button class="upload-button" id="shipOutUploadButton" type="button">↥&nbsp; 上传</button><em id="shipOutUploadName"></em></span></label>
         <h3 class="marketplace-address-title" id="marketplaceAddressTitle" hidden>收件地址信息</h3>
         <label class="release-field">
-          <span class="required">下单类型</span>
+          <span class="required">运单类型</span>
           <select id="releaseApplication" required><option value="FBA" selected>FBA</option><option value="Walmart">Walmart</option><option value="Tiktok">Tiktok</option><option value="私人地址">私人地址</option></select>
         </label>
         <label class="release-field fba-release-field"><span class="required">目的地</span><select id="releaseDestination" required><option value="">请选择</option><option>ABE2</option><option>ABE3</option><option>ABE8</option><option>BWI9</option><option>FEDEX</option></select></label>
@@ -198,7 +198,6 @@
         <label class="release-field fba-release-field"><span>备注</span><input id="releaseRemark" placeholder="请输入" /></label>
         <label class="release-field fba-release-field"><span>仓库备注</span><input id="releaseWarehouseRemark" placeholder="请输入仓库备注" /></label>
         <label class="release-field upload-field waybill-attachment-field"><span>附件上传</span><span><input id="releaseFile" type="file" multiple hidden /><button class="upload-button" id="uploadButton" type="button">↥&nbsp; 上传</button><em id="uploadName"></em></span></label>
-        <div class="release-attachment-list waybill-attachment-field" id="releaseAttachmentList" aria-live="polite"></div>
 
         <label class="release-field marketplace-release-field" hidden><span class="required">目的地</span><input id="releaseWarehouseCode" required placeholder="请输入目的地" /></label>
         <label class="release-field marketplace-release-field" hidden><span class="required">箱数</span><input id="releaseMarketplaceBoxes" type="number" min="1" required placeholder="请输入" /></label>
@@ -234,6 +233,15 @@
             <label class="private-service-note"><span>增值服务备注：</span><textarea id="releasePrivateServiceRemark" placeholder="请输入"></textarea></label>
           </div>
         </section>
+      </section>
+      <section class="drawer-attachment-section" id="drawerAttachmentSection">
+        <h3>附件</h3>
+        <div class="drawer-attachment-upload">
+          <input id="drawerAttachmentFile" type="file" multiple hidden />
+          <button class="upload-button" id="drawerAttachmentButton" type="button">↥&nbsp; 上传</button>
+          <em id="drawerAttachmentName"></em>
+        </div>
+        <div class="release-attachment-list" id="releaseAttachmentList" aria-live="polite"></div>
       </section>
       <section class="cargo-box-section" id="cargoBoxSection">
         <h3>货箱信息</h3>

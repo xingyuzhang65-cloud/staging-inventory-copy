@@ -745,7 +745,7 @@ function renderTableChrome() {
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>申请类型</th><th class="release-type-col">下单类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
+    <th>运单类型</th><th class="release-type-col">下单类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
@@ -1016,7 +1016,7 @@ $("#exportButton").addEventListener("click", () => {
     window.alert("请先保存或放弃指令修改，再执行导出");
     return;
   }
-  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","申请类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","运单类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
   if (isApprovalView() || isTerminalRequestView()) requestHeader.push("指令数量", "指令");
   else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令数量", "指令");
   requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
@@ -1037,7 +1037,7 @@ $("#exportButton").addEventListener("click", () => {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = isApprovalView() ? "待审批.csv" : isInstructionView() ? "指令处理.csv" : isShippedView() ? "已出库.csv" : isOutboundView() ? "待出库.csv" : isDestroyedView() ? "销毁.csv" : isRejectedView() ? "审批拒绝.csv" : "暂存库存.csv";
+  link.download = isApprovalView() ? "待审批.csv" : isInstructionView() ? "指令处理.csv" : isShippedView() ? "已出库.csv" : isOutboundView() ? "待出库.csv" : isDestroyedView() ? "已完成.csv" : isRejectedView() ? "审批拒绝.csv" : "暂存库存.csv";
   link.click();
   URL.revokeObjectURL(url);
 });
@@ -1201,10 +1201,23 @@ function getReleaseAttachments() {
 function renderReleaseAttachments() {
   const target = $("#releaseAttachmentList");
   const attachments = getReleaseAttachments();
-  $("#uploadName").textContent = attachments.length ? `已上传 ${attachments.length} 个附件` : "";
+  const uploadText = attachments.length ? `已上传 ${attachments.length} 个附件` : "";
+  $("#uploadName").textContent = uploadText;
+  $("#drawerAttachmentName").textContent = uploadText;
   target.innerHTML = attachments.length
     ? attachments.map((attachment) => `<div class="release-attachment-item"><span class="release-attachment-name">${attachment.kind === "image" ? "PDA图片：" : "附件："}${escapeHtml(attachment.name)}</span><a class="release-attachment-download" href="${escapeHtml(attachment.url)}" download="${escapeHtml(attachment.name)}">下载</a></div>`).join("")
     : "";
+}
+
+function addReleaseAttachments(files) {
+  if (!files.length || !activeReleaseRow) return;
+  const attachments = getReleaseAttachments();
+  files.forEach((file) => attachments.push({
+    name: file.name,
+    url: URL.createObjectURL(file),
+    kind: file.type.startsWith("image/") ? "image" : "file"
+  }));
+  renderReleaseAttachments();
 }
 
 function renderInstructionList() {
@@ -1397,6 +1410,7 @@ function updateReleaseShippingState() {
   });
   $("#releaseDestroyBoxNo").disabled = activeReleaseReadOnly || !compactOrderMode || !destroyOrderMode;
   $("#releaseShipOutBoxes").required = compactOrderMode && !activeReleaseReadOnly;
+  $("#releaseDestroyBoxNo").required = destroyOrderMode && compactOrderMode && !activeReleaseReadOnly;
 }
 
 function setReleaseDrawerMode(readOnly, status) {
@@ -1834,16 +1848,13 @@ document.addEventListener("keydown", (event) => {
 });
 $("#uploadButton").addEventListener("click", () => $("#releaseFile").click());
 $("#releaseFile").addEventListener("change", (event) => {
-  const files = [...(event.target.files || [])];
-  if (!files.length || !activeReleaseRow) return;
-  const attachments = getReleaseAttachments();
-  files.forEach((file) => attachments.push({
-    name: file.name,
-    url: URL.createObjectURL(file),
-    kind: file.type.startsWith("image/") ? "image" : "file"
-  }));
+  addReleaseAttachments([...(event.target.files || [])]);
   event.target.value = "";
-  renderReleaseAttachments();
+});
+$("#drawerAttachmentButton").addEventListener("click", () => $("#drawerAttachmentFile").click());
+$("#drawerAttachmentFile").addEventListener("change", (event) => {
+  addReleaseAttachments([...(event.target.files || [])]);
+  event.target.value = "";
 });
 $("#releaseApplication").addEventListener("change", () => {
   updateReleaseApplicationFields();
@@ -1862,12 +1873,16 @@ $("#releaseAddressDetail").addEventListener("input", () => updateReleaseTextCoun
 $("#releaseOverseasRemark").addEventListener("input", () => updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount"));
 $("#privateUploadButton").addEventListener("click", () => $("#releasePrivateFile").click());
 $("#releasePrivateFile").addEventListener("change", (event) => {
+  addReleaseAttachments([...(event.target.files || [])]);
   $("#privateUploadName").textContent = event.target.files[0]?.name || "";
+  event.target.value = "";
 });
 $("#shipOutUploadButton").addEventListener("click", () => $("#releaseShipOutFile").click());
 $("#releaseShipOutFile").addEventListener("change", (event) => {
   const files = [...(event.target.files || [])];
+  addReleaseAttachments(files);
   $("#shipOutUploadName").textContent = files.map((f) => f.name).join("、") || "";
+  event.target.value = "";
 });
 releaseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1922,6 +1937,7 @@ $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomV
 $("#releaseMarketplaceBoxes").addEventListener("input", () => $("#releaseMarketplaceBoxes").setCustomValidity(""));
 $("#releasePrivateBoxes").addEventListener("input", () => $("#releasePrivateBoxes").setCustomValidity(""));
 $("#releaseShipOutBoxes").addEventListener("input", () => $("#releaseShipOutBoxes").setCustomValidity(""));
+$("#releaseDestroyBoxNo").addEventListener("input", () => $("#releaseDestroyBoxNo").setCustomValidity(""));
 
 function buildWatermarks() {
   const layer = $("#watermarks");
