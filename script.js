@@ -1144,44 +1144,59 @@ approvalReviewOverlay.addEventListener("click", (event) => {
 });
 
 function getCargoBoxRows(row) {
-  if (row.id === 1 && row.status === "暂存") {
-    return [
-      { boxNo: "FBA19DNZH02MU000319U0001", customerTracking: "YT2507100001_0710_2U0001", customerData: ["44 KG", "50*50*50 CM"], systemWeight: ["44 / 44 KG", "50*50*50 CM"], carrier: "美森正班13日达-卡派包税", transferNo: "1Z0VV966030992", warehouseReturnNo: "1Z0VV966030992", networkStatus: "已下单", status: "查看" },
-      { boxNo: "FBA19DNZH02MU000319U0002", customerTracking: "YT2507100001_0710_2U0002", customerData: ["44 KG", "50*50*50 CM"], systemWeight: ["44 / 44 KG", "50*50*50 CM"], carrier: "美森正班13日达-卡派包税", transferNo: "1321636632", warehouseReturnNo: "1321636632", networkStatus: "已下单", status: "查看" }
-    ];
-  }
-  const count = Math.max(1, Math.min(Number(row.unsent || row.boxes || 1), 8));
-  const perBoxWeight = Number(row.weight || count * 44) / count;
-  const fbaCode = `FBA${String(18 + row.id).padStart(2, "0")}DNZH02MU0003${String(row.id).padStart(2, "0")}`;
-  const waybillNo = `YT250710${String(row.id).padStart(4, "0")}_0710_${row.id}`;
-  return Array.from({ length: count }, (_, index) => {
-    const sequence = index + 1;
-    const weight = Number(perBoxWeight.toFixed(2));
-    const transferNo = `1Z0VV96603${String(row.id).padStart(2, "0")}${String(sequence).padStart(4, "0")}`;
-    return {
-      boxNo: `${fbaCode}U${String(sequence).padStart(4, "0")}`,
-      customerTracking: `${waybillNo}U${String(sequence).padStart(4, "0")}`,
-      customerData: [`${weight} KG`, "50*50*50 CM"],
-      systemWeight: [`${weight} / ${weight} KG`, "50*50*50 CM"],
-      carrier: row.dispatch || "-",
-      transferNo,
-      warehouseReturnNo: transferNo,
-      networkStatus: "已下单",
-      status: "查看"
-    };
-  });
+  const count = Math.max(1, Math.min(Number(row.unsent || row.boxes || 1), 10));
+  const unitPrice = row.id % 2 ? 10 : 12;
+  const quantity = row.id % 3 ? 16 : 12;
+  const material = row.cargoMaterial || "Oxford\u725b\u6d25\u5e03";
+  const customsCode = `42021290${String(row.id).padStart(2, "0")}`;
+  const boxPrefix = row.shipmentId || `FBA${String(18 + row.id).padStart(2, "0")}DNZH02MU0003${String(row.id).padStart(2, "0")}`;
+  return Array.from({ length: count }, (_, index) => ({
+    boxNo: `${boxPrefix}${String(index + 1).padStart(3, "0")}`,
+    poNumber: row.referenceId || "-",
+    englishName: "lunch bag",
+    chineseName: "\u5348\u9910\u5305",
+    unitPrice,
+    quantity,
+    totalPrice: unitPrice * quantity,
+    material,
+    customsCode
+  }));
 }
 
 function renderCargoBoxRows(row) {
-  $("#cargoBoxBody").innerHTML = getCargoBoxRows(row).map((box) => `<tr>
-    <td class="cargo-check"><input type="checkbox" disabled aria-label="货箱 ${box.boxNo}" /></td>
-    <td class="box-code"><div>${box.boxNo}</div><div class="subline">${box.customerTracking}</div></td>
-    <td><div>${box.customerData[0]}</div><div class="subline">${box.customerData[1]}</div></td>
-    <td><div>${box.systemWeight[0]}</div><div class="subline">${box.systemWeight[1]}</div></td>
-    <td><div>${box.carrier}</div><div class="subline">${box.transferNo}</div></td>
-    <td class="muted">-</td><td class="return-no">${box.warehouseReturnNo}</td>
-    <td>${box.networkStatus}</td><td class="muted">${box.status}</td>
+  const rows = getCargoBoxRows(row);
+  const total = rows.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+  $("#cargoBoxMaterial").textContent = rows[0]?.material || "Oxford\u725b\u6d25\u5e03";
+  $("#cargoDeclareTotal").textContent = String(total);
+  const allChecked = rows.length > 0 && rows.every((_, i) => selectedCargoBoxIndices.has(i));
+  const anyChecked = rows.some((_, i) => selectedCargoBoxIndices.has(i));
+  const canSelect = !activeReleaseReadOnly;
+  $("#cargoBoxSection thead").innerHTML = `<tr>
+    <th class="cargo-index">#</th>
+    <th class="cargo-check"><input type="checkbox" id="cargoBoxSelectAll" aria-label="\u5168\u9009\u8d27\u7bb1" ${!canSelect ? "disabled" : ""} /></th>
+    <th>FBA/IBR\u7bb1\u53f7</th><th>PO Number</th><th>\u4ea7\u54c1\u82f1\u6587\u540d</th><th>\u4ea7\u54c1\u4e2d\u6587\u540d</th>
+    <th>\u4ea7\u54c1\u7533\u62a5\u5355\u4ef7</th><th>\u4ea7\u54c1\u7533\u62a5\u6570\u91cf</th><th>\u4ea7\u54c1\u7533\u62a5\u603b\u4ef7</th><th>\u4ea7\u54c1\u6750\u8d28</th><th>\u4ea7\u54c1\u6d77\u5173\u7f16\u7801</th>
+  </tr>`;
+  $("#cargoBoxBody").innerHTML = rows.map((box, index) => `<tr>
+    <td class="cargo-index">${index + 1}</td>
+    <td class="cargo-check"><input type="checkbox" class="cargo-box-check" data-index="${index}" aria-label="\u8d27\u7bb1 ${escapeHtml(box.boxNo)}" ${selectedCargoBoxIndices.has(index) ? "checked" : ""} ${!canSelect ? "disabled" : ""} /></td>
+    <td>${escapeHtml(box.boxNo)}</td>
+    <td>${escapeHtml(box.poNumber)}</td>
+    <td>${escapeHtml(box.englishName)}</td>
+    <td>${escapeHtml(box.chineseName)}</td>
+    <td>${box.unitPrice}</td>
+    <td>${box.quantity}</td>
+    <td>${box.totalPrice}</td>
+    <td>${escapeHtml(box.material)}</td>
+    <td>${escapeHtml(box.customsCode)}</td>
   </tr>`).join("");
+  // Sync select-all checkbox after render
+  setTimeout(() => {
+    const selectAll = $("#cargoBoxSelectAll");
+    if (!selectAll) return;
+    selectAll.checked = allChecked;
+    selectAll.indeterminate = anyChecked && !allChecked;
+  }, 0);
 }
 
 function getActiveInstructionRows() {
@@ -1318,6 +1333,7 @@ let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
 let activeReleaseOrderType = "放货";
 const selectedDetailInstructionCodes = new Set();
+let selectedCargoBoxIndices = new Set();
 
 function normalizeReleaseRow(row) {
   const pallet = row.pallet || "-";
@@ -1421,7 +1437,7 @@ function setReleaseDrawerMode(readOnly, status) {
   $("#releaseCancel").textContent = readOnly ? "关闭" : "取消";
   $("#instructionAdd").hidden = false;
   $("#instructionBatchComplete").hidden = !["指令待处理", "指令处理中", "待出库"].includes(status);
-  $("#cargoBoxSection").hidden = !readOnly && status === "暂存";
+  $("#cargoBoxSection").hidden = false;
   releaseForm.classList.toggle("release-readonly", readOnly);
 }
 
@@ -1476,6 +1492,7 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseTitle").textContent = readOnly ? "运单详情" : "下单";
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
+  $("#releaseForm").insertBefore($("#cargoBoxSection"), $("#drawerAttachmentSection"));
   renderCargoBoxRows(row);
   renderReleaseAttachments();
   renderInstructionList();
@@ -1491,6 +1508,7 @@ function closeReleaseDrawer() {
   activeReleaseRow = null;
   activeReleaseSourceRow = null;
   selectedDetailInstructionCodes.clear();
+  selectedCargoBoxIndices.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
   activeReleaseOrderType = "放货";
@@ -1517,6 +1535,29 @@ $("#releaseClose").addEventListener("click", closeReleaseDrawer);
 $("#releaseCancel").addEventListener("click", closeReleaseDrawer);
 releaseOverlay.addEventListener("click", (event) => {
   if (event.target === releaseOverlay) closeReleaseDrawer();
+});
+// Cargo box checkbox delegation
+$("#cargoBoxBody").addEventListener("change", (event) => {
+  const checkbox = event.target.closest(".cargo-box-check");
+  if (!checkbox) return;
+  const index = Number(checkbox.dataset.index);
+  if (checkbox.checked) {
+    selectedCargoBoxIndices.add(index);
+  } else {
+    selectedCargoBoxIndices.delete(index);
+  }
+  // Re-render to keep select-all in sync
+  if (activeReleaseRow) renderCargoBoxRows(activeReleaseRow);
+});
+$("#cargoBoxSection").addEventListener("change", (event) => {
+  if (!event.target.matches("#cargoBoxSelectAll")) return;
+  const rows = activeReleaseRow ? getCargoBoxRows(activeReleaseRow) : [];
+  if (event.target.checked) {
+    rows.forEach((_, i) => selectedCargoBoxIndices.add(i));
+  } else {
+    selectedCargoBoxIndices.clear();
+  }
+  if (activeReleaseRow) renderCargoBoxRows(activeReleaseRow);
 });
 $("#instructionAdd").addEventListener("click", openInstructionPicker);
 $("#instructionClose").addEventListener("click", closeInstructionPicker);
