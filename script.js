@@ -969,10 +969,10 @@ window.addEventListener("beforeunload", (event) => {
   event.returnValue = "";
 });
 
-document.querySelectorAll(".status-tab").forEach((tab) => {
+document.querySelectorAll(".status-tab[data-status]").forEach((tab) => {
   tab.addEventListener("click", () => {
     if (tab.dataset.status !== activeStatus && !confirmDiscardInstructionStatusDrafts()) return;
-    document.querySelectorAll(".status-tab").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll(".status-tab[data-status]").forEach((item) => item.classList.remove("active"));
     tab.classList.add("active");
     activeStatus = tab.dataset.status;
     selected.clear();
@@ -1145,60 +1145,77 @@ approvalReviewOverlay.addEventListener("click", (event) => {
 
 function getCargoBoxRows(row) {
   const count = Math.max(1, Math.min(Number(row.unsent || row.boxes || 1), 10));
-  const unitPrice = row.id % 2 ? 10 : 12;
-  const quantity = row.id % 3 ? 16 : 12;
-  const material = row.cargoMaterial || "Oxford\u725b\u6d25\u5e03";
-  const customsCode = `42021290${String(row.id).padStart(2, "0")}`;
-  const boxPrefix = row.shipmentId || `FBA${String(18 + row.id).padStart(2, "0")}DNZH02MU0003${String(row.id).padStart(2, "0")}`;
-  return Array.from({ length: count }, (_, index) => ({
-    boxNo: `${boxPrefix}${String(index + 1).padStart(3, "0")}`,
-    poNumber: row.referenceId || "-",
-    englishName: "lunch bag",
-    chineseName: "\u5348\u9910\u5305",
-    unitPrice,
-    quantity,
-    totalPrice: unitPrice * quantity,
-    material,
-    customsCode
-  }));
+  return Array.from({ length: count }, (_, index) => {
+    const boxIndex = index + 1;
+    const key = `${getInstructionDetailKey(row)}::${boxIndex}`;
+    const systemBoxNo = row.system && row.system !== "/" ? `${row.system}-${String(boxIndex).padStart(4, "0")}` : `${row.container}-${String(boxIndex).padStart(4, "0")}`;
+    const lengthCm = 22 + (row.id % 3);
+    const widthCm = 23 + (boxIndex % 4);
+    const heightCm = 5 + (row.id % 4);
+    const customerWeight = Number((1.7 + (row.id % 4) * 0.2 + (boxIndex % 2) * 0.1).toFixed(1));
+    const materialWeight = Number(((lengthCm * widthCm * heightCm) / 6000).toFixed(1));
+    const actualWeight = Number(Math.max(0.1, customerWeight - 0.1).toFixed(1));
+    return {
+      key,
+      systemBoxNo,
+      customerData: `${customerWeight} KG / ${lengthCm}*${widthCm}*${heightCm} CM`,
+      pickingData: `材重 ${materialWeight} KG / 实重 ${actualWeight} KG`,
+      boxStatus: getCargoBoxStatus(row, index)
+    };
+  });
+}
+
+function getCargoBoxStatus(row, index) {
+  if (row.status === "已出库") return "已出库";
+  if (["指令处理中", "待出库"].includes(row.status)) return "处理中";
+  return ["待处理", "处理中", "已出库"][index % 3];
+}
+
+function getCargoBoxStatusClass(status) {
+  return {
+    "待处理": "is-pending",
+    "处理中": "is-processing",
+    "已出库": "is-shipped"
+  }[status] || "is-pending";
+}
+
+function isCargoBoxSelectable(box) {
+  return box.boxStatus === "待处理";
+}
+
+function getSelectedCargoBoxes(row) {
+  if (!row.selectedCargoBoxes) row.selectedCargoBoxes = [];
+  return new Set(row.selectedCargoBoxes);
+}
+
+function setSelectedCargoBoxes(row, selectedBoxes) {
+  row.selectedCargoBoxes = [...selectedBoxes];
 }
 
 function renderCargoBoxRows(row) {
-  const rows = getCargoBoxRows(row);
-  const total = rows.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
-  $("#cargoBoxMaterial").textContent = rows[0]?.material || "Oxford\u725b\u6d25\u5e03";
-  $("#cargoDeclareTotal").textContent = String(total);
-  const allChecked = rows.length > 0 && rows.every((_, i) => selectedCargoBoxIndices.has(i));
-  const anyChecked = rows.some((_, i) => selectedCargoBoxIndices.has(i));
-  const canSelect = !activeReleaseReadOnly;
-  $("#cargoBoxSection thead").innerHTML = `<tr>
-    <th class="cargo-index">#</th>
-    <th class="cargo-check"><input type="checkbox" id="cargoBoxSelectAll" aria-label="\u5168\u9009\u8d27\u7bb1" ${!canSelect ? "disabled" : ""} /></th>
-    <th>FBA/IBR\u7bb1\u53f7</th><th>PO Number</th><th>\u4ea7\u54c1\u82f1\u6587\u540d</th><th>\u4ea7\u54c1\u4e2d\u6587\u540d</th>
-    <th>\u4ea7\u54c1\u7533\u62a5\u5355\u4ef7</th><th>\u4ea7\u54c1\u7533\u62a5\u6570\u91cf</th><th>\u4ea7\u54c1\u7533\u62a5\u603b\u4ef7</th><th>\u4ea7\u54c1\u6750\u8d28</th><th>\u4ea7\u54c1\u6d77\u5173\u7f16\u7801</th>
-  </tr>`;
-  $("#cargoBoxBody").innerHTML = rows.map((box, index) => `<tr>
-    <td class="cargo-index">${index + 1}</td>
-    <td class="cargo-check"><input type="checkbox" class="cargo-box-check" data-index="${index}" aria-label="\u8d27\u7bb1 ${escapeHtml(box.boxNo)}" ${selectedCargoBoxIndices.has(index) ? "checked" : ""} ${!canSelect ? "disabled" : ""} /></td>
-    <td>${escapeHtml(box.boxNo)}</td>
-    <td>${escapeHtml(box.poNumber)}</td>
-    <td>${escapeHtml(box.englishName)}</td>
-    <td>${escapeHtml(box.chineseName)}</td>
-    <td>${box.unitPrice}</td>
-    <td>${box.quantity}</td>
-    <td>${box.totalPrice}</td>
-    <td>${escapeHtml(box.material)}</td>
-    <td>${escapeHtml(box.customsCode)}</td>
-  </tr>`).join("");
-  // Sync select-all checkbox after render
-  setTimeout(() => {
-    const selectAll = $("#cargoBoxSelectAll");
-    if (!selectAll) return;
-    selectAll.checked = allChecked;
-    selectAll.indeterminate = anyChecked && !allChecked;
-  }, 0);
+  if (!row) return;
+  const selectedBoxes = getSelectedCargoBoxes(row);
+  const statusOrder = { "待处理": 0, "处理中": 1, "已出库": 2 };
+  const rows = getCargoBoxRows(row).sort((a, b) => (statusOrder[a.boxStatus] ?? 9) - (statusOrder[b.boxStatus] ?? 9));
+  rows.forEach((box) => {
+    if (!isCargoBoxSelectable(box)) selectedBoxes.delete(box.key);
+  });
+  setSelectedCargoBoxes(row, selectedBoxes);
+  $("#cargoBoxBody").innerHTML = rows.length ? rows.map((box) => `<tr data-cargo-key="${escapeHtml(box.key)}">
+    <td class="cargo-box-check-col"><input class="cargo-box-check" type="checkbox" data-cargo-key="${escapeHtml(box.key)}" ${selectedBoxes.has(box.key) ? "checked" : ""} ${isCargoBoxSelectable(box) ? "" : "disabled"} aria-label="选择货箱 ${escapeHtml(box.systemBoxNo)}" /></td>
+    <td class="cargo-box-code">${escapeHtml(box.systemBoxNo)}</td>
+    <td>${escapeHtml(box.customerData)}</td>
+    <td>${escapeHtml(box.pickingData)}</td>
+    <td><span class="cargo-box-status ${getCargoBoxStatusClass(box.boxStatus)}">${escapeHtml(box.boxStatus)}</span></td>
+  </tr>`).join("") : `<tr class="cargo-box-empty"><td colspan="5">暂无货箱数据</td></tr>`;
+  const selectAll = $("#cargoBoxSelectAll");
+  if (selectAll) {
+    const selectableRows = rows.filter(isCargoBoxSelectable);
+    selectAll.checked = selectableRows.length > 0 && selectableRows.every((box) => selectedBoxes.has(box.key));
+    selectAll.indeterminate = selectableRows.some((box) => selectedBoxes.has(box.key)) && !selectAll.checked;
+    selectAll.disabled = selectableRows.length === 0;
+  }
 }
-
 function getActiveInstructionRows() {
   if (!activeReleaseRow) return [];
   return ensureInstructionDetailRows(activeReleaseRow);
@@ -1238,35 +1255,17 @@ function addReleaseAttachments(files) {
 function renderInstructionList() {
   const target = $("#instructionBody");
   const rows = getActiveInstructionRows();
-  const statusAdjustable = ["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus);
-  const rowCodes = new Set(rows.map((row) => row.code));
-  selectedDetailInstructionCodes.forEach((code) => {
-    if (!rowCodes.has(code)) selectedDetailInstructionCodes.delete(code);
-  });
-  const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
-  const selectedPendingRows = statusAdjustable ? selectedRows.filter((row) => (row.status || "待处理") === "待处理") : [];
-  const selectAllControl = $("#instructionDetailSelectAll");
-  selectAllControl.disabled = rows.length === 0;
-  selectAllControl.checked = rows.length > 0 && rows.every((row) => selectedDetailInstructionCodes.has(row.code));
-  selectAllControl.indeterminate = !selectAllControl.checked && selectedRows.length > 0;
-  $("#instructionBatchComplete").hidden = !statusAdjustable;
-  $("#instructionBatchComplete").disabled = selectedPendingRows.length === 0;
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="13"><i>▤</i>暂无数据</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="11"><i>▤</i>暂无数据</td></tr>';
     return;
   }
-  target.innerHTML = rows.map((row, index) => {
+  target.innerHTML = rows.map((row) => {
     const total = Number(row.price || 0) * Number(row.quantity || 1);
-    const status = row.status || "待处理";
-    const statusDisplay = statusAdjustable
-      ? `<select class="instruction-detail-status ${status === "已处理" ? "is-complete" : "is-pending"}" data-instruction-index="${index}" aria-label="调整${row.name}的指令状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
-      : `<span class="instruction-detail-status-tag ${status === "已处理" ? "is-complete" : "is-pending"}">${status}</span>`;
     const operationControl = `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>`;
-    const instructionCheck = `<input class="instruction-row-status-check" type="checkbox" data-code="${row.code}" aria-label="选择${row.name}" ${selectedDetailInstructionCodes.has(row.code) ? "checked" : ""} />`;
     return `<tr>
-      <td class="instruction-check-col">${instructionCheck}</td><td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
+      <td>${row.name}</td><td>${row.type}</td><td>${row.unit}</td><td>${row.price}</td><td>${row.quantity || "1"}</td>
       <td>${row.currency}</td><td>${Number(total.toFixed(2))}</td><td>${row.addedAt}</td><td>${row.addedBy}</td>
-      <td>${row.description}</td><td>${statusDisplay}</td><td>${operationControl}</td>
+      <td>${row.description}</td><td>${operationControl}</td>
     </tr>`;
   }).join("");
 }
@@ -1280,43 +1279,85 @@ function getFilteredInstructionCatalog() {
   );
 }
 
+function getExistingInstructionForCatalog(existingRows, catalogCode) {
+  return existingRows.find((row) => row.catalogCode === catalogCode || row.code === catalogCode);
+}
+
+function getInstructionDraftValue(row) {
+  return instructionDraftValues.get(row.code) || {
+    unit: row.unit,
+    price: row.price,
+    quantity: "1",
+    currency: row.currency
+  };
+}
+
+function formatLocalDateTime() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function renderInstructionDropdown() {
+  const dropdown = $("#instructionDropdown");
+  const rows = getFilteredInstructionCatalog().filter((row) => !instructionDraftCodes.has(row.code));
+  dropdown.innerHTML = `<option value="">请选择要添加的指令</option>${rows.map((row) =>
+    `<option value="${escapeHtml(row.code)}">${escapeHtml(row.name)}（${escapeHtml(row.code)}）</option>`
+  ).join("")}`;
+  dropdown.disabled = rows.length === 0;
+  $("#instructionAddSelected").disabled = true;
+}
+
 function renderInstructionPicker() {
-  const rows = getFilteredInstructionCatalog();
-  const displayRows = [...rows, ...Array(Math.max(0, 18 - rows.length)).fill(null)].slice(0, 18);
-  $("#instructionPickerBody").innerHTML = displayRows.map((row) => {
-    const alreadyAdded = row && instructionExistingCatalogCodes.has(row.code);
-    const draft = row ? (instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" }) : null;
-    const disabled = alreadyAdded ? "disabled" : "";
-    return `<tr>
-    <td><input class="instruction-pick" type="checkbox" ${row ? `data-code="${row.code}"` : "disabled"} ${row && (instructionDraftCodes.has(row.code) || alreadyAdded) ? "checked" : ""} ${alreadyAdded ? 'disabled title="已添加"' : ""} /></td>
-    <td>${row?.code || ""}</td><td>${row?.name || ""}</td><td>${row?.type || ""}</td>
-    <td>${row ? `<select class="instruction-draft-unit" data-code="${row.code}" aria-label="${escapeHtml(row.name)}计费单位" ${disabled}><option value="票" ${draft.unit === "票" ? "selected" : ""}>票</option><option value="箱" ${draft.unit === "箱" ? "selected" : ""}>箱</option><option value="KG" ${draft.unit === "KG" ? "selected" : ""}>KG</option></select>` : ""}</td>
-    <td>${row ? `<input class="instruction-draft-price" data-code="${row.code}" type="number" min="0" step="any" value="${escapeHtml(draft.price)}" aria-label="${escapeHtml(row.name)}计费单价" ${disabled} />` : ""}</td>
-    <td>${row ? `<input class="instruction-draft-quantity" data-code="${row.code}" type="number" min="0" step="any" value="${escapeHtml(draft.quantity)}" aria-label="${escapeHtml(row.name)}计费数量" ${disabled} />` : ""}</td>
-    <td>${row?.currency || ""}</td><td>${row?.description || ""}</td>
-  </tr>`;
-  }).join("");
-  const availableCodes = instructionCatalog.filter((row) => !instructionExistingCatalogCodes.has(row.code)).map((row) => row.code);
-  $("#instructionSelectAll").checked = availableCodes.length > 0 && availableCodes.every((code) => instructionDraftCodes.has(code));
-  $("#instructionSelectAll").disabled = availableCodes.length === 0;
-  $("#instructionSelectedCount").textContent = `已选中${instructionDraftCodes.size}条`;
+  renderInstructionDropdown();
+  const selectedCodes = [...instructionDraftCodes];
+  if (!selectedCodes.length) {
+    $("#instructionPickerBody").innerHTML = '<tr class="instruction-picker-empty"><td colspan="8">暂未选择指令，请从上方下拉框中选择并添加</td></tr>';
+  } else {
+    $("#instructionPickerBody").innerHTML = selectedCodes.map((code) => {
+      const row = instructionCatalog.find((item) => item.code === code);
+      if (!row) return "";
+      const draft = getInstructionDraftValue(row);
+      return `<tr>
+        <td>${escapeHtml(row.name)}</td>
+        <td>${escapeHtml(row.type)}</td>
+        <td><select class="instruction-draft-field" data-draft-field="unit" data-code="${escapeHtml(row.code)}">
+          <option value="票" ${draft.unit === "票" ? "selected" : ""}>票</option>
+          <option value="箱" ${draft.unit === "箱" ? "selected" : ""}>箱</option>
+          <option value="KG" ${draft.unit === "KG" ? "selected" : ""}>KG</option>
+        </select></td>
+        <td><input class="instruction-draft-field" data-draft-field="price" data-code="${escapeHtml(row.code)}" type="number" min="0" step="any" value="${escapeHtml(draft.price)}" /></td>
+        <td><input class="instruction-draft-field" data-draft-field="quantity" data-code="${escapeHtml(row.code)}" type="number" min="0" step="any" value="${escapeHtml(draft.quantity)}" /></td>
+        <td><select class="instruction-draft-field" data-draft-field="currency" data-code="${escapeHtml(row.code)}">
+          <option value="人民币" ${draft.currency === "人民币" ? "selected" : ""}>人民币</option>
+          <option value="USD" ${draft.currency === "USD" ? "selected" : ""}>USD</option>
+        </select></td>
+        <td>${escapeHtml(row.description)}</td>
+        <td><button class="instruction-picker-remove" data-code="${escapeHtml(row.code)}" type="button">移除</button></td>
+      </tr>`;
+    }).join("");
+  }
+  $("#instructionSelectedCount").innerHTML = `已选中 <strong>${instructionDraftCodes.size}</strong> 条指令`;
+  $("#instructionCatalogCount").textContent = `共 ${instructionCatalog.length} 条可选`;
 }
 
 function openInstructionPicker() {
   const existing = getActiveInstructionRows();
-  instructionExistingCatalogCodes = new Set(existing.map((row) => row.catalogCode).filter(Boolean));
-  instructionDraftCodes = new Set();
+  instructionExistingCatalogCodes = new Set(existing.map((row) => row.catalogCode || row.code).filter(Boolean));
+  instructionDraftCodes = new Set([...instructionExistingCatalogCodes].filter((code) => instructionCatalog.some((row) => row.code === code)));
   instructionDraftValues.clear();
   instructionCatalog.forEach((row) => {
-    const existingRow = existing.find((item) => item.catalogCode === row.code);
+    const existingRow = getExistingInstructionForCatalog(existing, row.code);
     instructionDraftValues.set(row.code, {
       unit: existingRow?.unit || row.unit,
       price: existingRow?.price || row.price,
-      quantity: existingRow?.quantity || "1"
+      quantity: existingRow?.quantity || "1",
+      currency: existingRow?.currency || row.currency
     });
   });
   $("#instructionSearchName").value = "";
   $("#instructionSearchType").value = "";
+  $("#instructionDropdown").value = "";
   $("#instructionOverlay").hidden = false;
   renderInstructionPicker();
 }
@@ -1333,7 +1374,6 @@ let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
 let activeReleaseOrderType = "放货";
 const selectedDetailInstructionCodes = new Set();
-let selectedCargoBoxIndices = new Set();
 
 function normalizeReleaseRow(row) {
   const pallet = row.pallet || "-";
@@ -1436,7 +1476,6 @@ function setReleaseDrawerMode(readOnly, status) {
   $("#releaseConfirm").hidden = readOnly;
   $("#releaseCancel").textContent = readOnly ? "关闭" : "取消";
   $("#instructionAdd").hidden = false;
-  $("#instructionBatchComplete").hidden = !["指令待处理", "指令处理中", "待出库"].includes(status);
   $("#cargoBoxSection").hidden = false;
   releaseForm.classList.toggle("release-readonly", readOnly);
 }
@@ -1508,7 +1547,6 @@ function closeReleaseDrawer() {
   activeReleaseRow = null;
   activeReleaseSourceRow = null;
   selectedDetailInstructionCodes.clear();
-  selectedCargoBoxIndices.clear();
   activeReleaseReadOnly = false;
   activeReleaseStatus = "暂存";
   activeReleaseOrderType = "放货";
@@ -1536,28 +1574,21 @@ $("#releaseCancel").addEventListener("click", closeReleaseDrawer);
 releaseOverlay.addEventListener("click", (event) => {
   if (event.target === releaseOverlay) closeReleaseDrawer();
 });
-// Cargo box checkbox delegation
 $("#cargoBoxBody").addEventListener("change", (event) => {
   const checkbox = event.target.closest(".cargo-box-check");
-  if (!checkbox) return;
-  const index = Number(checkbox.dataset.index);
-  if (checkbox.checked) {
-    selectedCargoBoxIndices.add(index);
-  } else {
-    selectedCargoBoxIndices.delete(index);
-  }
-  // Re-render to keep select-all in sync
-  if (activeReleaseRow) renderCargoBoxRows(activeReleaseRow);
+  if (!checkbox || !activeReleaseRow) return;
+  const selectedBoxes = getSelectedCargoBoxes(activeReleaseRow);
+  checkbox.checked ? selectedBoxes.add(checkbox.dataset.cargoKey) : selectedBoxes.delete(checkbox.dataset.cargoKey);
+  setSelectedCargoBoxes(activeReleaseRow, selectedBoxes);
+  renderCargoBoxRows(activeReleaseRow);
 });
-$("#cargoBoxSection").addEventListener("change", (event) => {
-  if (!event.target.matches("#cargoBoxSelectAll")) return;
-  const rows = activeReleaseRow ? getCargoBoxRows(activeReleaseRow) : [];
-  if (event.target.checked) {
-    rows.forEach((_, i) => selectedCargoBoxIndices.add(i));
-  } else {
-    selectedCargoBoxIndices.clear();
-  }
-  if (activeReleaseRow) renderCargoBoxRows(activeReleaseRow);
+$("#cargoBoxSelectAll").addEventListener("change", (event) => {
+  if (!activeReleaseRow) return;
+  const selectedBoxes = event.target.checked
+    ? new Set(getCargoBoxRows(activeReleaseRow).filter(isCargoBoxSelectable).map((box) => box.key))
+    : new Set();
+  setSelectedCargoBoxes(activeReleaseRow, selectedBoxes);
+  renderCargoBoxRows(activeReleaseRow);
 });
 $("#instructionAdd").addEventListener("click", openInstructionPicker);
 $("#instructionClose").addEventListener("click", closeInstructionPicker);
@@ -1571,81 +1602,72 @@ $("#instructionReset").addEventListener("click", () => {
 $("#instructionSearchName").addEventListener("keydown", (event) => {
   if (event.key === "Enter") renderInstructionPicker();
 });
-$("#instructionPickerBody").addEventListener("change", (event) => {
-  const draftUnit = event.target.closest(".instruction-draft-unit");
-  const draftPrice = event.target.closest(".instruction-draft-price");
-  const draftQuantity = event.target.closest(".instruction-draft-quantity");
-  const draftControl = draftUnit || draftPrice || draftQuantity;
-  if (draftControl?.dataset.code) {
-    const row = instructionCatalog.find((item) => item.code === draftControl.dataset.code);
-    if (!row) return;
-    const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
-    if (draftUnit) draft.unit = draftUnit.value;
-    if (draftPrice) draft.price = draftPrice.value;
-    if (draftQuantity) draft.quantity = draftQuantity.value;
-    instructionDraftValues.set(row.code, draft);
-    return;
-  }
-  const checkbox = event.target.closest(".instruction-pick");
-  if (!checkbox || !checkbox.dataset.code) return;
-  checkbox.checked ? instructionDraftCodes.add(checkbox.dataset.code) : instructionDraftCodes.delete(checkbox.dataset.code);
+$("#instructionDropdown").addEventListener("change", (event) => {
+  $("#instructionAddSelected").disabled = !event.target.value;
+});
+$("#instructionAddSelected").addEventListener("click", () => {
+  const code = $("#instructionDropdown").value;
+  if (!code) return;
+  instructionDraftCodes.add(code);
+  $("#instructionDropdown").value = "";
+  renderInstructionPicker();
+});
+$("#instructionPickerBody").addEventListener("click", (event) => {
+  const removeButton = event.target.closest(".instruction-picker-remove");
+  if (!removeButton) return;
+  instructionDraftCodes.delete(removeButton.dataset.code);
   renderInstructionPicker();
 });
 $("#instructionPickerBody").addEventListener("input", (event) => {
-  const control = event.target.closest(".instruction-draft-price, .instruction-draft-quantity");
+  const control = event.target.closest(".instruction-draft-field");
   if (!control?.dataset.code) return;
   const row = instructionCatalog.find((item) => item.code === control.dataset.code);
   if (!row) return;
-  const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
-  if (control.classList.contains("instruction-draft-price")) draft.price = control.value;
-  if (control.classList.contains("instruction-draft-quantity")) draft.quantity = control.value;
+  const draft = getInstructionDraftValue(row);
+  draft[control.dataset.draftField] = control.value;
   instructionDraftValues.set(row.code, draft);
 });
-$("#instructionPickerBody").addEventListener("focusout", (event) => {
-  const control = event.target.closest(".instruction-draft-price, .instruction-draft-quantity");
-  if (!control?.dataset.code || control.value.trim()) return;
+$("#instructionPickerBody").addEventListener("change", (event) => {
+  const control = event.target.closest(".instruction-draft-field");
+  if (!control?.dataset.code) return;
   const row = instructionCatalog.find((item) => item.code === control.dataset.code);
   if (!row) return;
-  const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
-  if (control.classList.contains("instruction-draft-price")) draft.price = row.price;
-  if (control.classList.contains("instruction-draft-quantity")) draft.quantity = "1";
-  control.value = control.classList.contains("instruction-draft-price") ? draft.price : draft.quantity;
+  const draft = getInstructionDraftValue(row);
+  draft[control.dataset.draftField] = control.value;
+  if (control.dataset.draftField === "price" && !control.value.trim()) {
+    control.value = row.price;
+    draft.price = row.price;
+  }
+  if (control.dataset.draftField === "quantity" && !control.value.trim()) {
+    control.value = "1";
+    draft.quantity = "1";
+  }
   instructionDraftValues.set(row.code, draft);
-});
-$("#instructionSelectAll").addEventListener("change", (event) => {
-  instructionDraftCodes = event.target.checked
-    ? new Set(instructionCatalog.filter((row) => !instructionExistingCatalogCodes.has(row.code)).map((row) => row.code))
-    : new Set();
-  renderInstructionPicker();
 });
 $("#instructionConfirm").addEventListener("click", () => {
   if (!activeReleaseRow) return;
-  if (!instructionDraftCodes.size) {
-    window.alert("请先选择需要新增的指令");
-    return;
-  }
   const existingRows = getActiveInstructionRows();
   const detailKey = getInstructionDetailKey(activeReleaseRow);
   const createdAt = Date.now();
-  const addedRows = instructionCatalog
-    .filter((row) => instructionDraftCodes.has(row.code))
-    .map((row, index) => {
-      const draft = instructionDraftValues.get(row.code) || { unit: row.unit, price: row.price, quantity: "1" };
+  const addedAt = formatLocalDateTime();
+  const rows = instructionCatalog.filter((row) => instructionDraftCodes.has(row.code)).map((row, index) => {
+      const draft = getInstructionDraftValue(row);
+      const existingRow = getExistingInstructionForCatalog(existingRows, row.code);
       return {
         ...row,
         catalogCode: row.code,
-        code: `${detailKey}-NEW-${createdAt}-${index + 1}`,
+        code: existingRow?.code || `${detailKey}-NEW-${createdAt}-${index + 1}`,
         unit: draft.unit || row.unit,
         price: String(draft.price).trim() || row.price,
         quantity: String(draft.quantity).trim() || "1",
-        addedAt: "2026-07-25 14:00:00",
+        currency: String(draft.currency || row.currency).trim() || row.currency,
+        addedAt,
         addedBy: "天朗（付豪）",
-        remark: "",
-        images: [],
-        status: "待处理"
+        remark: existingRow?.remark || "",
+        images: existingRow?.images || [],
+        status: existingRow?.status || "待处理"
       };
     });
-  const rows = [...existingRows, ...addedRows];
   instructionRowsByInventory.set(detailKey, rows);
   syncInstructionDetails(detailKey, rows);
   closeInstructionPicker();
@@ -1742,7 +1764,7 @@ $("#instructionBody").addEventListener("change", (event) => {
   renderRows();
 });
 
-$("#instructionDetailSelectAll").addEventListener("change", (event) => {
+$("#instructionDetailSelectAll")?.addEventListener("change", (event) => {
   getActiveInstructionRows().forEach((row) => {
     event.target.checked ? selectedDetailInstructionCodes.add(row.code) : selectedDetailInstructionCodes.delete(row.code);
   });
@@ -1809,7 +1831,7 @@ $("#instructionDownloadImages")?.addEventListener("click", () => {
   });
 });
 
-$("#instructionBatchComplete").addEventListener("click", () => {
+$("#instructionBatchComplete")?.addEventListener("click", () => {
   if (!activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus) || !selectedDetailInstructionCodes.size) return;
   const rows = getActiveInstructionRows();
   const detailKey = getInstructionDetailKey(activeReleaseRow);
@@ -2002,5 +2024,664 @@ window.addEventListener("resize", () => {
   clearTimeout(watermarkTimer);
   watermarkTimer = setTimeout(buildWatermarks, 120);
 });
+
+const interceptStatusOrder = ["待处理", "拦截中", "拦截成功", "拦截失败", "已取消"];
+const interceptStatusLabel = {
+  待处理: "待处理",
+  拦截中: "拦截中",
+  拦截成功: "拦截成功",
+  拦截失败: "拦截失败",
+  已取消: "已取消"
+};
+const interceptStatusClass = {
+  待处理: "is-pending",
+  拦截中: "is-processing",
+  拦截成功: "is-success",
+  拦截失败: "is-failed",
+  已取消: "is-canceled"
+};
+const interceptTasks = [
+  {
+    id: 1, no: "INT202608040001", waybill: "WEMA1131231", customer: "TTTX", warehouse: "美仓1号仓",
+    cargoStatus: "未拆柜", inventoryStatus: "待拆柜", outboundStatus: "未出库", boxes: 11,
+    status: "待处理", reason: "客户调整运输计划，申请暂缓出库", remark: "等待客户确认新运输计划",
+    applicant: "客服-张敏", appliedAt: "2026-08-04 09:18:22", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
+    logs: [{ time: "2026-08-04 09:18:22", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户申请拦截" }]
+  },
+  {
+    id: 2, no: "INT202608040002", waybill: "MSCU7654321-260701", customer: "ABC-US", warehouse: "美仓1号仓",
+    cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
+    status: "待处理", reason: "订单信息异常，客户要求暂缓处理", remark: "请仓库优先确认货物位置",
+    applicant: "客服-刘洋", appliedAt: "2026-08-04 10:06:15", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
+    logs: [{ time: "2026-08-04 10:06:15", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "订单信息待客户复核" }]
+  },
+  {
+    id: 3, no: "INT202608030015", waybill: "FBA323N235Y8", customer: "23", warehouse: "美仓1号仓",
+    cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 5,
+    status: "拦截中", reason: "客户申请暂停出库", remark: "仓库正在核对货物位置",
+    applicant: "客服-张敏", appliedAt: "2026-08-03 15:20:31", handler: "仓库-李明", handleAt: "2026-08-03 15:34:06", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
+    logs: [
+      { time: "2026-08-03 15:20:31", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户调整出库计划" },
+      { time: "2026-08-03 15:34:06", user: "仓库-李明", action: "确认拦截", change: "待处理 → 拦截中", note: "货物已入库，创建仓库拦截任务" }
+    ]
+  },
+  {
+    id: 4, no: "INT202608020009", waybill: "CCCA1414141-240411", customer: "TTTX", warehouse: "美仓1号仓",
+    cargoStatus: "暂存中", inventoryStatus: "暂存", outboundStatus: "未出库", boxes: 2,
+    status: "拦截成功", reason: "客户要求货物转入暂存", remark: "后续等待客户重新下单",
+    applicant: "客服-周悦", appliedAt: "2026-08-02 11:03:44", handler: "仓库-王强", handleAt: "2026-08-02 13:46:20", failReason: "", actualBoxes: "2", storageNo: "STG202608020001", resultRemark: "货物已转入 A02-03 暂存库位",
+    logs: [
+      { time: "2026-08-02 11:03:44", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请进入暂存" },
+      { time: "2026-08-02 11:14:18", user: "仓库-王强", action: "确认拦截", change: "待处理 → 拦截中", note: "货物已入库" },
+      { time: "2026-08-02 13:46:20", user: "仓库-王强", action: "拦截成功", change: "拦截中 → 拦截成功", note: "实际拦截 2 箱，已生成暂存单 STG202608020001" }
+    ]
+  },
+  {
+    id: 5, no: "INT202608010004", waybill: "TLLU2026072-260715", customer: "23", warehouse: "美仓1号仓",
+    cargoStatus: "已出库", inventoryStatus: "无库存", outboundStatus: "已出库", boxes: 3,
+    status: "拦截失败", reason: "客户临时要求取消发货", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "货物已完成出库", actualBoxes: "", storageNo: "", resultRemark: "",
+    logs: [
+      { time: "2026-08-01 16:32:09", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "客户要求取消发货" },
+      { time: "2026-08-01 16:32:10", user: "系统", action: "状态校验", change: "待处理 → 拦截失败", note: "货物已完成出库，无法执行拦截" }
+    ]
+  },
+  {
+    id: 6, no: "INT202607310018", waybill: "AAAA0000000-241109", customer: "TTTX", warehouse: "美仓1号仓",
+    cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
+    status: "已取消", reason: "客户申请暂停发货", remark: "客户已自行调整订单", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
+    logs: [
+      { time: "2026-07-31 09:11:48", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请暂停发货" },
+      { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "取消申请", change: "待处理 → 已取消", note: "客户主动取消" }
+    ]
+  }
+];
+
+let interceptActiveTab = "全部";
+let interceptVisibleRows = [];
+let selectedInterceptIds = new Set();
+let activeInterceptId = null;
+let interceptFeedbackMode = "";
+let interceptWaybillSources = new Map();
+
+const interceptPage = $("#interceptPage");
+const inventoryPage = $("#inventoryPage");
+const interceptTableBody = $("#interceptTableBody");
+const interceptFilters = {
+  no: $("#interceptNoFilter"),
+  waybill: $("#interceptWaybillFilter"),
+  customer: $("#interceptCustomerFilter"),
+  warehouse: $("#interceptWarehouseFilter"),
+  cargoStatus: $("#interceptCargoStatusFilter"),
+  status: $("#interceptStatusFilter"),
+  dateFrom: $("#interceptDateFrom"),
+  dateTo: $("#interceptDateTo")
+};
+
+function getInterceptTask(id = activeInterceptId) {
+  return interceptTasks.find((task) => task.id === Number(id));
+}
+
+function getInterceptStatusTag(status) {
+  return `<span class="intercept-status ${interceptStatusClass[status] || "is-pending"}">${escapeHtml(interceptStatusLabel[status] || status)}</span>`;
+}
+
+function getInterceptCargoTag(status) {
+  const extraClass = status === "已出库" ? " is-outbound" : status === "暂存中" ? " is-storage" : "";
+  return `<span class="intercept-cargo-status${extraClass}">${escapeHtml(status)}</span>`;
+}
+
+function formatInterceptDate(value) {
+  return String(value || "").slice(0, 10);
+}
+
+function renderInterceptStatusTabs() {
+  document.querySelectorAll("[data-intercept-status]").forEach((tab) => {
+    const status = tab.dataset.interceptStatus;
+    const count = status === "全部" ? interceptTasks.length : interceptTasks.filter((task) => task.status === status).length;
+    const label = status === "拦截成功" ? "成功" : status === "拦截失败" ? "失败" : status === "已取消" ? "取消" : status;
+    tab.textContent = `${label}(${count})`;
+    tab.classList.toggle("active", status === interceptActiveTab);
+  });
+}
+
+function getFilteredInterceptTasks() {
+  const no = interceptFilters.no.value.trim().toLowerCase();
+  const waybill = interceptFilters.waybill.value.trim().toLowerCase();
+  const from = interceptFilters.dateFrom.value;
+  const to = interceptFilters.dateTo.value;
+  return interceptTasks.filter((task) => (
+    (interceptActiveTab === "全部" || task.status === interceptActiveTab)
+    && (!no || task.no.toLowerCase().includes(no))
+    && (!waybill || task.waybill.toLowerCase().includes(waybill))
+    && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
+    && (!interceptFilters.warehouse.value || task.warehouse === interceptFilters.warehouse.value)
+    && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
+    && (!interceptFilters.status.value || task.status === interceptFilters.status.value)
+    && (!from || formatInterceptDate(task.appliedAt) >= from)
+    && (!to || formatInterceptDate(task.appliedAt) <= to)
+  ));
+}
+
+function getVisiblePendingInterceptTasks() {
+  return interceptVisibleRows.filter((task) => task.status === "待处理");
+}
+
+function getSelectedPendingInterceptTasks() {
+  return [...selectedInterceptIds]
+    .map((id) => getInterceptTask(id))
+    .filter((task) => task?.status === "待处理");
+}
+
+function pruneInterceptSelection() {
+  const visiblePendingIds = new Set(getVisiblePendingInterceptTasks().map((task) => task.id));
+  selectedInterceptIds = new Set([...selectedInterceptIds].filter((id) => visiblePendingIds.has(id)));
+}
+
+function updateInterceptBatchControls() {
+  const isPendingView = interceptActiveTab === "待处理";
+  const pendingRows = getVisiblePendingInterceptTasks();
+  const selectedCount = pendingRows.filter((task) => selectedInterceptIds.has(task.id)).length;
+  const selectAll = $("#interceptSelectAll");
+  const cancelButton = $("#interceptBatchCancelButton");
+  const confirmButton = $("#interceptBatchConfirmButton");
+
+  cancelButton.hidden = !isPendingView;
+  confirmButton.hidden = !isPendingView;
+  cancelButton.disabled = selectedCount === 0;
+  confirmButton.disabled = selectedCount === 0;
+  selectAll.disabled = !isPendingView || pendingRows.length === 0;
+  selectAll.checked = pendingRows.length > 0 && selectedCount === pendingRows.length;
+  selectAll.indeterminate = selectedCount > 0 && selectedCount < pendingRows.length;
+}
+
+function renderInterceptRows() {
+  renderInterceptStatusTabs();
+  interceptVisibleRows = getFilteredInterceptTasks();
+  pruneInterceptSelection();
+  $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
+  if (!interceptVisibleRows.length) {
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="13">暂无匹配的拦截任务</td></tr>';
+  } else {
+    interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
+      const primaryAction = task.status === "待处理" ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>'
+        : task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="feedback" type="button">反馈</button>'
+          : task.status === "拦截成功" ? '<button class="intercept-action" data-intercept-action="storage" type="button">暂存单</button>' : "";
+      const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
+      const disabled = task.status === "待处理" ? "" : " disabled";
+      return `<tr data-intercept-id="${task.id}">
+        <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
+        <td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.warehouse)}</td>
+        <td>${getInterceptCargoTag(task.cargoStatus)}</td><td>${getInterceptStatusTag(task.status)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>
+        <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
+        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}</td>
+      </tr>`;
+    }).join("");
+  }
+  updateInterceptBatchControls();
+  $("#interceptTableFooter").innerHTML = `<span>共 ${interceptVisibleRows.length} 条</span><button type="button">‹</button><button class="active" type="button">1</button><button type="button">›</button><select><option>50 条/页</option></select>`;
+}
+
+function addInterceptLog(task, action, previousStatus, note, user = "仓库-李明") {
+  const now = formatLocalDateTime();
+  task.logs.push({
+    time: now,
+    user,
+    action,
+    change: `${previousStatus || "-"} → ${task.status}`,
+    note
+  });
+  task.handler = user;
+  task.handleAt = now;
+}
+
+function renderInterceptDetail(task) {
+  const resultSection = $("#interceptResultSection");
+  $("#interceptDetailTitle").textContent = `拦截详情 · ${task.no}`;
+  $("#interceptDetailSubTitle").innerHTML = `${getInterceptStatusTag(task.status)} <span>${escapeHtml(task.waybill)}</span>`;
+
+  const stepLabels = ["提交申请", "确认拦截", "仓库处理中", task.status === "拦截失败" ? "拦截失败" : task.status === "已取消" ? "已取消" : "完成"];
+  const currentStep = task.status === "待处理" ? 0 : task.status === "拦截中" ? 2 : 3;
+  $("#interceptFlow").innerHTML = stepLabels.map((label, index) => {
+    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && task.status === "拦截成功");
+    const isActive = index === currentStep;
+    return `<div class="intercept-flow-step${isComplete ? " is-complete" : ""}${isActive ? " is-active" : ""}"><i>${isComplete ? "✓" : index + 1}</i><span>${label}</span></div>`;
+  }).join("");
+
+  const field = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
+  $("#interceptBasicInfo").innerHTML = [
+    field("拦截单号", escapeHtml(task.no)),
+    field("运单号", escapeHtml(task.waybill)),
+    field("客户名称", escapeHtml(task.customer)),
+    field("申请原因", escapeHtml(task.reason)),
+    field("申请人", escapeHtml(task.applicant)),
+    field("申请时间", escapeHtml(task.appliedAt)),
+    field("备注", escapeHtml(task.remark || "-"))
+  ].join("");
+  $("#interceptCargoInfo").innerHTML = [
+    field("货物状态", getInterceptCargoTag(task.cargoStatus)),
+    field("所在仓库", escapeHtml(task.warehouse)),
+    field("箱数", `${escapeHtml(task.boxes)} 箱`),
+    field("库存状态", escapeHtml(task.inventoryStatus)),
+    field("出库状态", escapeHtml(task.outboundStatus))
+  ].join("");
+
+  let resultRows;
+  if (task.status === "拦截成功") {
+    resultRows = [
+      field("处理结果", getInterceptStatusTag(task.status)),
+      field("实际拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes)} 箱`),
+      field("暂存单号", `<button class="intercept-result-link" data-intercept-action="storage" type="button">${escapeHtml(task.storageNo)}</button>`),
+      field("处理备注", escapeHtml(task.resultRemark || "-"))
+    ];
+  } else if (task.status === "拦截失败") {
+    resultRows = [field("处理结果", getInterceptStatusTag(task.status)), field("失败原因", escapeHtml(task.failReason || "-")), field("处理人", escapeHtml(task.handler || "-")), field("处理时间", escapeHtml(task.handleAt || "-"))];
+  } else if (task.status === "已取消") {
+    resultRows = [field("处理结果", getInterceptStatusTag(task.status)), field("取消说明", escapeHtml(task.resultRemark || task.remark || "-")), field("处理人", escapeHtml(task.handler || "-")), field("处理时间", escapeHtml(task.handleAt || "-"))];
+  } else {
+    resultRows = [field("当前状态", getInterceptStatusTag(task.status)), field("处理人", escapeHtml(task.handler || "待分配")), field("处理时间", escapeHtml(task.handleAt || "-")), field("处理说明", task.status === "待处理" ? "等待确认拦截" : "仓库正在执行货物拦截")];
+  }
+  resultSection.hidden = false;
+  $("#interceptResultInfo").innerHTML = resultRows.join("");
+  $("#interceptLogBody").innerHTML = task.logs.map((log) => `<tr><td>${escapeHtml(log.time)}</td><td>${escapeHtml(log.user)}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.change)}</td><td title="${escapeHtml(log.note)}">${escapeHtml(log.note)}</td></tr>`).join("");
+
+  const actions = task.status === "待处理"
+    ? '<button class="btn" data-detail-action="cancel" type="button">取消申请</button><button class="btn primary" data-detail-action="confirm" type="button">确认拦截</button>'
+    : task.status === "拦截中"
+      ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
+      : task.status === "拦截成功"
+        ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
+        : "";
+  $("#interceptDetailActions").innerHTML = `<button class="btn" data-detail-action="close" type="button">关闭</button>${actions}`;
+}
+
+function openInterceptDetail(id) {
+  const task = getInterceptTask(id);
+  if (!task) return;
+  activeInterceptId = task.id;
+  renderInterceptDetail(task);
+  $("#interceptDetailOverlay").hidden = false;
+}
+
+function closeInterceptDetail() {
+  $("#interceptDetailOverlay").hidden = true;
+  activeInterceptId = null;
+}
+
+function refreshInterceptUI() {
+  renderInterceptRows();
+  const task = getInterceptTask();
+  if (task && !$("#interceptDetailOverlay").hidden) renderInterceptDetail(task);
+}
+
+function applyInterceptConfirm(task) {
+  if (!task || task.status !== "待处理") return false;
+  const previousStatus = task.status;
+  if (task.cargoStatus === "已出库") {
+    task.status = "拦截失败";
+    task.failReason = "货物已完成出库";
+    task.resultRemark = "系统校验货物已完成出库，无法执行拦截";
+    addInterceptLog(task, "状态校验", previousStatus, task.resultRemark, "系统");
+    return true;
+  }
+  task.status = "拦截中";
+  addInterceptLog(task, "确认拦截", previousStatus, task.cargoStatus === "未拆柜" ? "货物未拆柜，已创建预报拦截任务" : "货物已入库，已创建仓库拦截任务");
+  return true;
+}
+
+function applyInterceptCancel(task) {
+  if (!task || task.status !== "待处理") return false;
+  const previousStatus = task.status;
+  task.status = "已取消";
+  task.resultRemark = "客户取消拦截申请";
+  addInterceptLog(task, "取消申请", previousStatus, task.resultRemark, "客服-张敏");
+  return true;
+}
+
+function confirmInterceptTask() {
+  const task = getInterceptTask();
+  if (!task || task.status !== "待处理") return;
+  if (task.cargoStatus === "已出库") {
+    applyInterceptConfirm(task);
+    window.alert("货物已出库，无法执行拦截");
+    refreshInterceptUI();
+    return;
+  }
+  const prompt = task.cargoStatus === "未拆柜" ? "当前货物未拆柜，确认执行拦截？" : "当前货物已入库，确认执行拦截？";
+  if (!window.confirm(prompt)) return;
+  applyInterceptConfirm(task);
+  refreshInterceptUI();
+}
+
+function cancelInterceptTask() {
+  const task = getInterceptTask();
+  if (!task || task.status !== "待处理") return;
+  if (!window.confirm("确认取消该拦截申请？")) return;
+  applyInterceptCancel(task);
+  refreshInterceptUI();
+}
+
+function confirmSelectedInterceptTasks() {
+  const tasks = getSelectedPendingInterceptTasks();
+  if (!tasks.length) {
+    window.alert("请先选择待处理拦截申请");
+    return;
+  }
+  const outboundCount = tasks.filter((task) => task.cargoStatus === "已出库").length;
+  const message = outboundCount
+    ? `确认批量确认选中的 ${tasks.length} 条拦截申请吗？其中 ${outboundCount} 条货物已出库，将自动标记为拦截失败。`
+    : `确认批量确认选中的 ${tasks.length} 条拦截申请吗？`;
+  if (!window.confirm(message)) return;
+  tasks.forEach(applyInterceptConfirm);
+  selectedInterceptIds.clear();
+  refreshInterceptUI();
+}
+
+function cancelSelectedInterceptTasks() {
+  const tasks = getSelectedPendingInterceptTasks();
+  if (!tasks.length) {
+    window.alert("请先选择待处理拦截申请");
+    return;
+  }
+  if (!window.confirm(`确认批量取消选中的 ${tasks.length} 条拦截申请吗？`)) return;
+  tasks.forEach(applyInterceptCancel);
+  selectedInterceptIds.clear();
+  refreshInterceptUI();
+}
+
+function openInterceptFeedback(mode) {
+  const task = getInterceptTask();
+  if (!task || task.status !== "拦截中") return;
+  interceptFeedbackMode = mode;
+  const isSuccess = mode === "success";
+  $("#interceptFeedbackTitle").textContent = isSuccess ? "确认拦截成功" : "确认拦截失败";
+  $("#interceptFeedbackFields").innerHTML = isSuccess
+    ? `<p>请确认实际拦截的货物数量。提交后系统将自动生成暂存单。</p><label><span class="required">实际拦截箱数</span><input id="interceptActualBoxes" type="number" min="1" max="${task.boxes}" value="${task.boxes}" required /></label><label><span>备注</span><textarea id="interceptFeedbackNote" maxlength="200" placeholder="请输入处理备注"></textarea></label>`
+    : '<p>请填写无法完成拦截的原因，系统将保留处理记录。</p><label><span class="required">失败原因</span><textarea id="interceptFailReason" maxlength="200" required placeholder="例如：已出库、找不到货物、客户取消"></textarea></label><label><span>备注</span><textarea id="interceptFeedbackNote" maxlength="200" placeholder="请输入补充说明"></textarea></label>';
+  $("#interceptFeedbackOverlay").hidden = false;
+}
+
+function createStorageFromIntercept(task) {
+  if (!task.storageNo || inventoryRows.some((row) => row.pallet === task.storageNo)) return;
+  const nextId = inventoryRows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  inventoryRows.unshift({
+    id: nextId,
+    customer: task.customer,
+    container: task.waybill,
+    system: task.waybill,
+    inbound: task.no,
+    blocked: "是",
+    transfer: "-",
+    destination: "暂存库",
+    dispatch: "-",
+    pallet: task.storageNo,
+    time: task.handleAt || formatLocalDateTime(),
+    weight: 0,
+    volume: 0,
+    boxes: Number(task.actualBoxes || task.boxes),
+    pending: 0,
+    unsent: Number(task.actualBoxes || task.boxes),
+    sent: 0,
+    status: "暂存"
+  });
+}
+
+function submitInterceptFeedback(event) {
+  event.preventDefault();
+  const task = getInterceptTask();
+  if (!task || task.status !== "拦截中") return;
+  const note = $("#interceptFeedbackNote")?.value.trim() || "";
+  const previousStatus = task.status;
+  if (interceptFeedbackMode === "success") {
+    const actualBoxes = Number($("#interceptActualBoxes").value);
+    if (!actualBoxes || actualBoxes < 1 || actualBoxes > task.boxes) {
+      window.alert(`实际拦截箱数需在 1 到 ${task.boxes} 之间`);
+      return;
+    }
+    task.status = "拦截成功";
+    task.cargoStatus = "暂存中";
+    task.inventoryStatus = "暂存";
+    task.outboundStatus = "未出库";
+    task.actualBoxes = String(actualBoxes);
+    task.storageNo = `STG${formatLocalDateTime().slice(0, 10).replaceAll("-", "")}${String(task.id).padStart(4, "0")}`;
+    task.resultRemark = note || "已完成货物拦截并转入暂存";
+    addInterceptLog(task, "拦截成功", previousStatus, `实际拦截 ${actualBoxes} 箱，已生成暂存单 ${task.storageNo}${note ? `；${note}` : ""}`);
+    createStorageFromIntercept(task);
+  } else {
+    const failReason = $("#interceptFailReason").value.trim();
+    if (!failReason) {
+      window.alert("请填写失败原因");
+      return;
+    }
+    task.status = "拦截失败";
+    task.failReason = failReason;
+    task.resultRemark = note;
+    addInterceptLog(task, "拦截失败", previousStatus, `${failReason}${note ? `；${note}` : ""}`);
+  }
+  $("#interceptFeedbackOverlay").hidden = true;
+  refreshInterceptUI();
+}
+
+function showStagingInventory(status = activeStatus) {
+  interceptPage.hidden = true;
+  inventoryPage.hidden = false;
+  $("#navInterceptManagement").classList.remove("active");
+  $("#navStagingInventory").classList.add("active");
+  $("#currentPageName").textContent = "暂存库存";
+  document.title = "暂存库存 - 美仓海外仓系统";
+  activeStatus = status;
+  document.querySelectorAll(".status-tab").forEach((tab) => {
+    if (tab.dataset.status) tab.classList.toggle("active", tab.dataset.status === activeStatus);
+  });
+  selected.clear();
+  $("#filterCard").classList.toggle("approval-filter", isRequestTableView());
+  $("#filterCard").classList.remove("approval-expanded", "collapsed");
+  $("#collapseButton").innerHTML = isRequestTableView() ? "<span>⌄</span> 展开" : "<span>⌃</span> 收起";
+  applyFilters();
+}
+
+function showInterceptManagement() {
+  if (!confirmDiscardInstructionStatusDrafts()) return;
+  inventoryPage.hidden = true;
+  interceptPage.hidden = false;
+  $("#navStagingInventory").classList.remove("active");
+  $("#navInterceptManagement").classList.add("active");
+  $("#currentPageName").textContent = "拦截管理";
+  document.title = "拦截管理 - 美仓海外仓系统";
+  renderInterceptRows();
+}
+
+function refreshInterceptFilterOptions() {
+  const customer = interceptFilters.customer.value;
+  const warehouse = interceptFilters.warehouse.value;
+  interceptFilters.customer.innerHTML = '<option value="">全部客户</option>';
+  interceptFilters.warehouse.innerHTML = '<option value="">全部仓库</option>';
+  addOptions(interceptFilters.customer, interceptTasks.map((task) => task.customer));
+  addOptions(interceptFilters.warehouse, interceptTasks.map((task) => task.warehouse));
+  interceptFilters.customer.value = customer;
+  interceptFilters.warehouse.value = warehouse;
+}
+
+function refreshInterceptWaybillOptions() {
+  const select = $("#interceptWaybill");
+  const previous = select.value;
+  interceptWaybillSources = new Map();
+  const rows = inventoryRows.filter((row) => row.status === "暂存");
+  select.innerHTML = '<option value="">请选择运单号</option>';
+  rows.forEach((row) => {
+    const key = String(row.id);
+    const waybill = row.system && row.system !== "/" ? row.system : row.container;
+    interceptWaybillSources.set(key, { ...row, waybill });
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = `${waybill}（${row.customer}）`;
+    select.appendChild(option);
+  });
+  select.value = previous;
+}
+
+function updateInterceptCreateCargo() {
+  const source = interceptWaybillSources.get($("#interceptWaybill").value);
+  $("#interceptCustomer").value = source?.customer || "";
+  $("#interceptWarehouse").value = source ? "美仓1号仓" : "";
+}
+
+function nextInterceptNo() {
+  const date = formatLocalDateTime().slice(0, 10).replaceAll("-", "");
+  const sequence = String(interceptTasks.filter((task) => task.no.startsWith(`INT${date}`)).length + 1).padStart(4, "0");
+  return `INT${date}${sequence}`;
+}
+
+function submitInterceptCreate(event) {
+  event.preventDefault();
+  const source = interceptWaybillSources.get($("#interceptWaybill").value);
+  if (!source || !event.currentTarget.reportValidity()) return;
+  const now = formatLocalDateTime();
+  const waybill = source.waybill;
+  const cargoStatus = source.sent > 0 ? "已出库" : "已拆柜";
+  const task = {
+    id: interceptTasks.reduce((max, item) => Math.max(max, item.id), 0) + 1,
+    no: nextInterceptNo(),
+    waybill,
+    customer: source.customer,
+    warehouse: "美仓1号仓",
+    cargoStatus,
+    inventoryStatus: cargoStatus === "已出库" ? "无库存" : "已入库",
+    outboundStatus: cargoStatus === "已出库" ? "已出库" : "未出库",
+    boxes: Number(source.unsent || source.boxes || 1),
+    status: "待处理",
+    reason: $("#interceptReason").value.trim(),
+    remark: $("#interceptRemark").value.trim(),
+    applicant: "天朗（付豪）",
+    appliedAt: now,
+    handler: "",
+    handleAt: "",
+    failReason: "",
+    actualBoxes: "",
+    storageNo: "",
+    resultRemark: "",
+    logs: [{ time: now, user: "天朗（付豪）", action: "提交申请", change: "- → 待处理", note: "创建拦截任务" }]
+  };
+  interceptTasks.unshift(task);
+  refreshInterceptFilterOptions();
+  $("#interceptCreateOverlay").hidden = true;
+  event.currentTarget.reset();
+  interceptActiveTab = "待处理";
+  renderInterceptRows();
+  openInterceptDetail(task.id);
+}
+
+function closeInterceptCreate() {
+  $("#interceptCreateOverlay").hidden = true;
+  $("#interceptCreateForm").reset();
+}
+
+function openInterceptCreate() {
+  refreshInterceptWaybillOptions();
+  updateInterceptCreateCargo();
+  $("#interceptCreateOverlay").hidden = false;
+  requestAnimationFrame(() => $("#interceptWaybill").focus());
+}
+
+function initInterceptManagement() {
+  interceptTasks.filter((task) => task.status === "拦截成功").forEach(createStorageFromIntercept);
+  refreshInterceptFilterOptions();
+  renderInterceptRows();
+  $("#navInterceptManagement").addEventListener("click", showInterceptManagement);
+  $("#navStagingInventory").addEventListener("click", () => showStagingInventory(activeStatus));
+  $("#interceptSearchButton").addEventListener("click", renderInterceptRows);
+  $("#interceptBatchCancelButton").addEventListener("click", cancelSelectedInterceptTasks);
+  $("#interceptBatchConfirmButton").addEventListener("click", confirmSelectedInterceptTasks);
+  $("#interceptSelectAll").addEventListener("change", (event) => {
+    getVisiblePendingInterceptTasks().forEach((task) => {
+      if (event.currentTarget.checked) selectedInterceptIds.add(task.id);
+      else selectedInterceptIds.delete(task.id);
+    });
+    renderInterceptRows();
+  });
+  $("#interceptResetButton").addEventListener("click", () => {
+    Object.values(interceptFilters).forEach((control) => { control.value = ""; });
+    selectedInterceptIds.clear();
+    interceptActiveTab = "全部";
+    renderInterceptRows();
+  });
+  Object.values(interceptFilters).forEach((control) => control.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") renderInterceptRows();
+  }));
+  document.querySelectorAll("[data-intercept-status]").forEach((tab) => tab.addEventListener("click", () => {
+    selectedInterceptIds.clear();
+    interceptActiveTab = tab.dataset.interceptStatus;
+    renderInterceptRows();
+  }));
+  $("#interceptCreateButton").addEventListener("click", openInterceptCreate);
+  $("#interceptCreateClose").addEventListener("click", closeInterceptCreate);
+  $("#interceptCreateCancel").addEventListener("click", closeInterceptCreate);
+  $("#interceptCreateOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptCreateOverlay")) closeInterceptCreate();
+  });
+  $("#interceptWaybill").addEventListener("change", updateInterceptCreateCargo);
+  $("#interceptCreateForm").addEventListener("submit", submitInterceptCreate);
+  interceptTableBody.addEventListener("change", (event) => {
+    const checkbox = event.target.closest(".intercept-row-check");
+    if (!checkbox) return;
+    const id = Number(checkbox.dataset.interceptId);
+    if (checkbox.checked) selectedInterceptIds.add(id);
+    else selectedInterceptIds.delete(id);
+    updateInterceptBatchControls();
+  });
+  interceptTableBody.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-intercept-action]");
+    if (!button) return;
+    const row = button.closest("[data-intercept-id]");
+    const task = getInterceptTask(row?.dataset.interceptId);
+    if (!task) return;
+    const action = button.dataset.interceptAction;
+    if (action === "storage") {
+      createStorageFromIntercept(task);
+      showStagingInventory("暂存");
+      return;
+    }
+    openInterceptDetail(task.id);
+  });
+  $("#interceptDetailClose").addEventListener("click", closeInterceptDetail);
+  $("#interceptDetailOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptDetailOverlay")) closeInterceptDetail();
+  });
+  $("#interceptDetailActions").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-detail-action]");
+    if (!button) return;
+    const action = button.dataset.detailAction;
+    if (action === "close") closeInterceptDetail();
+    if (action === "confirm") confirmInterceptTask();
+    if (action === "cancel") cancelInterceptTask();
+    if (action === "success" || action === "failure") openInterceptFeedback(action);
+    if (action === "storage") {
+      const task = getInterceptTask();
+      if (task) createStorageFromIntercept(task);
+      closeInterceptDetail();
+      showStagingInventory("暂存");
+    }
+  });
+  $("#interceptResultInfo").addEventListener("click", (event) => {
+    if (!event.target.closest("[data-intercept-action=\"storage\"]")) return;
+    const task = getInterceptTask();
+    if (task) createStorageFromIntercept(task);
+    closeInterceptDetail();
+    showStagingInventory("暂存");
+  });
+  $("#interceptFeedbackClose").addEventListener("click", () => { $("#interceptFeedbackOverlay").hidden = true; });
+  $("#interceptFeedbackCancel").addEventListener("click", () => { $("#interceptFeedbackOverlay").hidden = true; });
+  $("#interceptFeedbackOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptFeedbackOverlay")) $("#interceptFeedbackOverlay").hidden = true;
+  });
+  $("#interceptFeedbackForm").addEventListener("submit", submitInterceptFeedback);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!$("#interceptFeedbackOverlay").hidden) $("#interceptFeedbackOverlay").hidden = true;
+    else if (!$("#interceptDetailOverlay").hidden) closeInterceptDetail();
+    else if (!$("#interceptCreateOverlay").hidden) closeInterceptCreate();
+  });
+}
+
+initInterceptManagement();
 renderRows();
 buildWatermarks();
