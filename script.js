@@ -1206,8 +1206,7 @@ function renderCargoBoxRows(row) {
     <td class="cargo-box-code">${escapeHtml(box.systemBoxNo)}</td>
     <td>${escapeHtml(box.customerData)}</td>
     <td>${escapeHtml(box.pickingData)}</td>
-    <td><span class="cargo-box-status ${getCargoBoxStatusClass(box.boxStatus)}">${escapeHtml(box.boxStatus)}</span></td>
-  </tr>`).join("") : `<tr class="cargo-box-empty"><td colspan="5">暂无货箱数据</td></tr>`;
+  </tr>`).join("") : `<tr class="cargo-box-empty"><td colspan="4">暂无货箱数据</td></tr>`;
   const selectAll = $("#cargoBoxSelectAll");
   if (selectAll) {
     const selectableRows = rows.filter(isCargoBoxSelectable);
@@ -2042,23 +2041,23 @@ const interceptStatusClass = {
 };
 const interceptTasks = [
   {
-    id: 1, no: "INT202608040001", waybill: "WEMA1131231", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 1, no: "202608040001", waybill: "2", container: "WEMA1131231", system: "/", customer: "TTTX", warehouse: "美仓1号仓",
     cargoStatus: "未拆柜", inventoryStatus: "待拆柜", outboundStatus: "未出库", boxes: 11,
-    status: "待处理", reason: "客户调整运输计划，申请暂缓出库", remark: "等待客户确认新运输计划",
+    status: "待处理", reason: "客户调整运输计划，申请暂缓出库", attachment: "拦截申请-20260804-01.pdf", remark: "等待客户确认新运输计划",
     applicant: "客服-张敏", appliedAt: "2026-08-04 09:18:22", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [{ time: "2026-08-04 09:18:22", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户申请拦截" }]
   },
   {
-    id: 2, no: "INT202608040002", waybill: "MSCU7654321-260701", customer: "ABC-US", warehouse: "美仓1号仓",
+    id: 2, no: "202608040002", waybill: "US0601", container: "MSCU7654321", system: "MSCU7654321-260701", customer: "ABC-US", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
-    status: "待处理", reason: "订单信息异常，客户要求暂缓处理", remark: "请仓库优先确认货物位置",
+    status: "待处理", reason: "订单信息异常，客户要求暂缓处理", attachment: "-", remark: "请仓库优先确认货物位置",
     applicant: "客服-刘洋", appliedAt: "2026-08-04 10:06:15", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [{ time: "2026-08-04 10:06:15", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "订单信息待客户复核" }]
   },
   {
-    id: 3, no: "INT202608030015", waybill: "FBA323N235Y8", customer: "23", warehouse: "美仓1号仓",
+    id: 3, no: "202608030015", waybill: "88", container: "8889990", system: "8889990-250623", customer: "23", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 5,
-    status: "拦截中", reason: "客户申请暂停出库", remark: "仓库正在核对货物位置",
+    status: "拦截中", reason: "客户申请暂停出库", attachment: "客户邮件截图.png", remark: "仓库正在核对货物位置",
     applicant: "客服-张敏", appliedAt: "2026-08-03 15:20:31", handler: "仓库-李明", handleAt: "2026-08-03 15:34:06", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [
       { time: "2026-08-03 15:20:31", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户调整出库计划" },
@@ -2066,9 +2065,9 @@ const interceptTasks = [
     ]
   },
   {
-    id: 4, no: "INT202608020009", waybill: "CCCA1414141-240411", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 4, no: "202608020009", waybill: "111", container: "CCCA1414141", system: "CCCA1414141-240411", customer: "TTTX", warehouse: "美仓1号仓",
     cargoStatus: "暂存中", inventoryStatus: "暂存", outboundStatus: "未出库", boxes: 2,
-    status: "拦截成功", reason: "客户要求货物转入暂存", remark: "后续等待客户重新下单",
+    status: "拦截成功", reason: "客户要求货物转入暂存", attachment: "拦截申请单.pdf", remark: "后续等待客户重新下单",
     applicant: "客服-周悦", appliedAt: "2026-08-02 11:03:44", handler: "仓库-王强", handleAt: "2026-08-02 13:46:20", failReason: "", actualBoxes: "2", storageNo: "STG202608020001", resultRemark: "货物已转入 A02-03 暂存库位",
     logs: [
       { time: "2026-08-02 11:03:44", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请进入暂存" },
@@ -2077,18 +2076,18 @@ const interceptTasks = [
     ]
   },
   {
-    id: 5, no: "INT202608010004", waybill: "TLLU2026072-260715", customer: "23", warehouse: "美仓1号仓",
+    id: 5, no: "202608010004", waybill: "72", container: "TLLU2026072", system: "TLLU2026072-260715", customer: "23", warehouse: "美仓1号仓",
     cargoStatus: "已出库", inventoryStatus: "无库存", outboundStatus: "已出库", boxes: 3,
-    status: "拦截失败", reason: "客户临时要求取消发货", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "货物已完成出库", actualBoxes: "", storageNo: "", resultRemark: "",
+    status: "拦截失败", reason: "客户临时要求取消发货", attachment: "-", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "货物已完成出库", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [
       { time: "2026-08-01 16:32:09", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "客户要求取消发货" },
       { time: "2026-08-01 16:32:10", user: "系统", action: "状态校验", change: "待处理 → 拦截失败", note: "货物已完成出库，无法执行拦截" }
     ]
   },
   {
-    id: 6, no: "INT202607310018", waybill: "AAAA0000000-241109", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 6, no: "202607310018", waybill: "2", container: "AAAA0000000", system: "AAAA0000000-241109", customer: "TTTX", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
-    status: "已取消", reason: "客户申请暂停发货", remark: "客户已自行调整订单", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
+    status: "已取消", reason: "客户申请暂停发货", attachment: "-", remark: "客户已自行调整订单", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
     logs: [
       { time: "2026-07-31 09:11:48", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请暂停发货" },
       { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "取消申请", change: "待处理 → 已取消", note: "客户主动取消" }
@@ -2100,8 +2099,8 @@ let interceptActiveTab = "全部";
 let interceptVisibleRows = [];
 let selectedInterceptIds = new Set();
 let activeInterceptId = null;
+let interceptDetailMode = "view";
 let interceptFeedbackMode = "";
-let interceptWaybillSources = new Map();
 
 const interceptPage = $("#interceptPage");
 const inventoryPage = $("#inventoryPage");
@@ -2109,6 +2108,8 @@ const interceptTableBody = $("#interceptTableBody");
 const interceptFilters = {
   no: $("#interceptNoFilter"),
   waybill: $("#interceptWaybillFilter"),
+  container: $("#interceptContainerFilter"),
+  system: $("#interceptSystemFilter"),
   customer: $("#interceptCustomerFilter"),
   warehouse: $("#interceptWarehouseFilter"),
   cargoStatus: $("#interceptCargoStatusFilter"),
@@ -2130,6 +2131,81 @@ function getInterceptCargoTag(status) {
   return `<span class="intercept-cargo-status${extraClass}">${escapeHtml(status)}</span>`;
 }
 
+const interceptAttachmentDownloadCache = new Map();
+
+function getInterceptAttachmentItems(task) {
+  if (!task) return [];
+  if (Array.isArray(task.attachments) && task.attachments.length) {
+    return task.attachments.map((item, index) => {
+      if (!item) return null;
+      if (typeof item === "string") {
+        const name = item.trim();
+        return name ? { name, url: getInterceptAttachmentUrl(task, name) } : null;
+      }
+      const name = String(item.name || item.filename || `附件${index + 1}`).trim();
+      if (!name) return null;
+      const url = String(item.url || "").trim() || getInterceptAttachmentUrl(task, name);
+      return { name, url };
+    }).filter(Boolean);
+  }
+  const raw = String(task.attachment || "").trim();
+  if (!raw || raw === "-") return [];
+  return [{ name: raw, url: getInterceptAttachmentUrl(task, raw) }];
+}
+
+function getInterceptAttachmentUrl(task, name) {
+  const key = `${task.id || task.no}::${name}`;
+  if (!interceptAttachmentDownloadCache.has(key)) {
+    const blob = new Blob([
+      `拦截单号: ${task.no}\n`,
+      `拦截原因: ${task.reason || "-"}\n`,
+      `附件名称: ${name}\n`
+    ], { type: "text/plain;charset=utf-8" });
+    interceptAttachmentDownloadCache.set(key, URL.createObjectURL(blob));
+  }
+  return interceptAttachmentDownloadCache.get(key);
+}
+
+function renderInterceptAttachments(task) {
+  const items = getInterceptAttachmentItems(task);
+  if (!items.length) return "-";
+  return `<div class="intercept-attachment-links">${items.map((item) => `<a class="intercept-attachment-link" href="${escapeHtml(item.url)}" download="${escapeHtml(item.name)}" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>`).join("")}</div>`;
+}
+
+function getInterceptCargoBoxSource(task) {
+  const boxes = Math.max(1, Number(task.actualBoxes || task.boxes || 1));
+  return {
+    ...task,
+    boxes,
+    unsent: boxes,
+    status: task.cargoStatus === "已出库" || task.status === "拦截失败" ? "已出库" : "待出库"
+  };
+}
+
+function renderInterceptCargoBoxes(task) {
+  const source = getInterceptCargoBoxSource(task);
+  const rows = getCargoBoxRows(source).sort((a, b) => (a.systemBoxNo || "").localeCompare(b.systemBoxNo || ""));
+  $("#interceptCargoBoxBody").innerHTML = rows.map((box) => `<tr>
+    <td class="cargo-box-code">${escapeHtml(box.systemBoxNo)}</td>
+    <td>${escapeHtml(box.customerData)}</td>
+    <td>${escapeHtml(box.pickingData)}</td>
+  </tr>`).join("");
+}
+
+function renderInterceptLog(task) {
+  $("#interceptLogTitle").textContent = "查看日志";
+  $("#interceptLogBody").innerHTML = task.logs.map((log) => {
+    const [before = "-", after = "-"] = String(log.change || "- → -").split("→").map((item) => item.trim());
+    return `<tr>
+      <td title="${escapeHtml(log.note || log.action)}">${escapeHtml(log.action)}</td>
+      <td title="${escapeHtml(before)}">${escapeHtml(before)}</td>
+      <td title="${escapeHtml(after)}">${escapeHtml(after)}</td>
+      <td>${escapeHtml(log.user)}</td>
+      <td>${escapeHtml(log.time)}</td>
+    </tr>`;
+  }).join("");
+}
+
 function formatInterceptDate(value) {
   return String(value || "").slice(0, 10);
 }
@@ -2147,12 +2223,16 @@ function renderInterceptStatusTabs() {
 function getFilteredInterceptTasks() {
   const no = interceptFilters.no.value.trim().toLowerCase();
   const waybill = interceptFilters.waybill.value.trim().toLowerCase();
+  const container = interceptFilters.container.value.trim().toLowerCase();
+  const system = interceptFilters.system.value.trim().toLowerCase();
   const from = interceptFilters.dateFrom.value;
   const to = interceptFilters.dateTo.value;
   return interceptTasks.filter((task) => (
     (interceptActiveTab === "全部" || task.status === interceptActiveTab)
     && (!no || task.no.toLowerCase().includes(no))
     && (!waybill || task.waybill.toLowerCase().includes(waybill))
+    && (!container || (task.container || "").toLowerCase().includes(container))
+    && (!system || (task.system || "").toLowerCase().includes(system))
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
     && (!interceptFilters.warehouse.value || task.warehouse === interceptFilters.warehouse.value)
     && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
@@ -2200,7 +2280,7 @@ function renderInterceptRows() {
   pruneInterceptSelection();
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="13">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="17">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const primaryAction = task.status === "待处理" ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>'
@@ -2208,12 +2288,13 @@ function renderInterceptRows() {
           : task.status === "拦截成功" ? '<button class="intercept-action" data-intercept-action="storage" type="button">暂存单</button>' : "";
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = task.status === "待处理" ? "" : " disabled";
+      const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
-        <td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.warehouse)}</td>
-        <td>${getInterceptCargoTag(task.cargoStatus)}</td><td>${getInterceptStatusTag(task.status)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>
+        <td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.system || "-")}">${escapeHtml(task.system || "-")}</td><td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.warehouse)}</td>
+        <td>${getInterceptCargoTag(task.cargoStatus)}</td><td>${getInterceptStatusTag(task.status)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${renderInterceptAttachments(task)}</td><td>${boxCount}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
-        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}</td>
+        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
   }
@@ -2234,8 +2315,7 @@ function addInterceptLog(task, action, previousStatus, note, user = "仓库-李�
   task.handleAt = now;
 }
 
-function renderInterceptDetail(task) {
-  const resultSection = $("#interceptResultSection");
+function renderInterceptDetail(task, mode = "view") {
   $("#interceptDetailTitle").textContent = `拦截详情 · ${task.no}`;
   $("#interceptDetailSubTitle").innerHTML = `${getInterceptStatusTag(task.status)} <span>${escapeHtml(task.waybill)}</span>`;
 
@@ -2250,67 +2330,66 @@ function renderInterceptDetail(task) {
   const field = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
   $("#interceptBasicInfo").innerHTML = [
     field("拦截单号", escapeHtml(task.no)),
-    field("运单号", escapeHtml(task.waybill)),
+    field("入仓号", escapeHtml(task.waybill)),
+    field("柜号", escapeHtml(task.container || "-")),
+    field("系统柜号", escapeHtml(task.system || "-")),
     field("客户名称", escapeHtml(task.customer)),
-    field("申请原因", escapeHtml(task.reason)),
+    field("拦截原因", escapeHtml(task.reason)),
+    field("附件", renderInterceptAttachments(task)),
+    field("拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes || "-")} 箱`),
+    field("货物状态", getInterceptCargoTag(task.cargoStatus)),
+    field("所在仓库", escapeHtml(task.warehouse)),
+    field("出库状态", escapeHtml(task.outboundStatus)),
     field("申请人", escapeHtml(task.applicant)),
     field("申请时间", escapeHtml(task.appliedAt)),
     field("备注", escapeHtml(task.remark || "-"))
   ].join("");
-  $("#interceptCargoInfo").innerHTML = [
-    field("货物状态", getInterceptCargoTag(task.cargoStatus)),
-    field("所在仓库", escapeHtml(task.warehouse)),
-    field("箱数", `${escapeHtml(task.boxes)} 箱`),
-    field("库存状态", escapeHtml(task.inventoryStatus)),
-    field("出库状态", escapeHtml(task.outboundStatus))
-  ].join("");
+  renderInterceptCargoBoxes(task);
 
-  let resultRows;
-  if (task.status === "拦截成功") {
-    resultRows = [
-      field("处理结果", getInterceptStatusTag(task.status)),
-      field("实际拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes)} 箱`),
-      field("暂存单号", `<button class="intercept-result-link" data-intercept-action="storage" type="button">${escapeHtml(task.storageNo)}</button>`),
-      field("处理备注", escapeHtml(task.resultRemark || "-"))
-    ];
-  } else if (task.status === "拦截失败") {
-    resultRows = [field("处理结果", getInterceptStatusTag(task.status)), field("失败原因", escapeHtml(task.failReason || "-")), field("处理人", escapeHtml(task.handler || "-")), field("处理时间", escapeHtml(task.handleAt || "-"))];
-  } else if (task.status === "已取消") {
-    resultRows = [field("处理结果", getInterceptStatusTag(task.status)), field("取消说明", escapeHtml(task.resultRemark || task.remark || "-")), field("处理人", escapeHtml(task.handler || "-")), field("处理时间", escapeHtml(task.handleAt || "-"))];
-  } else {
-    resultRows = [field("当前状态", getInterceptStatusTag(task.status)), field("处理人", escapeHtml(task.handler || "待分配")), field("处理时间", escapeHtml(task.handleAt || "-")), field("处理说明", task.status === "待处理" ? "等待确认拦截" : "仓库正在执行货物拦截")];
-  }
-  resultSection.hidden = false;
-  $("#interceptResultInfo").innerHTML = resultRows.join("");
-  $("#interceptLogBody").innerHTML = task.logs.map((log) => `<tr><td>${escapeHtml(log.time)}</td><td>${escapeHtml(log.user)}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.change)}</td><td title="${escapeHtml(log.note)}">${escapeHtml(log.note)}</td></tr>`).join("");
-
-  const actions = task.status === "待处理"
-    ? '<button class="btn" data-detail-action="cancel" type="button">取消申请</button><button class="btn primary" data-detail-action="confirm" type="button">确认拦截</button>'
-    : task.status === "拦截中"
-      ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
-      : task.status === "拦截成功"
-        ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
-        : "";
+  const actions = mode === "process"
+    ? task.status === "待处理"
+      ? '<button class="btn" data-detail-action="cancel" type="button">取消申请</button><button class="btn primary" data-detail-action="confirm" type="button">确认拦截</button>'
+      : task.status === "拦截中"
+        ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
+        : task.status === "拦截成功"
+          ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
+          : ""
+    : "";
   $("#interceptDetailActions").innerHTML = `<button class="btn" data-detail-action="close" type="button">关闭</button>${actions}`;
 }
 
-function openInterceptDetail(id) {
+function openInterceptDetail(id, mode = "view") {
   const task = getInterceptTask(id);
   if (!task) return;
   activeInterceptId = task.id;
-  renderInterceptDetail(task);
+  interceptDetailMode = mode;
+  renderInterceptDetail(task, mode);
   $("#interceptDetailOverlay").hidden = false;
+}
+
+function openInterceptLog(id) {
+  const task = getInterceptTask(id);
+  if (!task) return;
+  activeInterceptId = task.id;
+  renderInterceptLog(task);
+  $("#interceptLogOverlay").hidden = false;
+}
+
+function closeInterceptLog() {
+  $("#interceptLogOverlay").hidden = true;
+  activeInterceptId = null;
 }
 
 function closeInterceptDetail() {
   $("#interceptDetailOverlay").hidden = true;
   activeInterceptId = null;
+  interceptDetailMode = "view";
 }
 
 function refreshInterceptUI() {
   renderInterceptRows();
   const task = getInterceptTask();
-  if (task && !$("#interceptDetailOverlay").hidden) renderInterceptDetail(task);
+  if (task && !$("#interceptDetailOverlay").hidden) renderInterceptDetail(task, interceptDetailMode);
 }
 
 function applyInterceptConfirm(task) {
@@ -2406,9 +2485,9 @@ function createStorageFromIntercept(task) {
   inventoryRows.unshift({
     id: nextId,
     customer: task.customer,
-    container: task.waybill,
-    system: task.waybill,
-    inbound: task.no,
+    container: task.container || task.waybill,
+    system: task.system || task.container || task.waybill,
+    inbound: task.waybill,
     blocked: "是",
     transfer: "-",
     destination: "暂存库",
@@ -2501,87 +2580,6 @@ function refreshInterceptFilterOptions() {
   interceptFilters.warehouse.value = warehouse;
 }
 
-function refreshInterceptWaybillOptions() {
-  const select = $("#interceptWaybill");
-  const previous = select.value;
-  interceptWaybillSources = new Map();
-  const rows = inventoryRows.filter((row) => row.status === "暂存");
-  select.innerHTML = '<option value="">请选择运单号</option>';
-  rows.forEach((row) => {
-    const key = String(row.id);
-    const waybill = row.system && row.system !== "/" ? row.system : row.container;
-    interceptWaybillSources.set(key, { ...row, waybill });
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = `${waybill}（${row.customer}）`;
-    select.appendChild(option);
-  });
-  select.value = previous;
-}
-
-function updateInterceptCreateCargo() {
-  const source = interceptWaybillSources.get($("#interceptWaybill").value);
-  $("#interceptCustomer").value = source?.customer || "";
-  $("#interceptWarehouse").value = source ? "美仓1号仓" : "";
-}
-
-function nextInterceptNo() {
-  const date = formatLocalDateTime().slice(0, 10).replaceAll("-", "");
-  const sequence = String(interceptTasks.filter((task) => task.no.startsWith(`INT${date}`)).length + 1).padStart(4, "0");
-  return `INT${date}${sequence}`;
-}
-
-function submitInterceptCreate(event) {
-  event.preventDefault();
-  const source = interceptWaybillSources.get($("#interceptWaybill").value);
-  if (!source || !event.currentTarget.reportValidity()) return;
-  const now = formatLocalDateTime();
-  const waybill = source.waybill;
-  const cargoStatus = source.sent > 0 ? "已出库" : "已拆柜";
-  const task = {
-    id: interceptTasks.reduce((max, item) => Math.max(max, item.id), 0) + 1,
-    no: nextInterceptNo(),
-    waybill,
-    customer: source.customer,
-    warehouse: "美仓1号仓",
-    cargoStatus,
-    inventoryStatus: cargoStatus === "已出库" ? "无库存" : "已入库",
-    outboundStatus: cargoStatus === "已出库" ? "已出库" : "未出库",
-    boxes: Number(source.unsent || source.boxes || 1),
-    status: "待处理",
-    reason: $("#interceptReason").value.trim(),
-    remark: $("#interceptRemark").value.trim(),
-    applicant: "天朗（付豪）",
-    appliedAt: now,
-    handler: "",
-    handleAt: "",
-    failReason: "",
-    actualBoxes: "",
-    storageNo: "",
-    resultRemark: "",
-    logs: [{ time: now, user: "天朗（付豪）", action: "提交申请", change: "- → 待处理", note: "创建拦截任务" }]
-  };
-  interceptTasks.unshift(task);
-  refreshInterceptFilterOptions();
-  $("#interceptCreateOverlay").hidden = true;
-  event.currentTarget.reset();
-  interceptActiveTab = "待处理";
-  renderInterceptRows();
-  openInterceptDetail(task.id);
-}
-
-function closeInterceptCreate() {
-  $("#interceptCreateOverlay").hidden = true;
-  $("#interceptCreateForm").reset();
-}
-
-function openInterceptCreate() {
-  refreshInterceptWaybillOptions();
-  updateInterceptCreateCargo();
-  $("#interceptCreateOverlay").hidden = false;
-  requestAnimationFrame(() => $("#interceptWaybill").focus());
-}
-
 function initInterceptManagement() {
   interceptTasks.filter((task) => task.status === "拦截成功").forEach(createStorageFromIntercept);
   refreshInterceptFilterOptions();
@@ -2612,14 +2610,6 @@ function initInterceptManagement() {
     interceptActiveTab = tab.dataset.interceptStatus;
     renderInterceptRows();
   }));
-  $("#interceptCreateButton").addEventListener("click", openInterceptCreate);
-  $("#interceptCreateClose").addEventListener("click", closeInterceptCreate);
-  $("#interceptCreateCancel").addEventListener("click", closeInterceptCreate);
-  $("#interceptCreateOverlay").addEventListener("click", (event) => {
-    if (event.target === $("#interceptCreateOverlay")) closeInterceptCreate();
-  });
-  $("#interceptWaybill").addEventListener("change", updateInterceptCreateCargo);
-  $("#interceptCreateForm").addEventListener("submit", submitInterceptCreate);
   interceptTableBody.addEventListener("change", (event) => {
     const checkbox = event.target.closest(".intercept-row-check");
     if (!checkbox) return;
@@ -2640,6 +2630,14 @@ function initInterceptManagement() {
       showStagingInventory("暂存");
       return;
     }
+    if (action === "log") {
+      openInterceptLog(task.id);
+      return;
+    }
+    if (action === "handle") {
+      openInterceptDetail(task.id, "process");
+      return;
+    }
     openInterceptDetail(task.id);
   });
   $("#interceptDetailClose").addEventListener("click", closeInterceptDetail);
@@ -2651,6 +2649,7 @@ function initInterceptManagement() {
     if (!button) return;
     const action = button.dataset.detailAction;
     if (action === "close") closeInterceptDetail();
+    if (action === "handle") openInterceptDetail(task.id, "process");
     if (action === "confirm") confirmInterceptTask();
     if (action === "cancel") cancelInterceptTask();
     if (action === "success" || action === "failure") openInterceptFeedback(action);
@@ -2661,12 +2660,9 @@ function initInterceptManagement() {
       showStagingInventory("暂存");
     }
   });
-  $("#interceptResultInfo").addEventListener("click", (event) => {
-    if (!event.target.closest("[data-intercept-action=\"storage\"]")) return;
-    const task = getInterceptTask();
-    if (task) createStorageFromIntercept(task);
-    closeInterceptDetail();
-    showStagingInventory("暂存");
+  $("#interceptLogClose").addEventListener("click", closeInterceptLog);
+  $("#interceptLogOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptLogOverlay")) closeInterceptLog();
   });
   $("#interceptFeedbackClose").addEventListener("click", () => { $("#interceptFeedbackOverlay").hidden = true; });
   $("#interceptFeedbackCancel").addEventListener("click", () => { $("#interceptFeedbackOverlay").hidden = true; });
@@ -2677,8 +2673,8 @@ function initInterceptManagement() {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (!$("#interceptFeedbackOverlay").hidden) $("#interceptFeedbackOverlay").hidden = true;
+    else if (!$("#interceptLogOverlay").hidden) closeInterceptLog();
     else if (!$("#interceptDetailOverlay").hidden) closeInterceptDetail();
-    else if (!$("#interceptCreateOverlay").hidden) closeInterceptCreate();
   });
 }
 

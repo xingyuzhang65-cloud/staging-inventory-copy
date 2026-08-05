@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260804-cargo-status-v2" />
+  <link rel="stylesheet" href="styles.css?v=20260805-intercept-management-v2" />
 </head>
 <body>
 
@@ -112,7 +112,9 @@
       <section class="filter-card intercept-filter-card">
         <div class="filter-grid intercept-filter-grid">
           <label class="filter-field"><span>拦截单号</span><input id="interceptNoFilter" type="text" placeholder="请输入拦截单号" /></label>
-          <label class="filter-field"><span>运单号</span><input id="interceptWaybillFilter" type="text" placeholder="请输入运单号" /></label>
+          <label class="filter-field"><span>入仓号</span><input id="interceptWaybillFilter" type="text" placeholder="请输入入仓号" /></label>
+          <label class="filter-field"><span>柜号</span><input id="interceptContainerFilter" type="text" placeholder="请输入柜号" /></label>
+          <label class="filter-field"><span>系统柜号</span><input id="interceptSystemFilter" type="text" placeholder="请输入系统柜号" /></label>
           <label class="filter-field"><span>客户名称</span><select id="interceptCustomerFilter"><option value="">全部客户</option></select></label>
           <label class="filter-field"><span>仓库</span><select id="interceptWarehouseFilter"><option value="">全部仓库</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
@@ -134,13 +136,13 @@
             <button class="status-tab" data-intercept-status="已取消" type="button">取消(0)</button>
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>批量取消</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>批量确认</button><button class="btn primary" id="interceptCreateButton" type="button">新建拦截</button></div>
+          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>批量取消</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>批量确认</button></div>
         </div>
         <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span>拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
-              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>拦截单号</th><th>运单号</th><th>客户名称</th><th>仓库</th><th>货物状态</th><th>拦截状态</th><th>申请原因</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
+              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>系统柜号</th><th>客户名称</th><th>仓库</th><th>货物状态</th><th>拦截状态</th><th>拦截原因</th><th>附件</th><th>拦截箱数</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
             </tr></thead>
             <tbody id="interceptTableBody"></tbody>
           </table>
@@ -150,33 +152,32 @@
     </main>
   </section>
 </div>
-<div class="intercept-overlay" id="interceptCreateOverlay" hidden>
-  <aside class="intercept-drawer" role="dialog" aria-modal="true" aria-labelledby="interceptCreateTitle">
-    <header class="intercept-drawer-header"><div><h2 id="interceptCreateTitle">新建拦截任务</h2><p>提交后将根据货物状态进入拦截流程</p></div><button class="intercept-close" id="interceptCreateClose" type="button" aria-label="关闭新建拦截">×</button></header>
-    <form class="intercept-form" id="interceptCreateForm">
-      <section class="intercept-form-section"><h3>拦截信息</h3><div class="intercept-form-grid">
-        <label><span class="required">运单号</span><select id="interceptWaybill" required><option value="">请选择运单号</option></select></label>
-        <label><span>客户名称</span><input id="interceptCustomer" readonly /></label>
-        <label><span>仓库</span><input id="interceptWarehouse" readonly /></label>
-        <label class="intercept-form-wide"><span class="required">拦截原因</span><textarea id="interceptReason" required maxlength="200" placeholder="请输入拦截原因"></textarea></label>
-        <label class="intercept-form-wide"><span>备注</span><textarea id="interceptRemark" maxlength="200" placeholder="请输入补充说明"></textarea></label>
-      </div></section>
-      <footer><button class="btn" id="interceptCreateCancel" type="button">取消</button><button class="btn primary" type="submit">提交申请</button></footer>
-    </form>
-  </aside>
-</div>
 <div class="intercept-overlay" id="interceptDetailOverlay" hidden>
   <aside class="intercept-drawer intercept-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="interceptDetailTitle">
     <header class="intercept-drawer-header"><div><h2 id="interceptDetailTitle">拦截详情</h2><p id="interceptDetailSubTitle">-</p></div><button class="intercept-close" id="interceptDetailClose" type="button" aria-label="关闭拦截详情">×</button></header>
     <div class="intercept-detail-content">
       <section class="intercept-flow-section"><div class="intercept-flow" id="interceptFlow"></div></section>
       <section class="intercept-detail-section"><h3>基础信息</h3><dl class="intercept-detail-grid" id="interceptBasicInfo"></dl></section>
-      <section class="intercept-detail-section"><h3>货物状态</h3><dl class="intercept-detail-grid" id="interceptCargoInfo"></dl></section>
-      <section class="intercept-detail-section" id="interceptResultSection"><h3>处理结果</h3><dl class="intercept-detail-grid" id="interceptResultInfo"></dl></section>
-      <section class="intercept-detail-section"><h3>操作日志</h3><div class="intercept-log-wrap"><table class="intercept-log-table"><thead><tr><th>操作时间</th><th>操作人</th><th>操作动作</th><th>状态变化</th><th>备注</th></tr></thead><tbody id="interceptLogBody"></tbody></table></div></section>
+      <section class="intercept-detail-section intercept-cargo-box-section">
+        <h3>货箱信息</h3>
+        <div class="intercept-cargo-box-wrap">
+          <table class="cargo-box-table intercept-cargo-box-table">
+            <thead><tr><th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th></tr></thead>
+            <tbody id="interceptCargoBoxBody"></tbody>
+          </table>
+        </div>
+      </section>
     </div>
     <footer class="intercept-drawer-footer" id="interceptDetailActions"></footer>
   </aside>
+</div>
+<div class="intercept-overlay intercept-log-overlay" id="interceptLogOverlay" hidden>
+  <section class="intercept-log-modal" role="dialog" aria-modal="true" aria-labelledby="interceptLogTitle">
+    <header class="intercept-log-header"><h2 id="interceptLogTitle">查看日志</h2><button class="intercept-close" id="interceptLogClose" type="button" aria-label="关闭拦截日志">×</button></header>
+    <div class="intercept-log-modal-body">
+      <div class="intercept-log-wrap"><table class="intercept-log-table"><thead><tr><th>操作内容</th><th>操作前</th><th>操作后</th><th>操作人</th><th>操作时间</th></tr></thead><tbody id="interceptLogBody"></tbody></table></div>
+    </div>
+  </section>
 </div>
 <div class="intercept-overlay intercept-feedback-overlay" id="interceptFeedbackOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptFeedbackTitle">
@@ -322,7 +323,7 @@
         <div class="cargo-box-table-wrap">
           <table class="cargo-box-table">
             <thead><tr>
-              <th class="cargo-box-check-col"><input id="cargoBoxSelectAll" type="checkbox" aria-label="全选货箱" /></th><th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th><th>货箱状态</th>
+              <th class="cargo-box-check-col"><input id="cargoBoxSelectAll" type="checkbox" aria-label="全选货箱" /></th><th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th>
             </tr></thead>
             <tbody id="cargoBoxBody"></tbody>
           </table>
@@ -430,6 +431,6 @@
 </div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260804-cargo-status-v2"></script>
+<script src="script.js?v=20260805-intercept-management-v2"></script>
 </body>
 </html>
