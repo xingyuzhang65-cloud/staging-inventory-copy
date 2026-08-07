@@ -119,6 +119,7 @@
           <label class="filter-field"><span>仓库</span><select id="interceptWarehouseFilter"><option value="">全部仓库</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
           <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option>拦截中</option><option>拦截成功</option><option>拦截失败</option><option>已取消</option></select></label>
+          <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field intercept-date-filter"><span>申请时间</span><span class="date-range"><input id="interceptDateFrom" type="date" /><em>→</em><input id="interceptDateTo" type="date" /><b>□</b></span></label>
         </div>
         <div class="filter-actions">
@@ -142,7 +143,7 @@
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
-              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>系统柜号</th><th>客户名称</th><th>仓库</th><th>货物状态</th><th>拦截状态</th><th>拦截原因</th><th>附件</th><th>拦截箱数</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
+              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>系统柜号</th><th>客户名称</th><th>仓库</th><th>最新运踪</th><th>预报单状态</th><th>货物状态</th><th>拦截状态</th><th>拦截原因</th><th>附件</th><th>拦截箱数</th><th>备注</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
             </tr></thead>
             <tbody id="interceptTableBody"></tbody>
           </table>
@@ -158,18 +159,84 @@
     <div class="intercept-detail-content">
       <section class="intercept-flow-section"><div class="intercept-flow" id="interceptFlow"></div></section>
       <section class="intercept-detail-section"><h3>基础信息</h3><dl class="intercept-detail-grid" id="interceptBasicInfo"></dl></section>
-      <section class="intercept-detail-section intercept-cargo-box-section">
-        <h3>货箱信息</h3>
-        <div class="intercept-cargo-box-wrap">
-          <table class="cargo-box-table intercept-cargo-box-table">
-            <thead><tr><th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th></tr></thead>
-            <tbody id="interceptCargoBoxBody"></tbody>
-          </table>
-        </div>
-      </section>
+      <nav class="intercept-detail-tabs" id="interceptDetailTabs" role="tablist" aria-label="拦截详情信息分类">
+        <button class="intercept-detail-tab active" id="interceptCargoTab" data-intercept-detail-tab="cargo" type="button" role="tab" aria-selected="true" aria-controls="interceptCargoPanel">货箱信息</button>
+        <button class="intercept-detail-tab" id="interceptFeeTab" data-intercept-detail-tab="fee" type="button" role="tab" aria-selected="false" aria-controls="interceptFeePanel">费用信息</button>
+        <button class="intercept-detail-tab" id="interceptOtherTab" data-intercept-detail-tab="other" type="button" role="tab" aria-selected="false" aria-controls="interceptOtherPanel">其它信息</button>
+      </nav>
+      <div class="intercept-detail-tab-panels">
+        <section class="intercept-detail-tab-panel" id="interceptCargoPanel" data-intercept-detail-panel="cargo" role="tabpanel" aria-labelledby="interceptCargoTab">
+          <section class="intercept-detail-section intercept-cargo-box-section">
+            <h3>货箱信息</h3>
+            <div class="intercept-cargo-box-wrap">
+              <table class="cargo-box-table intercept-cargo-box-table">
+                <thead><tr><th>货箱号</th><th>客户数据</th><th>系统拣货（材重/实重）</th></tr></thead>
+                <tbody id="interceptCargoBoxBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+        <section class="intercept-detail-tab-panel" id="interceptFeePanel" data-intercept-detail-panel="fee" role="tabpanel" aria-labelledby="interceptFeeTab" hidden>
+          <section class="intercept-detail-section">
+            <div id="interceptFeeContent"></div>
+          </section>
+        </section>
+        <section class="intercept-detail-tab-panel" id="interceptOtherPanel" data-intercept-detail-panel="other" role="tabpanel" aria-labelledby="interceptOtherTab" hidden>
+          <section class="intercept-detail-section">
+            <div class="intercept-other-toolbar"><h3>其它信息</h3><button class="btn" id="interceptAttachmentUploadButton" type="button">上传附件</button></div>
+            <div class="intercept-attachment-table-wrap">
+              <table class="intercept-attachment-table">
+                <thead><tr><th>附件名称</th><th>附件类型</th><th>客户可见</th><th>文件大小</th><th>上传人</th><th>上传时间</th><th>操作</th></tr></thead>
+                <tbody id="interceptAttachmentBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </div>
     </div>
     <footer class="intercept-drawer-footer" id="interceptDetailActions"></footer>
   </aside>
+</div>
+<div class="intercept-overlay intercept-fee-overlay" id="interceptFeeOverlay" hidden>
+  <section class="intercept-fee-modal" role="dialog" aria-modal="true" aria-labelledby="interceptFeeTitle">
+    <header class="intercept-fee-modal-header">
+      <h2 id="interceptFeeTitle">添加费用</h2>
+      <div class="intercept-fee-modal-actions"><button class="btn primary" id="interceptFeeAddRow" type="button">+ 添加</button><button class="intercept-close" id="interceptFeeClose" type="button" aria-label="关闭添加费用">×</button></div>
+    </header>
+    <form id="interceptFeeForm">
+      <div class="intercept-fee-modal-body">
+        <div class="intercept-fee-summary"><span>费用明细</span><div><span>共 <strong id="interceptFeeCount">0</strong> 条</span><span>原币合计 <strong id="interceptFeeOriginalTotal">0.00</strong></span><span>人民币合计 <strong id="interceptFeeRmbTotal">0.00</strong></span></div></div>
+        <div class="intercept-fee-modal-table-wrap"><datalist id="interceptFeeCatalog"></datalist><table class="intercept-fee-table intercept-storage-fee-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*单位</th><th>*汇率</th><th>*单价</th><th>*数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>操作</th></tr></thead><tbody id="interceptFeeDraftBody"></tbody></table></div>
+      </div>
+      <footer class="intercept-fee-modal-footer"><button class="btn" id="interceptFeeCancel" type="button">取消</button><button class="btn primary" type="submit">确认</button></footer>
+    </form>
+  </section>
+</div>
+<div class="intercept-overlay intercept-feedback-overlay intercept-attachment-overlay" id="interceptAttachmentOverlay" hidden>
+  <section class="intercept-attachment-modal" role="dialog" aria-modal="true" aria-labelledby="interceptAttachmentTitle">
+    <header><h2 id="interceptAttachmentTitle">上传附件</h2><button class="intercept-close" id="interceptAttachmentClose" type="button" aria-label="关闭附件弹窗">×</button></header>
+    <div class="intercept-attachment-content">
+      <div class="intercept-attachment-upload-row">
+        <span class="intercept-attachment-label"><b>*</b> 文件附件：</span>
+        <div class="intercept-attachment-upload-main">
+          <label class="intercept-attachment-upload-button">点击上传<input id="interceptAttachmentFileInput" type="file" /></label>
+          <div class="intercept-attachment-tip">文件大小不超过 50M</div>
+          <div class="intercept-attachment-warning">若为报关件资料，文件类型请选择“报关资料”</div>
+          <div class="intercept-attachment-file-row" id="interceptAttachmentFileRow" hidden><span id="interceptAttachmentFileName"></span><span class="intercept-attachment-file-size" id="interceptAttachmentFileSize">-</span><button id="interceptAttachmentFileRemove" type="button">删除</button></div>
+        </div>
+      </div>
+      <label class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 文件类型：</span><select class="intercept-attachment-form-field" id="interceptAttachmentType"></select></label>
+      <div class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 客户是否可见：</span><div class="intercept-attachment-radio-group"><label><input type="radio" name="interceptAttachmentCustomerVisible" value="不可见" />不可见</label><label><input type="radio" name="interceptAttachmentCustomerVisible" value="可见" />可见</label></div></div>
+    </div>
+    <footer><button class="btn" id="interceptAttachmentCancel" type="button">取消</button><button class="btn primary" id="interceptAttachmentConfirm" type="button">确定</button></footer>
+  </section>
+</div>
+<div class="intercept-overlay intercept-feedback-overlay intercept-attachment-overlay" id="interceptAttachmentDeleteOverlay" hidden>
+  <section class="intercept-attachment-modal intercept-attachment-delete-modal" role="dialog" aria-modal="true" aria-labelledby="interceptAttachmentDeleteTitle">
+    <header><h2 id="interceptAttachmentDeleteTitle">删除附件</h2><button class="intercept-close" id="interceptAttachmentDeleteClose" type="button" aria-label="关闭删除附件弹窗">×</button></header>
+    <div class="intercept-attachment-delete-content" id="interceptAttachmentDeleteText"></div>
+    <footer><button class="btn" id="interceptAttachmentDeleteCancel" type="button">取消</button><button class="btn primary" id="interceptAttachmentDeleteConfirm" type="button">确定</button></footer>
+  </section>
 </div>
 <div class="intercept-overlay intercept-log-overlay" id="interceptLogOverlay" hidden>
   <section class="intercept-log-modal" role="dialog" aria-modal="true" aria-labelledby="interceptLogTitle">
@@ -380,37 +447,20 @@
   </aside>
 </div>
 <div class="instruction-overlay" id="instructionOverlay" hidden>
-  <aside class="instruction-drawer" role="dialog" aria-modal="true" aria-labelledby="instructionDrawerTitle">
-    <header><h3 id="instructionDrawerTitle">添加指令</h3><button id="instructionClose" type="button" aria-label="关闭">×</button></header>
-    <div class="instruction-picker-content">
-      <section class="instruction-picker-card">
-        <div class="instruction-search">
-          <label><span>费用名称：</span><input id="instructionSearchName" placeholder="请输入代码/名称" /></label>
-          <label><span>费用类型：</span><select id="instructionSearchType"><option value="">请选择费用类型</option><option>仓储费</option><option>操作费</option></select></label>
-          <button class="btn primary" id="instructionSearch" type="button">搜索</button>
-          <button class="btn" id="instructionReset" type="button">重置</button>
-        </div>
-        <div class="instruction-selector-row">
-          <label for="instructionDropdown">选择指令：</label>
-          <select id="instructionDropdown">
-            <option value="">请选择要添加的指令</option>
-          </select>
-          <button class="btn primary" id="instructionAddSelected" type="button">添加至列表</button>
-        </div>
-        <div class="instruction-picker-table-wrap">
-          <table class="instruction-picker-table">
-            <thead><tr><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*计费单价（元）</th><th>*计费数量</th><th>*币种</th><th>描述</th><th>操作</th></tr></thead>
-            <tbody id="instructionPickerBody"></tbody>
-          </table>
-        </div>
-        <div class="instruction-pagination">
-          <span id="instructionSelectedCount">已选中0条</span>
-          <span class="instruction-total-count" id="instructionCatalogCount">共 0 条可选</span>
-        </div>
-      </section>
+  <section class="instruction-modal instruction-fee-modal" role="dialog" aria-modal="true" aria-labelledby="instructionDrawerTitle">
+    <header><h3 id="instructionDrawerTitle">添加费用</h3><div class="instruction-fee-header-actions"><button class="btn primary" id="instructionAddRow" type="button">+ 添加</button><button id="instructionClose" type="button" aria-label="关闭">×</button></div></header>
+    <div class="instruction-fee-content">
+      <div class="instruction-fee-summary-bar"><strong>费用明细</strong><span><b id="instructionFeeCount">共 0 条</b><em>原币合计 <i id="instructionFeeOriginalTotal">0.00</i></em><em>人民币合计 <i id="instructionFeeCnyTotal">0.00</i></em></span></div>
+      <div class="instruction-fee-table-wrap">
+        <table class="instruction-fee-entry-table">
+          <thead><tr><th><span class="required">计费时间</span></th><th>费用名称</th><th>费用类型</th><th><span class="required">单位</span></th><th><span class="required">汇率</span></th><th><span class="required">单价</span></th><th><span class="required">数量</span></th><th><span class="required">币种</span></th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>操作</th></tr></thead>
+          <tbody id="instructionPickerBody"></tbody>
+        </table>
+      </div>
+      <datalist id="instructionFeeCatalog"></datalist>
     </div>
-    <footer><button class="btn primary" id="instructionConfirm" type="button">确认</button><button class="btn" id="instructionCancel" type="button">取消</button></footer>
-  </aside>
+    <footer><button class="btn" id="instructionCancel" type="button">取消</button><button class="btn primary" id="instructionConfirm" type="button">确认</button></footer>
+  </section>
 </div>
 <div class="instruction-modal-overlay" id="instructionEditOverlay" hidden>
   <section class="instruction-modal edit-modal" role="dialog" aria-modal="true">
@@ -459,6 +509,7 @@
     <footer><button class="btn" id="instructionRemarkCancel" type="button">取消</button><button class="btn primary" id="instructionRemarkConfirm" type="button">确定</button></footer>
   </section>
 </div>
+<div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
 <script src="script.js?v=20260805-intercept-management-v2"></script>
