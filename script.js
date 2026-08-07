@@ -2101,6 +2101,8 @@ let selectedInterceptIds = new Set();
 let activeInterceptId = null;
 let interceptDetailMode = "view";
 let interceptFeedbackMode = "";
+let interceptCancelContext = { mode: "single", taskId: null };
+let interceptRemarkContext = null;
 
 const interceptPage = $("#interceptPage");
 const inventoryPage = $("#inventoryPage");
@@ -2242,6 +2244,10 @@ function getFilteredInterceptTasks() {
   ));
 }
 
+function getVisibleSelectableInterceptTasks() {
+  return interceptVisibleRows;
+}
+
 function getVisiblePendingInterceptTasks() {
   return interceptVisibleRows.filter((task) => task.status === "待处理");
 }
@@ -2253,25 +2259,40 @@ function getSelectedPendingInterceptTasks() {
 }
 
 function pruneInterceptSelection() {
-  const visiblePendingIds = new Set(getVisiblePendingInterceptTasks().map((task) => task.id));
-  selectedInterceptIds = new Set([...selectedInterceptIds].filter((id) => visiblePendingIds.has(id)));
+  const visibleSelectableIds = new Set(getVisibleSelectableInterceptTasks().map((task) => task.id));
+  selectedInterceptIds = new Set([...selectedInterceptIds].filter((id) => visibleSelectableIds.has(id)));
 }
 
 function updateInterceptBatchControls() {
   const isPendingView = interceptActiveTab === "待处理";
-  const pendingRows = getVisiblePendingInterceptTasks();
-  const selectedCount = pendingRows.filter((task) => selectedInterceptIds.has(task.id)).length;
+  const isInterceptingView = interceptActiveTab === "拦截中";
+  const selectableRows = getVisibleSelectableInterceptTasks();
+  const selectedCount = selectableRows.filter((task) => selectedInterceptIds.has(task.id)).length;
   const selectAll = $("#interceptSelectAll");
   const cancelButton = $("#interceptBatchCancelButton");
   const confirmButton = $("#interceptBatchConfirmButton");
+  const successButton = $("#interceptBatchSuccessButton");
+  const failureButton = $("#interceptBatchFailureButton");
+  const noteButton = $("#interceptBatchNoteButton");
+  const exportButton = $("#interceptBatchExportButton");
 
   cancelButton.hidden = !isPendingView;
   confirmButton.hidden = !isPendingView;
+  successButton.hidden = !isInterceptingView;
+  failureButton.hidden = !isInterceptingView;
+  noteButton.hidden = false;
+  exportButton.hidden = false;
+
   cancelButton.disabled = selectedCount === 0;
   confirmButton.disabled = selectedCount === 0;
-  selectAll.disabled = !isPendingView || pendingRows.length === 0;
-  selectAll.checked = pendingRows.length > 0 && selectedCount === pendingRows.length;
-  selectAll.indeterminate = selectedCount > 0 && selectedCount < pendingRows.length;
+  successButton.disabled = selectedCount === 0;
+  failureButton.disabled = selectedCount === 0;
+  noteButton.disabled = selectedCount === 0;
+  exportButton.disabled = selectedCount === 0;
+
+  selectAll.disabled = selectableRows.length === 0;
+  selectAll.checked = selectableRows.length > 0 && selectedCount === selectableRows.length;
+  selectAll.indeterminate = selectedCount > 0 && selectedCount < selectableRows.length;
 }
 
 function renderInterceptRows() {
@@ -2283,18 +2304,17 @@ function renderInterceptRows() {
     interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="17">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
-      const primaryAction = task.status === "待处理" ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>'
-        : task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="feedback" type="button">反馈</button>'
-          : task.status === "拦截成功" ? '<button class="intercept-action" data-intercept-action="storage" type="button">暂存单</button>' : "";
+      const primaryAction = (task.status === "待处理" || task.status === "拦截中") ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>' : "";
+      const remarkAction = task.status !== "已取消" ? '<button class="intercept-action" data-intercept-action="remark" type="button">备注</button>' : "";
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
-      const disabled = task.status === "待处理" ? "" : " disabled";
+      const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.system || "-")}">${escapeHtml(task.system || "-")}</td><td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.warehouse)}</td>
         <td>${getInterceptCargoTag(task.cargoStatus)}</td><td>${getInterceptStatusTag(task.status)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${renderInterceptAttachments(task)}</td><td>${boxCount}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
-        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
+        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${remarkAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
   }
@@ -2342,7 +2362,7 @@ function renderInterceptDetail(task, mode = "view") {
     field("出库状态", escapeHtml(task.outboundStatus)),
     field("申请人", escapeHtml(task.applicant)),
     field("申请时间", escapeHtml(task.appliedAt)),
-    field("备注", escapeHtml(task.remark || "-"))
+    field("备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑备注" style="margin-left:6px">✎</button>`)
   ].join("");
   renderInterceptCargoBoxes(task);
 
@@ -2407,12 +2427,13 @@ function applyInterceptConfirm(task) {
   return true;
 }
 
-function applyInterceptCancel(task) {
+function applyInterceptCancel(task, reason = "") {
   if (!task || task.status !== "待处理") return false;
   const previousStatus = task.status;
   task.status = "已取消";
-  task.resultRemark = "客户取消拦截申请";
-  addInterceptLog(task, "取消申请", previousStatus, task.resultRemark, "客服-张敏");
+  task.resultRemark = reason || "取消拦截申请";
+  task.remark = task.remark ? `${task.remark}；取消原因：${reason}` : `取消原因：${reason}`;
+  addInterceptLog(task, "取消申请", previousStatus, reason || "取消拦截申请", "客服-张敏");
   return true;
 }
 
@@ -2434,9 +2455,11 @@ function confirmInterceptTask() {
 function cancelInterceptTask() {
   const task = getInterceptTask();
   if (!task || task.status !== "待处理") return;
-  if (!window.confirm("确认取消该拦截申请？")) return;
-  applyInterceptCancel(task);
-  refreshInterceptUI();
+  interceptCancelContext = { mode: "single", taskId: task.id };
+  $("#interceptCancelReasonTitle").textContent = "取消拦截";
+  $("#interceptCancelReasonText").value = "";
+  $("#interceptCancelReasonOverlay").hidden = false;
+  $("#interceptCancelReasonText").focus();
 }
 
 function confirmSelectedInterceptTasks() {
@@ -2461,10 +2484,225 @@ function cancelSelectedInterceptTasks() {
     window.alert("请先选择待处理拦截申请");
     return;
   }
-  if (!window.confirm(`确认批量取消选中的 ${tasks.length} 条拦截申请吗？`)) return;
-  tasks.forEach(applyInterceptCancel);
+  interceptCancelContext = { mode: "batch", taskIds: tasks.map((t) => t.id) };
+  $("#interceptCancelReasonTitle").textContent = `批量取消拦截（${tasks.length} 条）`;
+  $("#interceptCancelReasonText").value = "";
+  $("#interceptCancelReasonOverlay").hidden = false;
+  $("#interceptCancelReasonText").focus();
+}
+
+function exportInterceptTasks() {
+  const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
+  if (!tasks.length) {
+    window.alert("请先选择要导出的记录");
+    return;
+  }
+  const headers = ["拦截单号", "入仓号", "柜号", "系统柜号", "客户名称", "仓库", "货物状态", "拦截状态", "拦截原因", "拦截箱数", "申请人", "申请时间", "处理人", "处理时间", "备注"];
+  const rows = tasks.map((task) => [
+    task.no, task.waybill, task.container || "", task.system || "", task.customer, task.warehouse,
+    task.cargoStatus, task.status, task.reason, task.actualBoxes || task.boxes || "",
+    task.applicant, task.appliedAt, task.handler || "", task.handleAt || "", task.remark || ""
+  ]);
+  const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `拦截管理_${interceptActiveTab}_${formatLocalDateTime().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function batchRemarkInterceptTasks() {
+  const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
+  if (!tasks.length) {
+    window.alert("请先选择要备注的记录");
+    return;
+  }
+  $("#interceptBatchNoteOverlay").hidden = false;
+  $("#interceptBatchNoteText").value = "";
+  $("#interceptBatchNoteText").focus();
+}
+
+function submitInterceptBatchNote(event) {
+  event.preventDefault();
+  const note = $("#interceptBatchNoteText").value.trim();
+  if (!note) {
+    window.alert("请输入备注内容");
+    return;
+  }
+  const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
+  tasks.forEach((task) => {
+    const previousRemark = task.remark || "";
+    task.remark = previousRemark ? `${previousRemark}；${note}` : note;
+    addInterceptLog(task, "批量备注", task.status, note);
+  });
+  $("#interceptBatchNoteOverlay").hidden = true;
   selectedInterceptIds.clear();
   refreshInterceptUI();
+}
+
+function closeInterceptBatchNote() {
+  $("#interceptBatchNoteOverlay").hidden = true;
+}
+
+function submitInterceptCancelReason(event) {
+  event.preventDefault();
+  const reason = $("#interceptCancelReasonText").value.trim();
+  if (!reason) {
+    window.alert("请输入取消原因");
+    return;
+  }
+  if (interceptCancelContext.mode === "single") {
+    const task = getInterceptTask(interceptCancelContext.taskId);
+    if (task) applyInterceptCancel(task, reason);
+  } else {
+    const tasks = (interceptCancelContext.taskIds || []).map((id) => getInterceptTask(id)).filter(Boolean);
+    tasks.forEach((task) => applyInterceptCancel(task, reason));
+    selectedInterceptIds.clear();
+  }
+  $("#interceptCancelReasonOverlay").hidden = true;
+  interceptCancelContext = { mode: "single", taskId: null };
+  refreshInterceptUI();
+}
+
+function closeInterceptCancelReason() {
+  $("#interceptCancelReasonOverlay").hidden = true;
+  interceptCancelContext = { mode: "single", taskId: null };
+}
+
+function openInterceptRemark(taskId) {
+  const task = getInterceptTask(taskId);
+  if (!task || task.status === "已取消") return;
+  interceptRemarkContext = task.id;
+  $("#interceptRemarkTitle").textContent = "编辑备注";
+  $("#interceptRemarkContext").textContent = `拦截单号：${task.no}`;
+  $("#interceptRemarkText").value = task.remark || "";
+  $("#interceptRemarkOverlay").hidden = false;
+  $("#interceptRemarkText").focus();
+}
+
+function submitInterceptRemark(event) {
+  event.preventDefault();
+  if (!interceptRemarkContext) return;
+  const task = getInterceptTask(interceptRemarkContext);
+  if (!task) return;
+  const remark = $("#interceptRemarkText").value.trim();
+  const previousRemark = task.remark || "";
+  task.remark = remark;
+  addInterceptLog(task, "修改备注", task.status, `"${previousRemark || "-"}" → "${remark || "-"}"`);
+  $("#interceptRemarkOverlay").hidden = true;
+  interceptRemarkContext = null;
+  refreshInterceptUI();
+}
+
+function closeInterceptRemark() {
+  $("#interceptRemarkOverlay").hidden = true;
+  interceptRemarkContext = null;
+}
+
+function getSelectedInterceptingTasks() {
+  return [...selectedInterceptIds]
+    .map((id) => getInterceptTask(id))
+    .filter((task) => task?.status === "拦截中");
+}
+
+function batchInterceptSuccess() {
+  const tasks = getSelectedInterceptingTasks();
+  if (!tasks.length) {
+    window.alert("请先选择拦截中的记录");
+    return;
+  }
+  $("#interceptBatchSuccessTitle").textContent = "批量拦截成功";
+  $("#interceptBatchSuccessSummary").textContent = `已选择 ${tasks.length} 条拦截中的记录，确认后将自动生成暂存单。`;
+  $("#interceptBatchSuccessNote").value = "";
+  $("#interceptBatchSuccessOverlay").hidden = false;
+  $("#interceptBatchSuccessNote").focus();
+}
+
+function batchInterceptFailure() {
+  const tasks = getSelectedInterceptingTasks();
+  if (!tasks.length) {
+    window.alert("请先选择拦截中的记录");
+    return;
+  }
+  $("#interceptBatchFailureTitle").textContent = "批量拦截失败";
+  $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条拦截中的记录，请填写失败原因。`;
+  $("#interceptBatchFailureReason").value = "";
+  $("#interceptBatchFailureNote").value = "";
+  $("#interceptBatchFailureOverlay").hidden = false;
+  $("#interceptBatchFailureReason").focus();
+}
+
+function submitInterceptBatchSuccess(event) {
+  event.preventDefault();
+  const tasks = getSelectedInterceptingTasks();
+  if (!tasks.length) return;
+  const note = $("#interceptBatchSuccessNote").value.trim();
+  const user = "仓库-李明";
+  tasks.forEach((task) => {
+    const previousStatus = task.status;
+    const actualBoxes = Number(task.actualBoxes || task.boxes);
+    task.status = "拦截成功";
+    task.cargoStatus = "暂存中";
+    task.inventoryStatus = "暂存";
+    task.outboundStatus = "未出库";
+    task.actualBoxes = String(actualBoxes);
+    task.storageNo = `STG${formatLocalDateTime().slice(0, 10).replaceAll("-", "")}${String(task.id).padStart(4, "0")}`;
+    task.resultRemark = note || "已完成货物拦截并转入暂存";
+    task.handler = user;
+    task.handleAt = formatLocalDateTime();
+    task.logs.push({
+      time: formatLocalDateTime(),
+      user,
+      action: "拦截成功",
+      change: `${previousStatus} → 拦截成功`,
+      note: `实际拦截 ${actualBoxes} 箱，已生成暂存单 ${task.storageNo}${note ? `；${note}` : ""}`
+    });
+    createStorageFromIntercept(task);
+  });
+  $("#interceptBatchSuccessOverlay").hidden = true;
+  selectedInterceptIds.clear();
+  refreshInterceptUI();
+}
+
+function submitInterceptBatchFailure(event) {
+  event.preventDefault();
+  const tasks = getSelectedInterceptingTasks();
+  if (!tasks.length) return;
+  const failReason = $("#interceptBatchFailureReason").value.trim();
+  if (!failReason) {
+    window.alert("请填写失败原因");
+    return;
+  }
+  const note = $("#interceptBatchFailureNote").value.trim();
+  const user = "仓库-李明";
+  tasks.forEach((task) => {
+    const previousStatus = task.status;
+    task.status = "拦截失败";
+    task.failReason = failReason;
+    task.resultRemark = note;
+    task.handler = user;
+    task.handleAt = formatLocalDateTime();
+    task.logs.push({
+      time: formatLocalDateTime(),
+      user,
+      action: "拦截失败",
+      change: `${previousStatus} → 拦截失败`,
+      note: `${failReason}${note ? `；${note}` : ""}`
+    });
+  });
+  $("#interceptBatchFailureOverlay").hidden = true;
+  selectedInterceptIds.clear();
+  refreshInterceptUI();
+}
+
+function closeInterceptBatchSuccess() {
+  $("#interceptBatchSuccessOverlay").hidden = true;
+}
+
+function closeInterceptBatchFailure() {
+  $("#interceptBatchFailureOverlay").hidden = true;
 }
 
 function openInterceptFeedback(mode) {
@@ -2589,8 +2827,12 @@ function initInterceptManagement() {
   $("#interceptSearchButton").addEventListener("click", renderInterceptRows);
   $("#interceptBatchCancelButton").addEventListener("click", cancelSelectedInterceptTasks);
   $("#interceptBatchConfirmButton").addEventListener("click", confirmSelectedInterceptTasks);
+  $("#interceptBatchSuccessButton").addEventListener("click", batchInterceptSuccess);
+  $("#interceptBatchFailureButton").addEventListener("click", batchInterceptFailure);
+  $("#interceptBatchNoteButton").addEventListener("click", batchRemarkInterceptTasks);
+  $("#interceptBatchExportButton").addEventListener("click", exportInterceptTasks);
   $("#interceptSelectAll").addEventListener("change", (event) => {
-    getVisiblePendingInterceptTasks().forEach((task) => {
+    getVisibleSelectableInterceptTasks().forEach((task) => {
       if (event.currentTarget.checked) selectedInterceptIds.add(task.id);
       else selectedInterceptIds.delete(task.id);
     });
@@ -2630,6 +2872,10 @@ function initInterceptManagement() {
       showStagingInventory("暂存");
       return;
     }
+    if (action === "remark") {
+      openInterceptRemark(task.id);
+      return;
+    }
     if (action === "log") {
       openInterceptLog(task.id);
       return;
@@ -2659,6 +2905,16 @@ function initInterceptManagement() {
       closeInterceptDetail();
       showStagingInventory("暂存");
     }
+    if (action === "editRemark") {
+      const task = getInterceptTask();
+      if (task) openInterceptRemark(task.id);
+    }
+  });
+  $("#interceptDetailOverlay").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-detail-action]");
+    if (!button || button.dataset.detailAction !== "editRemark") return;
+    const task = getInterceptTask();
+    if (task) openInterceptRemark(task.id);
   });
   $("#interceptLogClose").addEventListener("click", closeInterceptLog);
   $("#interceptLogOverlay").addEventListener("click", (event) => {
@@ -2670,9 +2926,44 @@ function initInterceptManagement() {
     if (event.target === $("#interceptFeedbackOverlay")) $("#interceptFeedbackOverlay").hidden = true;
   });
   $("#interceptFeedbackForm").addEventListener("submit", submitInterceptFeedback);
+  $("#interceptBatchNoteClose").addEventListener("click", closeInterceptBatchNote);
+  $("#interceptBatchNoteCancel").addEventListener("click", closeInterceptBatchNote);
+  $("#interceptBatchNoteOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptBatchNoteOverlay")) closeInterceptBatchNote();
+  });
+  $("#interceptBatchNoteForm").addEventListener("submit", submitInterceptBatchNote);
+  $("#interceptCancelReasonClose").addEventListener("click", closeInterceptCancelReason);
+  $("#interceptCancelReasonCancel").addEventListener("click", closeInterceptCancelReason);
+  $("#interceptCancelReasonOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptCancelReasonOverlay")) closeInterceptCancelReason();
+  });
+  $("#interceptCancelReasonForm").addEventListener("submit", submitInterceptCancelReason);
+  $("#interceptRemarkClose").addEventListener("click", closeInterceptRemark);
+  $("#interceptRemarkCancelBtn").addEventListener("click", closeInterceptRemark);
+  $("#interceptRemarkOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptRemarkOverlay")) closeInterceptRemark();
+  });
+  $("#interceptRemarkForm").addEventListener("submit", submitInterceptRemark);
+  $("#interceptBatchSuccessClose").addEventListener("click", closeInterceptBatchSuccess);
+  $("#interceptBatchSuccessCancel").addEventListener("click", closeInterceptBatchSuccess);
+  $("#interceptBatchSuccessOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptBatchSuccessOverlay")) closeInterceptBatchSuccess();
+  });
+  $("#interceptBatchSuccessForm").addEventListener("submit", submitInterceptBatchSuccess);
+  $("#interceptBatchFailureClose").addEventListener("click", closeInterceptBatchFailure);
+  $("#interceptBatchFailureCancel").addEventListener("click", closeInterceptBatchFailure);
+  $("#interceptBatchFailureOverlay").addEventListener("click", (event) => {
+    if (event.target === $("#interceptBatchFailureOverlay")) closeInterceptBatchFailure();
+  });
+  $("#interceptBatchFailureForm").addEventListener("submit", submitInterceptBatchFailure);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    if (!$("#interceptFeedbackOverlay").hidden) $("#interceptFeedbackOverlay").hidden = true;
+    if (!$("#interceptRemarkOverlay").hidden) closeInterceptRemark();
+    else if (!$("#interceptCancelReasonOverlay").hidden) closeInterceptCancelReason();
+    else if (!$("#interceptBatchSuccessOverlay").hidden) closeInterceptBatchSuccess();
+    else if (!$("#interceptBatchFailureOverlay").hidden) closeInterceptBatchFailure();
+    else if (!$("#interceptBatchNoteOverlay").hidden) closeInterceptBatchNote();
+    else if (!$("#interceptFeedbackOverlay").hidden) $("#interceptFeedbackOverlay").hidden = true;
     else if (!$("#interceptLogOverlay").hidden) closeInterceptLog();
     else if (!$("#interceptDetailOverlay").hidden) closeInterceptDetail();
   });

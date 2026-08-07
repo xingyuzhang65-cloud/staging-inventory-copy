@@ -243,6 +243,8 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 }
 .btn:hover { border-color: #95c8f3; color: #168ff5; }
 .btn.primary { border-color: #168ff5; color: #fff; background: #168ff5; }
+.btn.danger { border-color: #e5484d; color: #fff; background: #e5484d; }
+.btn.danger:hover { border-color: #d63031; background: #d63031; }
 .collapse-button span { display: inline-block; margin-right: 4px; font-size: 15px; }
 .filter-card.collapsed { min-height: 48px; }
 .filter-card.collapsed .filter-grid { display: none; }
