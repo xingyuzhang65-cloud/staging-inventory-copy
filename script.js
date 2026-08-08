@@ -2042,7 +2042,7 @@ window.addEventListener("resize", () => {
 const interceptStatusOrder = ["待处理", "拦截中", "拦截成功", "拦截失败", "已取消"];
 const interceptStatusLabel = {
   待处理: "待处理",
-  拦截中: "拦截中",
+  拦截中: "处理中",
   拦截成功: "拦截成功",
   拦截失败: "拦截失败",
   已取消: "已取消"
@@ -2076,7 +2076,7 @@ const interceptTasks = [
     applicant: "客服-张敏", appliedAt: "2026-08-03 15:20:31", handler: "仓库-李明", handleAt: "2026-08-03 15:34:06", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [
       { time: "2026-08-03 15:20:31", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户调整出库计划" },
-      { time: "2026-08-03 15:34:06", user: "仓库-李明", action: "确认拦截", change: "待处理 → 拦截中", note: "货物已入库，创建仓库拦截任务" }
+      { time: "2026-08-03 15:34:06", user: "仓库-李明", action: "确认拦截", change: "待处理 → 处理中", note: "货物已入库，创建仓库拦截任务" }
     ]
   },
   {
@@ -2086,8 +2086,8 @@ const interceptTasks = [
     applicant: "客服-周悦", appliedAt: "2026-08-02 11:03:44", handler: "仓库-王强", handleAt: "2026-08-02 13:46:20", failReason: "", actualBoxes: "2", storageNo: "STG202608020001", resultRemark: "货物已转入 A02-03 暂存库位",
     logs: [
       { time: "2026-08-02 11:03:44", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请进入暂存" },
-      { time: "2026-08-02 11:14:18", user: "仓库-王强", action: "确认拦截", change: "待处理 → 拦截中", note: "货物已入库" },
-      { time: "2026-08-02 13:46:20", user: "仓库-王强", action: "拦截成功", change: "拦截中 → 拦截成功", note: "实际拦截 2 箱，已生成暂存单 STG202608020001" }
+      { time: "2026-08-02 11:14:18", user: "仓库-王强", action: "确认拦截", change: "待处理 → 处理中", note: "货物已入库" },
+      { time: "2026-08-02 13:46:20", user: "仓库-王强", action: "拦截成功", change: "处理中 → 拦截成功", note: "实际拦截 2 箱，已生成暂存单 STG202608020001" }
     ]
   },
   {
@@ -2113,7 +2113,7 @@ const interceptTasks = [
 const interceptLatestTrackingDefaults = {
   1: "2026-08-04 08:30 已到达洛杉矶港，等待清关",
   2: "2026-08-03 15:00 已入库美仓1号仓",
-  3: "2026-08-03 12:00 货物在库，拦截中",
+  3: "2026-08-03 12:00 货物在库，处理中",
   4: "2026-08-02 14:00 已转入暂存库位 A02-03",
   5: "2026-08-01 16:00 货物已完成出库，已送达",
   6: "2026-07-31 09:00 已取消，货物正常出库"
@@ -2648,7 +2648,7 @@ function renderInterceptStatusTabs() {
   document.querySelectorAll("[data-intercept-status]").forEach((tab) => {
     const status = tab.dataset.interceptStatus;
     const count = status === "全部" ? interceptTasks.length : interceptTasks.filter((task) => task.status === status).length;
-    const label = status === "拦截成功" ? "成功" : status === "拦截失败" ? "失败" : status === "已取消" ? "取消" : status;
+    const label = status === "拦截成功" ? "拦截成功" : status === "拦截失败" ? "拦截失败" : status === "拦截中" ? "处理中" : status === "已取消" ? "取消" : status;
     tab.textContent = `${label}(${count})`;
     tab.classList.toggle("active", status === interceptActiveTab);
   });
@@ -2731,7 +2731,7 @@ function renderInterceptRows() {
   pruneInterceptSelection();
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="20">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="17">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const primaryAction = (task.status === "待处理" || task.status === "拦截中") ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>' : "";
@@ -2741,8 +2741,8 @@ function renderInterceptRows() {
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
-        <td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.system || "-")}">${escapeHtml(task.system || "-")}</td><td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.warehouse)}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td>${getInterceptCargoTag(task.cargoStatus)}</td><td>${getInterceptStatusTag(task.status)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${renderInterceptAttachments(task)}</td><td>${boxCount}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
+        <td>${escapeHtml(task.customer)}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td>${escapeHtml(task.warehouse)}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${renderInterceptAttachments(task)}</td><td>${boxCount}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${remarkAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
@@ -2758,7 +2758,7 @@ function addInterceptLog(task, action, previousStatus, note, user = "仓库-李�
     time: now,
     user,
     action,
-    change: `${previousStatus || "-"} → ${task.status}`,
+    change: `${interceptStatusLabel[previousStatus] || previousStatus || "-"} → ${interceptStatusLabel[task.status] || task.status}`,
     note
   });
   task.handler = user;
@@ -2779,11 +2779,10 @@ function renderInterceptDetail(task, mode = "view") {
 
   const field = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
   $("#interceptBasicInfo").innerHTML = [
+    field("客户名称", escapeHtml(task.customer)),
     field("拦截单号", escapeHtml(task.no)),
     field("入仓号", escapeHtml(task.waybill)),
     field("柜号", escapeHtml(task.container || "-")),
-    field("系统柜号", escapeHtml(task.system || "-")),
-    field("客户名称", escapeHtml(task.customer)),
     field("拦截原因", escapeHtml(task.reason)),
     field("附件", renderInterceptAttachments(task)),
     field("拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes || "-")} 箱`),
@@ -2934,10 +2933,10 @@ function exportInterceptTasks() {
     showInterceptToast();
     return;
   }
-  const headers = ["拦截单号", "入仓号", "柜号", "系统柜号", "客户名称", "仓库", "最新运踪", "预报单状态", "货物状态", "拦截状态", "拦截原因", "拦截箱数", "备注", "申请人", "申请时间", "处理人", "处理时间"];
+  const headers = ["客户名称", "拦截单号", "入仓号", "柜号", "仓库", "最新运踪", "预报单状态", "拦截原因", "拦截箱数", "备注", "申请人", "申请时间", "处理人", "处理时间"];
   const rows = tasks.map((task) => [
-    task.no, task.waybill, task.container || "", task.system || "", task.customer, task.warehouse,
-    task.latestTracking || "", getInterceptForecastStatus(task), task.cargoStatus, task.status, task.reason, task.actualBoxes || task.boxes || "", task.remark || "",
+    task.customer, task.no, task.waybill, task.container || "", task.warehouse,
+    task.latestTracking || "", getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", task.remark || "",
     task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
   ]);
   const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -3051,7 +3050,7 @@ function batchInterceptSuccess() {
     return;
   }
   $("#interceptBatchSuccessTitle").textContent = "批量拦截成功";
-  $("#interceptBatchSuccessSummary").textContent = `已选择 ${tasks.length} 条拦截中的记录，确认后将自动生成暂存单。`;
+  $("#interceptBatchSuccessSummary").textContent = `已选择 ${tasks.length} 条处理中的记录，确认后将自动生成暂存单。`;
   $("#interceptBatchSuccessNote").value = "";
   $("#interceptBatchSuccessOverlay").hidden = false;
   $("#interceptBatchSuccessNote").focus();
@@ -3064,7 +3063,7 @@ function batchInterceptFailure() {
     return;
   }
   $("#interceptBatchFailureTitle").textContent = "批量拦截失败";
-  $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条拦截中的记录，请填写失败原因。`;
+  $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条处理中的记录，请填写失败原因。`;
   $("#interceptBatchFailureReason").value = "";
   $("#interceptBatchFailureNote").value = "";
   $("#interceptBatchFailureOverlay").hidden = false;
