@@ -2228,7 +2228,6 @@ const interceptFilters = {
   customer: $("#interceptCustomerFilter"),
   source: $("#interceptSourceFilter"),
   type: $("#interceptTypeFilter"),
-  type: $("#interceptTypeFilter"),
   writeoffStatus: $("#interceptWriteoffFilter"),
   cargoStatus: $("#interceptCargoStatusFilter"),
   status: $("#interceptStatusFilter"),
