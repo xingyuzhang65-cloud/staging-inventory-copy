@@ -422,7 +422,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-list-summary span:last-child { color: #929aa2; }
 .intercept-table {
   width: 100%;
-  min-width: 2580px;
+  min-width: 2680px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -460,23 +460,24 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   accent-color: #168ff5;
 }
 .intercept-table th:nth-child(2) { width: 100px; }
-.intercept-table th:nth-child(3) { width: 142px; }
-.intercept-table th:nth-child(4) { width: 96px; }
-.intercept-table th:nth-child(5) { width: 126px; }
-.intercept-table th:nth-child(6) { width: 220px; }
-.intercept-table th:nth-child(7) { width: 112px; }
-.intercept-table th:nth-child(8) { width: 190px; }
-.intercept-table th:nth-child(9) { width: 86px; }
-.intercept-table th:nth-child(10) { width: 200px; }
+.intercept-table th:nth-child(3) { width: 96px; }
+.intercept-table th:nth-child(4) { width: 142px; }
+.intercept-table th:nth-child(5) { width: 96px; }
+.intercept-table th:nth-child(6) { width: 126px; }
+.intercept-table th:nth-child(7) { width: 220px; }
+.intercept-table th:nth-child(8) { width: 112px; }
+.intercept-table th:nth-child(9) { width: 190px; }
+.intercept-table th:nth-child(10) { width: 86px; }
 .intercept-table th:nth-child(11) { width: 200px; }
-.intercept-table th:nth-child(12) { width: 94px; }
-.intercept-table th:nth-child(13) { width: 200px; }
-.intercept-table th:nth-child(14) { width: 94px; }
-.intercept-table th:nth-child(15),
-.intercept-table th:nth-child(17) { width: 142px; }
-.intercept-table th:nth-child(16) { width: 96px; }
-.intercept-table th:nth-child(18),
-.intercept-table td:nth-child(18) {
+.intercept-table th:nth-child(12) { width: 200px; }
+.intercept-table th:nth-child(13) { width: 94px; }
+.intercept-table th:nth-child(14) { width: 200px; }
+.intercept-table th:nth-child(15) { width: 94px; }
+.intercept-table th:nth-child(16),
+.intercept-table th:nth-child(18) { width: 142px; }
+.intercept-table th:nth-child(17) { width: 96px; }
+.intercept-table th:nth-child(19),
+.intercept-table td:nth-child(19) {
   position: sticky;
   z-index: 3;
   right: 0;
@@ -485,8 +486,8 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   background: #fff;
   box-shadow: -8px 0 12px rgba(29,42,54,.08);
 }
-.intercept-table th:nth-child(11),
-.intercept-table td:nth-child(11) {
+.intercept-table th:nth-child(12),
+.intercept-table td:nth-child(12) {
   text-align: left;
   white-space: normal;
 }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260810-intercept-instruction-fees-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260810-intercept-source-v1" />
 </head>
 <body>
 
@@ -116,6 +116,7 @@
           <label class="filter-field"><span>柜号</span><input id="interceptContainerFilter" type="text" placeholder="请输入柜号" /></label>
           <label class="filter-field"><span>系统柜号</span><input id="interceptSystemFilter" type="text" placeholder="请输入系统柜号" /></label>
           <label class="filter-field"><span>客户名称</span><select id="interceptCustomerFilter"><option value="">全部客户</option></select></label>
+          <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
           <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option value="拦截中">处理中</option><option>拦截成功</option><option>拦截失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
@@ -142,7 +143,7 @@
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
-              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>最新运踪</th><th>预报单状态</th><th>拦截原因</th><th>拦截箱数</th><th class="intercept-instruction-count-col">指令数量</th><th class="intercept-instruction-list-col">指令</th><th>客户备注</th><th>备注</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
+              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截来源</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>最新运踪</th><th>预报单状态</th><th>拦截原因</th><th>拦截箱数</th><th class="intercept-instruction-count-col">指令数量</th><th class="intercept-instruction-list-col">指令</th><th>客户备注</th><th>备注</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
             </tr></thead>
             <tbody id="interceptTableBody"></tbody>
           </table>
@@ -516,6 +517,6 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260810-intercept-instruction-fees-v1"></script>
+<script src="script.js?v=20260810-intercept-source-v1"></script>
 </body>
 </html>

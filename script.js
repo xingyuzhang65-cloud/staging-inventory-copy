@@ -2098,21 +2098,21 @@ const interceptStatusClass = {
 };
 const interceptTasks = [
   {
-    id: 1, no: "202608040001", waybill: "2", container: "WEMA1131231", system: "/", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 1, no: "202608040001", waybill: "2", container: "WEMA1131231", system: "/", customer: "TTTX", source: "美仓拦截", warehouse: "美仓1号仓",
     cargoStatus: "未拆柜", inventoryStatus: "待拆柜", outboundStatus: "未出库", boxes: 11,
     status: "待处理", reason: "客户调整运输计划，申请暂缓出库", attachment: "拦截申请-20260804-01.pdf", customerRemark: "请优先保留整票货物，待客户确认后再处理", remark: "等待客户确认新运输计划",
     applicant: "客服-张敏", appliedAt: "2026-08-04 09:18:22", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [{ time: "2026-08-04 09:18:22", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户申请拦截" }]
   },
   {
-    id: 2, no: "202608040002", waybill: "US0601", container: "MSCU7654321", system: "MSCU7654321-260701", customer: "ABC-US", warehouse: "美仓1号仓",
+    id: 2, no: "202608040002", waybill: "US0601", container: "MSCU7654321", system: "MSCU7654321-260701", customer: "ABC-US", source: "天图拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
     status: "待处理", reason: "订单信息异常，客户要求暂缓处理", attachment: "-", customerRemark: "订单信息核实中，请勿安排出库", remark: "请仓库优先确认货物位置",
     applicant: "客服-刘洋", appliedAt: "2026-08-04 10:06:15", handler: "", handleAt: "", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [{ time: "2026-08-04 10:06:15", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "订单信息待客户复核" }]
   },
   {
-    id: 3, no: "202608030015", waybill: "88", container: "8889990", system: "8889990-250623", customer: "23", warehouse: "美仓1号仓",
+    id: 3, no: "202608030015", waybill: "88", container: "8889990", system: "8889990-250623", customer: "23", source: "美仓拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 5,
     status: "拦截中", reason: "客户申请暂停出库", attachment: "客户邮件截图.png", customerRemark: "客户要求暂停发货，等待后续通知", remark: "仓库正在核对货物位置",
     applicant: "客服-张敏", appliedAt: "2026-08-03 15:20:31", handler: "仓库-李明", handleAt: "2026-08-03 15:34:06", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "",
@@ -2122,7 +2122,7 @@ const interceptTasks = [
     ]
   },
   {
-    id: 4, no: "202608020009", waybill: "111", container: "CCCA1414141", system: "CCCA1414141-240411", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 4, no: "202608020009", waybill: "111", container: "CCCA1414141", system: "CCCA1414141-240411", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
     cargoStatus: "暂存中", inventoryStatus: "暂存", outboundStatus: "未出库", boxes: 2,
     status: "拦截成功", reason: "客户要求货物转入暂存", attachment: "拦截申请单.pdf", customerRemark: "请转入暂存，后续由客户重新下单", remark: "后续等待客户重新下单",
     applicant: "客服-周悦", appliedAt: "2026-08-02 11:03:44", handler: "仓库-王强", handleAt: "2026-08-02 13:46:20", failReason: "", actualBoxes: "2", storageNo: "STG202608020001", resultRemark: "货物已转入 A02-03 暂存库位",
@@ -2133,7 +2133,7 @@ const interceptTasks = [
     ]
   },
   {
-    id: 5, no: "202608010004", waybill: "72", container: "TLLU2026072", system: "TLLU2026072-260715", customer: "23", warehouse: "美仓1号仓",
+    id: 5, no: "202608010004", waybill: "72", container: "TLLU2026072", system: "TLLU2026072-260715", customer: "23", source: "美仓拦截", warehouse: "美仓1号仓",
     cargoStatus: "已出库", inventoryStatus: "无库存", outboundStatus: "已出库", boxes: 3,
     status: "拦截失败", reason: "客户临时要求取消发货", attachment: "-", customerRemark: "如已出库请同步实际状态", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "货物已完成出库", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [
@@ -2142,7 +2142,7 @@ const interceptTasks = [
     ]
   },
   {
-    id: 6, no: "202607310018", waybill: "2", container: "AAAA0000000", system: "AAAA0000000-241109", customer: "TTTX", warehouse: "美仓1号仓",
+    id: 6, no: "202607310018", waybill: "2", container: "AAAA0000000", system: "AAAA0000000-241109", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
     status: "已取消", reason: "客户申请暂停发货", attachment: "-", customerRemark: "客户已撤回本次拦截申请", remark: "客户已自行调整订单", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
     logs: [
@@ -2220,6 +2220,7 @@ const interceptFilters = {
   container: $("#interceptContainerFilter"),
   system: $("#interceptSystemFilter"),
   customer: $("#interceptCustomerFilter"),
+  source: $("#interceptSourceFilter"),
   cargoStatus: $("#interceptCargoStatusFilter"),
   status: $("#interceptStatusFilter"),
   forecastStatus: $("#interceptForecastStatusFilter"),
@@ -2733,6 +2734,7 @@ function getFilteredInterceptTasks() {
     && (!container || (task.container || "").toLowerCase().includes(container))
     && (!system || (task.system || "").toLowerCase().includes(system))
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
+    && (!interceptFilters.source.value || task.source === interceptFilters.source.value)
     && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
     && (!interceptFilters.status.value || task.status === interceptFilters.status.value)
     && (!interceptFilters.forecastStatus.value || getInterceptForecastStatus(task) === interceptFilters.forecastStatus.value)
@@ -2795,7 +2797,7 @@ function renderInterceptRows() {
   pruneInterceptSelection();
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="18">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="19">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
@@ -2805,7 +2807,7 @@ function renderInterceptRows() {
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
-        <td>${escapeHtml(task.customer)}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
+        <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.source || "-")}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
         <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${boxCount}</td><td class="intercept-instruction-count-col">${renderInterceptInstructionCount(task, instructionRows)}</td><td class="intercept-instruction-list-col">${renderInterceptInstructionLines(instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
@@ -2844,6 +2846,7 @@ function renderInterceptDetail(task, mode = "view") {
   const field = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
   $("#interceptBasicInfo").innerHTML = [
     field("客户名称", escapeHtml(task.customer)),
+    field("拦截来源", escapeHtml(task.source || "-")),
     field("拦截单号", escapeHtml(task.no)),
     field("入仓号", escapeHtml(task.waybill)),
     field("柜号", escapeHtml(task.container || "-")),
@@ -2997,9 +3000,9 @@ function exportInterceptTasks() {
     showInterceptToast();
     return;
   }
-  const headers = ["客户名称", "拦截单号", "入仓号", "柜号", "最新运踪", "预报单状态", "拦截原因", "拦截箱数", "客户备注", "备注", "申请人", "申请时间", "处理人", "处理时间"];
+  const headers = ["客户名称", "拦截来源", "拦截单号", "入仓号", "柜号", "最新运踪", "预报单状态", "拦截原因", "拦截箱数", "客户备注", "备注", "申请人", "申请时间", "处理人", "处理时间"];
   const rows = tasks.map((task) => [
-    task.customer, task.no, task.waybill, task.container || "",
+    task.customer, task.source || "", task.no, task.waybill, task.container || "",
     task.latestTracking || "", getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", task.customerRemark || "", task.remark || "",
     task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
   ]);
