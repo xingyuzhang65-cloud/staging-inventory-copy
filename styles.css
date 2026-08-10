@@ -736,10 +736,9 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-fee-main-table th:nth-child(9),
 .intercept-fee-main-table th:nth-child(10) { width: 112px; }
 .intercept-fee-main-table th:nth-child(11) { width: 166px; }
-.intercept-fee-main-table th:nth-child(12) { width: 94px; }
-.intercept-fee-main-table th:nth-child(13) { width: 142px; }
-.intercept-fee-main-table th:nth-child(14) { width: 84px; }
-.intercept-fee-main-table th:nth-child(15) { width: 118px; }
+.intercept-fee-main-table th:nth-child(12) { width: 142px; }
+.intercept-fee-main-table th:nth-child(13) { width: 84px; }
+.intercept-fee-main-table th:nth-child(14) { width: 118px; }
 .intercept-fee-status { display: inline-block; min-width: 56px; padding: 3px 7px; border-radius: 10px; color: #b7791f; background: #fff7e6; text-align: center; }
 .intercept-fee-status.is-complete { color: #1d8a56; background: #eaf8f0; }
 .intercept-fee-status.is-pending { color: #b7791f; background: #fff7e6; }
@@ -810,8 +809,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-storage-fee-table th:nth-child(9),
 .intercept-storage-fee-table th:nth-child(10) { width: 112px; }
 .intercept-storage-fee-table th:nth-child(11) { width: 166px; }
-.intercept-storage-fee-table th:nth-child(12) { width: 94px; }
-.intercept-storage-fee-table th:nth-child(13) { width: 64px; }
+.intercept-storage-fee-table th:nth-child(12) { width: 64px; }
 .intercept-fee-form-field {
   width: 100%;
   height: 28px;

@@ -2359,7 +2359,6 @@ function getInterceptInstructionRows(task) {
       price: fee.unitPrice,
       quantity: fee.quantity || 1,
       currency: fee.currency || "人民币",
-      status: fee.status || "待处理",
       description: fee.remark || fee.description || ""
     }));
   }
@@ -2370,22 +2369,19 @@ function getInterceptInstructionRows(task) {
   const sourceRows = sourceRow ? ensureInstructionDetailRows(sourceRow) : [];
   if (sourceRows.length) return sourceRows;
   const fallback = instructionCatalog.find((row) => row.name.startsWith("拦截-")) || instructionCatalog[0];
-  return fallback ? [{ ...fallback, quantity: "1", status: task.status === "待处理" ? "待处理" : "已处理" }] : [];
+  return fallback ? [{ ...fallback, quantity: "1" }] : [];
 }
 
 function renderInterceptInstructionCount(task, rows = getInterceptInstructionRows(task)) {
-  const completed = rows.filter((row) => row.status === "已处理").length;
-  const completeClass = rows.length > 0 && completed === rows.length ? " is-complete" : "";
-  return `<span class="instruction-count${completeClass}" title="${completed} 条已处理，${rows.length - completed} 条待处理">${completed}/${rows.length}</span>`;
+  return `<span class="instruction-count" title="共 ${rows.length} 条指令">${rows.length}</span>`;
 }
 
 function renderInterceptInstructionLines(rows) {
   if (!rows.length) return '<span class="instruction-empty">-</span>';
   return `<div class="instruction-lines">${rows.map((row) => {
-    const status = row.status === "已处理" ? "已处理" : "待处理";
     const amount = Number(row.cnyAmount ?? Number(row.price || 0) * Number(row.quantity || 1));
     const text = `${row.name || "费用"} ${Number(amount.toFixed(2))} ${row.currency || "人民币"}`;
-    return `<div class="instruction-line ${status === "已处理" ? "status-success" : "status-pending"}" title="${escapeHtml(`${status}：${text}`)}"><span class="instruction-state-label">${status}</span><span class="instruction-line-text">${escapeHtml(text)}</span></div>`;
+    return `<div class="instruction-line" title="${escapeHtml(text)}"><span class="instruction-line-text">${escapeHtml(text)}</span></div>`;
   }).join("")}</div>`;
 }
 
@@ -2421,8 +2417,7 @@ function getInterceptFeeRows(task) {
     addedAt: row.addedAt || task.appliedAt || formatLocalDateTime(),
     addedBy: row.addedBy || "系统",
     description: row.description || "",
-    remark: row.remark || row.description || "",
-    status: row.status || "待处理"
+    remark: row.remark || row.description || ""
   }));
   return task.fees;
 }
@@ -2443,15 +2438,14 @@ function renderInterceptFee(task) {
     <td class="intercept-fee-amount">${formatInterceptFeeAmount(getInterceptFeeOriginalAmount(fee))}</td>
     <td class="intercept-fee-amount">${formatInterceptFeeAmount(getInterceptFeeRmbAmount(fee))}</td>
     <td>${escapeHtml(fee.remark || fee.description || "-")}</td>
-    <td>${fee.status === "已处理" ? '<span class="intercept-fee-status is-complete">已处理</span>' : '<span class="intercept-fee-status is-pending">待处理</span>'}</td>
     <td>${escapeHtml(fee.addedAt || "-")}</td>
     <td>${escapeHtml(fee.addedBy || "系统")}</td>
     <td><button class="intercept-action" data-intercept-fee-action="edit" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button">编辑</button><button class="intercept-action danger" data-intercept-fee-action="delete" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button">删除</button></td>
-  </tr>`).join("") : '<tr><td colspan="15" class="intercept-fee-empty">暂无费用记录</td></tr>';
+  </tr>`).join("") : '<tr><td colspan="14" class="intercept-fee-empty">暂无费用记录</td></tr>';
   $("#interceptFeeContent").innerHTML = `<div class="intercept-fee-detail-toolbar">
     <div><h3 class="intercept-fee-detail-title">指令费用</h3><div class="intercept-fee-detail-summary"><span>共 <strong>${rows.length}</strong> 条</span><span>原币合计 <strong>${formatInterceptFeeAmount(originalTotal)}</strong></span><span>人民币合计 <strong>${formatInterceptFeeAmount(rmbTotal)}</strong></span></div></div>
     <button class="btn primary" data-intercept-fee-action="add" type="button">新增指令费用</button>
-  </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*单价</th><th>*数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>指令状态</th><th>添加时间</th><th>添加人</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*单价</th><th>*数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>添加时间</th><th>添加人</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function createInterceptFeeDraft(fee) {
@@ -2465,8 +2459,7 @@ function createInterceptFeeDraft(fee) {
     unitPrice: String(fee.unitPrice ?? 0),
     quantity: String(fee.quantity ?? 1),
     currency: fee.currency || "人民币",
-    remark: fee.remark || fee.description || "",
-    status: fee.status || "待处理"
+    remark: fee.remark || fee.description || ""
   };
 }
 
@@ -2511,7 +2504,7 @@ function renderInterceptFeeDraftRows() {
   renderInterceptFeeDraftSummary();
   const body = $("#interceptFeeDraftBody");
   if (!interceptFeeDraftRows.length) {
-    body.innerHTML = '<tr><td colspan="13" class="intercept-fee-empty">暂无数据</td></tr>';
+    body.innerHTML = '<tr><td colspan="12" class="intercept-fee-empty">暂无数据</td></tr>';
     return;
   }
   body.innerHTML = interceptFeeDraftRows.map((row) => {
@@ -2530,7 +2523,6 @@ function renderInterceptFeeDraftRows() {
       <td class="intercept-fee-amount intercept-fee-draft-original">${formatInterceptFeeAmount(originalAmount)}</td>
       <td class="intercept-fee-amount intercept-fee-draft-rmb">${formatInterceptFeeAmount(rmbAmount)}</td>
       <td><input class="intercept-fee-form-field" data-intercept-fee-field="remark" value="${escapeHtml(row.remark)}" aria-label="费用备注" /></td>
-      <td><select class="intercept-fee-form-field" data-intercept-fee-field="status" aria-label="指令状态"><option value="待处理" ${row.status !== "已处理" ? "selected" : ""}>待处理</option><option value="已处理" ${row.status === "已处理" ? "selected" : ""}>已处理</option></select></td>
       <td><button class="intercept-fee-delete" data-intercept-fee-draft-remove="${escapeHtml(row.id)}" type="button" aria-label="删除费用" title="删除费用明细">删除</button></td>
     </tr>`;
   }).join("");
@@ -2575,8 +2567,7 @@ function saveInterceptFeeDraftRows(event) {
       addedAt: existing?.addedAt || confirmedAt,
       addedBy: existing?.addedBy || "仓库-李明",
       description: row.remark.trim(),
-      remark: row.remark.trim(),
-      status: row.status || existing?.status || "待处理"
+      remark: row.remark.trim()
     };
   });
   closeInterceptFeeModal();
