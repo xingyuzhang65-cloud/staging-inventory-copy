@@ -2177,7 +2177,6 @@ const interceptFilters = {
   container: $("#interceptContainerFilter"),
   system: $("#interceptSystemFilter"),
   customer: $("#interceptCustomerFilter"),
-  warehouse: $("#interceptWarehouseFilter"),
   cargoStatus: $("#interceptCargoStatusFilter"),
   status: $("#interceptStatusFilter"),
   forecastStatus: $("#interceptForecastStatusFilter"),
@@ -2668,7 +2667,6 @@ function getFilteredInterceptTasks() {
     && (!container || (task.container || "").toLowerCase().includes(container))
     && (!system || (task.system || "").toLowerCase().includes(system))
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
-    && (!interceptFilters.warehouse.value || task.warehouse === interceptFilters.warehouse.value)
     && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
     && (!interceptFilters.status.value || task.status === interceptFilters.status.value)
     && (!interceptFilters.forecastStatus.value || getInterceptForecastStatus(task) === interceptFilters.forecastStatus.value)
@@ -2731,7 +2729,7 @@ function renderInterceptRows() {
   pruneInterceptSelection();
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="17">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="15">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const primaryAction = (task.status === "待处理" || task.status === "拦截中") ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>' : "";
@@ -2741,8 +2739,8 @@ function renderInterceptRows() {
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
-        <td>${escapeHtml(task.customer)}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td>${escapeHtml(task.warehouse)}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${renderInterceptAttachments(task)}</td><td>${boxCount}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
+        <td>${escapeHtml(task.customer)}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${boxCount}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${remarkAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
@@ -2784,7 +2782,6 @@ function renderInterceptDetail(task, mode = "view") {
     field("入仓号", escapeHtml(task.waybill)),
     field("柜号", escapeHtml(task.container || "-")),
     field("拦截原因", escapeHtml(task.reason)),
-    field("附件", renderInterceptAttachments(task)),
     field("拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes || "-")} 箱`),
     field("货物状态", getInterceptCargoTag(task.cargoStatus)),
     field("所在仓库", escapeHtml(task.warehouse)),
@@ -2933,9 +2930,9 @@ function exportInterceptTasks() {
     showInterceptToast();
     return;
   }
-  const headers = ["客户名称", "拦截单号", "入仓号", "柜号", "仓库", "最新运踪", "预报单状态", "拦截原因", "拦截箱数", "备注", "申请人", "申请时间", "处理人", "处理时间"];
+  const headers = ["客户名称", "拦截单号", "入仓号", "柜号", "最新运踪", "预报单状态", "拦截原因", "拦截箱数", "备注", "申请人", "申请时间", "处理人", "处理时间"];
   const rows = tasks.map((task) => [
-    task.customer, task.no, task.waybill, task.container || "", task.warehouse,
+    task.customer, task.no, task.waybill, task.container || "",
     task.latestTracking || "", getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", task.remark || "",
     task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
   ]);
@@ -3245,13 +3242,9 @@ function showInterceptManagement() {
 
 function refreshInterceptFilterOptions() {
   const customer = interceptFilters.customer.value;
-  const warehouse = interceptFilters.warehouse.value;
   interceptFilters.customer.innerHTML = '<option value="">全部客户</option>';
-  interceptFilters.warehouse.innerHTML = '<option value="">全部仓库</option>';
   addOptions(interceptFilters.customer, interceptTasks.map((task) => task.customer));
-  addOptions(interceptFilters.warehouse, interceptTasks.map((task) => task.warehouse));
   interceptFilters.customer.value = customer;
-  interceptFilters.warehouse.value = warehouse;
 }
 
 function initInterceptManagement() {
