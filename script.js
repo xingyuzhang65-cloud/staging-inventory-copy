@@ -2163,6 +2163,8 @@ const interceptLatestTrackingDefaults = {
 
 interceptTasks.forEach((task) => {
   task.latestTracking ||= interceptLatestTrackingDefaults[task.id] || "-";
+  task.interceptType ||= task.cargoStatus === "未拆柜" ? "拆柜前拦截" : "拆柜后拦截";
+  task.writeoffStatus ||= task.id === 3 ? "部分核销" : task.id === 4 ? "已核销" : "待核销";
 });
 
 function getInterceptForecastStatus(task) {
@@ -2174,6 +2176,10 @@ function getInterceptForecastStatus(task) {
     "拦截失败": "预报失败",
     "已取消": "已取消"
   }[task.status] || "待预报";
+}
+
+function getInterceptType(task) {
+  return task.interceptType || (task.cargoStatus === "未拆柜" ? "拆柜前拦截" : "拆柜后拦截");
 }
 
 function getInterceptForecastStatusClass(status) {
@@ -2221,6 +2227,9 @@ const interceptFilters = {
   system: $("#interceptSystemFilter"),
   customer: $("#interceptCustomerFilter"),
   source: $("#interceptSourceFilter"),
+  type: $("#interceptTypeFilter"),
+  type: $("#interceptTypeFilter"),
+  writeoffStatus: $("#interceptWriteoffFilter"),
   cargoStatus: $("#interceptCargoStatusFilter"),
   status: $("#interceptStatusFilter"),
   forecastStatus: $("#interceptForecastStatusFilter"),
@@ -2371,6 +2380,22 @@ function getInterceptInstructionRows(task) {
   if (sourceRows.length) return sourceRows;
   const fallback = instructionCatalog.find((row) => row.name.startsWith("拦截-")) || instructionCatalog[0];
   return fallback ? [{ ...fallback, quantity: "1" }] : [];
+}
+
+function getInterceptWriteoffStatus(task) {
+  if (["待核销", "部分核销", "已核销"].includes(task?.writeoffStatus)) return task.writeoffStatus;
+  const rows = getInterceptFeeRows(task);
+  if (!rows.length) return "待核销";
+  const values = rows.map((fee) => String(fee.writeoffStatus || fee.verificationStatus || "待核销"));
+  if (values.every((status) => status === "已核销")) return "已核销";
+  if (values.some((status) => status === "已核销" || status === "部分核销")) return "部分核销";
+  return "待核销";
+}
+
+function getInterceptWriteoffTag(task) {
+  const status = getInterceptWriteoffStatus(task);
+  const tone = status === "已核销" ? "is-success" : status === "部分核销" ? "is-processing" : "is-pending";
+  return `<span class="intercept-writeoff-status ${tone}">${status}</span>`;
 }
 
 function renderInterceptInstructionCount(task, rows = getInterceptInstructionRows(task)) {
@@ -2735,6 +2760,8 @@ function getFilteredInterceptTasks() {
     && (!system || (task.system || "").toLowerCase().includes(system))
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
     && (!interceptFilters.source.value || task.source === interceptFilters.source.value)
+    && (!interceptFilters.type.value || task.interceptType === interceptFilters.type.value)
+    && (!interceptFilters.writeoffStatus.value || getInterceptWriteoffStatus(task) === interceptFilters.writeoffStatus.value)
     && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
     && (!interceptFilters.status.value || task.status === interceptFilters.status.value)
     && (!interceptFilters.forecastStatus.value || getInterceptForecastStatus(task) === interceptFilters.forecastStatus.value)
@@ -2797,7 +2824,7 @@ function renderInterceptRows() {
   pruneInterceptSelection();
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="19">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="20">暂无匹配的拦截任务</td></tr>';
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
@@ -2807,7 +2834,7 @@ function renderInterceptRows() {
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
-        <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.source || "-")}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
+        <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(task.source || "-")}</td><td>${escapeHtml(task.interceptType || "-")}</td><td>${getInterceptWriteoffTag(task)}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td><td title="${escapeHtml(task.latestTracking || "-")}">${escapeHtml(task.latestTracking || "-")}</td>
         <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${boxCount}</td><td class="intercept-instruction-count-col">${renderInterceptInstructionCount(task, instructionRows)}</td><td class="intercept-instruction-list-col">${renderInterceptInstructionLines(instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
@@ -2847,6 +2874,7 @@ function renderInterceptDetail(task, mode = "view") {
   $("#interceptBasicInfo").innerHTML = [
     field("客户名称", escapeHtml(task.customer)),
     field("拦截来源", escapeHtml(task.source || "-")),
+    field("核销状态", getInterceptWriteoffTag(task)),
     field("拦截单号", escapeHtml(task.no)),
     field("入仓号", escapeHtml(task.waybill)),
     field("柜号", escapeHtml(task.container || "-")),
