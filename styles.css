@@ -506,6 +506,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   background: #fff;
   box-shadow: -8px 0 12px rgba(29,42,54,.08);
 }
+.intercept-table td:nth-child(19) { white-space: normal; }
 .intercept-table th:nth-child(10),
 .intercept-table td:nth-child(10) {
   text-align: left;

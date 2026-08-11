@@ -139,7 +139,7 @@
             <button class="status-tab" data-intercept-status="已取消" type="button">取消(0)</button>
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>批量取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>批量确认拦截</button><button class="btn primary" id="interceptBatchSuccessButton" type="button" hidden>批量拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>批量拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>批量备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
+          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>确认拦截</button><button class="btn primary" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
         </div>
         <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span>拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
@@ -262,20 +262,20 @@
 </div>
 <div class="intercept-overlay" id="interceptBatchSuccessOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchSuccessTitle">
-    <header><h2 id="interceptBatchSuccessTitle">批量拦截成功</h2><button class="intercept-close" id="interceptBatchSuccessClose" type="button" aria-label="关闭批量拦截成功">×</button></header>
+    <header><h2 id="interceptBatchSuccessTitle">拦截成功</h2><button class="intercept-close" id="interceptBatchSuccessClose" type="button" aria-label="关闭拦截成功">×</button></header>
     <form id="interceptBatchSuccessForm"><div class="intercept-feedback-content"><p id="interceptBatchSuccessSummary"></p><label><span>备注</span><textarea id="interceptBatchSuccessNote" maxlength="200" placeholder="请输入处理备注"></textarea></label></div><footer><button class="btn" id="interceptBatchSuccessCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay" id="interceptBatchFailureOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchFailureTitle">
-    <header><h2 id="interceptBatchFailureTitle">批量拦截失败</h2><button class="intercept-close" id="interceptBatchFailureClose" type="button" aria-label="关闭批量拦截失败">×</button></header>
+    <header><h2 id="interceptBatchFailureTitle">拦截失败</h2><button class="intercept-close" id="interceptBatchFailureClose" type="button" aria-label="关闭拦截失败">×</button></header>
     <form id="interceptBatchFailureForm"><div class="intercept-feedback-content"><p id="interceptBatchFailureSummary"></p><label><span class="required">失败原因</span><textarea id="interceptBatchFailureReason" maxlength="200" required placeholder="请填写失败原因"></textarea></label><label><span>备注</span><textarea id="interceptBatchFailureNote" maxlength="200" placeholder="请输入补充说明"></textarea></label></div><footer><button class="btn" id="interceptBatchFailureCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay" id="interceptBatchNoteOverlay" hidden>>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchNoteTitle">
-    <header><h2 id="interceptBatchNoteTitle">批量备注</h2><button class="intercept-close" id="interceptBatchNoteClose" type="button" aria-label="关闭批量备注">×</button></header>
-    <form id="interceptBatchNoteForm"><div class="intercept-feedback-content"><label><span>备注内容</span><textarea id="interceptBatchNoteText" maxlength="200" placeholder="请输入批量备注内容" required></textarea></label></div><footer><button class="btn" id="interceptBatchNoteCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
+    <header><h2 id="interceptBatchNoteTitle">备注</h2><button class="intercept-close" id="interceptBatchNoteClose" type="button" aria-label="关闭备注">×</button></header>
+    <form id="interceptBatchNoteForm"><div class="intercept-feedback-content"><label><span>备注内容</span><textarea id="interceptBatchNoteText" maxlength="200" placeholder="请输入备注内容" required></textarea></label></div><footer><button class="btn" id="interceptBatchNoteCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay intercept-feedback-overlay" id="interceptFeedbackOverlay" hidden>
