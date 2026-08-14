@@ -145,7 +145,7 @@
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
-              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截类型</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>预报单状态</th><th>拦截原因</th><th>拦截箱数</th><th>指令费用</th><th>核销状态</th><th>客户备注</th><th>备注</th><th>拦截来源</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
+              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截类型</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>预报单状态</th><th>拦截原因</th><th id="interceptStatusReasonHeader" hidden></th><th>拦截箱数</th><th>指令费用</th><th>核销状态</th><th>客户备注</th><th>备注</th><th>拦截来源</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
             </tr></thead>
             <tbody id="interceptTableBody"></tbody>
           </table>
@@ -255,7 +255,7 @@
   </section>
 </div>
 <div class="intercept-overlay" id="interceptCancelReasonOverlay" hidden>
-  <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptCancelReasonTitle">
+  <section class="intercept-feedback-modal intercept-compact-modal" role="dialog" aria-modal="true" aria-labelledby="interceptCancelReasonTitle">
     <header><h2 id="interceptCancelReasonTitle">取消拦截</h2><button class="intercept-close" id="interceptCancelReasonClose" type="button" aria-label="关闭取消拦截">×</button></header>
     <form id="interceptCancelReasonForm"><div class="intercept-feedback-content"><label><span class="required">取消原因</span><textarea id="interceptCancelReasonText" maxlength="200" placeholder="请输入取消拦截的原因" required></textarea></label></div><footer><button class="btn" id="interceptCancelReasonCancel" type="button">取消</button><button class="btn primary" type="submit">确认取消拦截</button></footer></form>
   </section>
@@ -267,9 +267,9 @@
   </section>
 </div>
 <div class="intercept-overlay" id="interceptBatchFailureOverlay" hidden>
-  <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchFailureTitle">
+  <section class="intercept-feedback-modal intercept-compact-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchFailureTitle">
     <header><h2 id="interceptBatchFailureTitle">拦截失败</h2><button class="intercept-close" id="interceptBatchFailureClose" type="button" aria-label="关闭拦截失败">×</button></header>
-    <form id="interceptBatchFailureForm"><div class="intercept-feedback-content"><p id="interceptBatchFailureSummary"></p><label><span class="required">失败原因</span><textarea id="interceptBatchFailureReason" maxlength="200" required placeholder="请填写失败原因"></textarea></label><label><span>备注</span><textarea id="interceptBatchFailureNote" maxlength="200" placeholder="请输入补充说明"></textarea></label></div><footer><button class="btn" id="interceptBatchFailureCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
+    <form id="interceptBatchFailureForm"><div class="intercept-feedback-content"><p id="interceptBatchFailureSummary"></p><label><span class="required">失败原因</span><textarea id="interceptBatchFailureReason" maxlength="200" required placeholder="请填写失败原因"></textarea></label></div><footer><button class="btn" id="interceptBatchFailureCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay" id="interceptBatchNoteOverlay" hidden>>

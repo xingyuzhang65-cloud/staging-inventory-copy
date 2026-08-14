@@ -2159,7 +2159,7 @@ const interceptTasks = [
   {
     id: 6, no: "202607310018", waybill: "2", container: "AAAA0000000", system: "AAAA0000000-241109", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
-    status: "已取消", reconciliationStatus: "已核销", reason: "客户申请暂停发货", attachment: "-", customerRemark: "客户已撤回本次拦截申请", remark: "客户已自行调整订单", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
+    status: "已取消", reconciliationStatus: "已核销", reason: "客户申请暂停发货", attachment: "-", customerRemark: "客户已撤回本次拦截申请", remark: "客户已自行调整订单", cancelReason: "客户主动取消申请", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
     logs: [
       { time: "2026-07-31 09:11:48", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请暂停发货" },
       { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "取消申请", change: "待处理 → 已取消", note: "客户主动取消" }
@@ -2811,6 +2811,13 @@ function getVisiblePendingInterceptTasks() {
   return interceptVisibleRows.filter((task) => task.status === "待处理");
 }
 
+function getInterceptStatusReasonColumn() {
+  const status = interceptActiveTab !== "全部" ? interceptActiveTab : interceptFilters.status.value;
+  if (status === "拦截失败") return { label: "失败原因", field: "failReason" };
+  if (status === "已取消") return { label: "取消原因", field: "cancelReason" };
+  return null;
+}
+
 function getSelectedPendingInterceptTasks() {
   return [...selectedInterceptIds]
     .map((id) => getInterceptTask(id))
@@ -2855,9 +2862,15 @@ function renderInterceptRows() {
   renderInterceptStatusTabs();
   interceptVisibleRows = getFilteredInterceptTasks();
   pruneInterceptSelection();
+  const statusReasonColumn = getInterceptStatusReasonColumn();
+  const statusReasonHeader = $("#interceptStatusReasonHeader");
+  if (statusReasonHeader) {
+    statusReasonHeader.hidden = !statusReasonColumn;
+    statusReasonHeader.textContent = statusReasonColumn?.label || "";
+  }
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = '<tr class="intercept-empty"><td colspan="19">暂无匹配的拦截任务</td></tr>';
+    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${statusReasonColumn ? 20 : 19}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
@@ -2868,10 +2881,13 @@ function renderInterceptRows() {
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
+      const statusReasonCell = statusReasonColumn
+        ? `<td class="intercept-status-reason-cell" title="${escapeHtml(task[statusReasonColumn.field] || "-")}">${escapeHtml(task[statusReasonColumn.field] || "-")}</td>`
+        : "";
       return `<tr data-intercept-id="${task.id}">
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>${statusReasonCell}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
@@ -2921,6 +2937,8 @@ function renderInterceptDetail(task, mode = "view") {
     field("出库状态", escapeHtml(task.outboundStatus)),
     field("申请人", escapeHtml(task.applicant)),
     field("申请时间", escapeHtml(task.appliedAt)),
+    task.status === "拦截失败" ? field("失败原因", escapeHtml(task.failReason || "-")) : "",
+    task.status === "已取消" ? field("取消原因", escapeHtml(task.cancelReason || task.resultRemark || "-")) : "",
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
     field("备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑备注" style="margin-left:6px">✎</button>`)
   ].join("");
@@ -3001,6 +3019,7 @@ function applyInterceptCancel(task, reason = "") {
   if (!task || task.status !== "待处理") return false;
   const previousStatus = task.status;
   task.status = "已取消";
+  task.cancelReason = reason;
   task.resultRemark = reason || "取消拦截申请";
   task.remark = task.remark ? `${task.remark}；取消原因：${reason}` : `取消原因：${reason}`;
   addInterceptLog(task, "取消申请", previousStatus, reason || "取消拦截申请", "客服-张敏");
@@ -3037,6 +3056,7 @@ function createAfterUnpackInterceptTask(task) {
     handler: "",
     handleAt: "",
     failReason: "",
+    cancelReason: "",
     fees: [],
     reconciliationStatus: "已核销",
     logs: [{
@@ -3113,7 +3133,7 @@ function cancelSelectedInterceptTasks() {
     return;
   }
   interceptCancelContext = { mode: "batch", taskIds: tasks.map((t) => t.id) };
-  $("#interceptCancelReasonTitle").textContent = `取消拦截（${tasks.length} 条）`;
+  $("#interceptCancelReasonTitle").textContent = `批量取消拦截（${tasks.length}条）`;
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3125,12 +3145,15 @@ function exportInterceptTasks() {
     showInterceptToast();
     return;
   }
+  const statusReasonColumn = getInterceptStatusReasonColumn();
   const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截箱数", "指令费用", "核销状态", "客户备注", "备注", "拦截来源", "申请人", "申请时间", "处理人", "处理时间"];
+  if (statusReasonColumn) headers.splice(7, 0, statusReasonColumn.label);
   const rows = tasks.map((task) => [
     task.customer, getInterceptType(task), task.no, task.waybill, task.container || "",
     getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", getInterceptInstructionRows(task).map(formatInterceptInstructionFee).join("；"), getInterceptReconciliationStatus(task), task.customerRemark || "", task.remark || "", task.source || "",
     task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
   ]);
+  if (statusReasonColumn) rows.forEach((row, index) => row.splice(7, 0, tasks[index][statusReasonColumn.field] || ""));
   const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -3264,7 +3287,6 @@ function batchInterceptFailure() {
   $("#interceptBatchFailureTitle").textContent = "拦截失败";
   $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条处理中的记录，请填写失败原因。`;
   $("#interceptBatchFailureReason").value = "";
-  $("#interceptBatchFailureNote").value = "";
   $("#interceptBatchFailureOverlay").hidden = false;
   $("#interceptBatchFailureReason").focus();
 }
@@ -3310,13 +3332,12 @@ function submitInterceptBatchFailure(event) {
     window.alert("请填写失败原因");
     return;
   }
-  const note = $("#interceptBatchFailureNote").value.trim();
   const user = "仓库-李明";
   tasks.forEach((task) => {
     const previousStatus = task.status;
     task.status = "拦截失败";
     task.failReason = failReason;
-    task.resultRemark = note;
+    task.resultRemark = "";
     task.handler = user;
     task.handleAt = formatLocalDateTime();
     task.logs.push({
@@ -3324,7 +3345,7 @@ function submitInterceptBatchFailure(event) {
       user,
       action: "拦截失败",
       change: `${previousStatus} → 拦截失败`,
-      note: `${failReason}${note ? `；${note}` : ""}`
+      note: failReason
     });
   });
   $("#interceptBatchFailureOverlay").hidden = true;
@@ -3348,7 +3369,7 @@ function openInterceptFeedback(mode) {
   $("#interceptFeedbackTitle").textContent = isSuccess ? "确认拦截成功" : "确认拦截失败";
   $("#interceptFeedbackFields").innerHTML = isSuccess
     ? `<p>请确认实际拦截的货物数量。提交后系统将自动生成暂存单。</p><label><span class="required">实际拦截箱数</span><input id="interceptActualBoxes" type="number" min="1" max="${task.boxes}" value="${task.boxes}" required /></label><label><span>备注</span><textarea id="interceptFeedbackNote" maxlength="200" placeholder="请输入处理备注"></textarea></label>`
-    : '<p>请填写无法完成拦截的原因，系统将保留处理记录。</p><label><span class="required">失败原因</span><textarea id="interceptFailReason" maxlength="200" required placeholder="例如：已出库、找不到货物、客户取消"></textarea></label><label><span>备注</span><textarea id="interceptFeedbackNote" maxlength="200" placeholder="请输入补充说明"></textarea></label>';
+    : '<p>请填写无法完成拦截的原因，系统将保留处理记录。</p><label><span class="required">失败原因</span><textarea id="interceptFailReason" maxlength="200" required placeholder="例如：已出库、找不到货物、客户取消"></textarea></label>';
   $("#interceptFeedbackOverlay").hidden = false;
 }
 
@@ -3406,8 +3427,8 @@ function submitInterceptFeedback(event) {
     }
     task.status = "拦截失败";
     task.failReason = failReason;
-    task.resultRemark = note;
-    addInterceptLog(task, "拦截失败", previousStatus, `${failReason}${note ? `；${note}` : ""}`);
+    task.resultRemark = "";
+    addInterceptLog(task, "拦截失败", previousStatus, failReason);
   }
   $("#interceptFeedbackOverlay").hidden = true;
   refreshInterceptUI();
