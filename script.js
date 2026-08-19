@@ -2096,10 +2096,11 @@ window.addEventListener("resize", () => {
   watermarkTimer = setTimeout(buildWatermarks, 120);
 });
 
-const interceptStatusOrder = ["待处理", "拦截中", "拦截成功", "拦截失败", "已取消"];
+const interceptStatusOrder = ["待处理", "拦截中", "已完成", "拦截成功", "拦截失败", "已取消"];
 const interceptStatusLabel = {
   待处理: "待处理",
   拦截中: "处理中",
+  已完成: "已完成",
   拦截成功: "拦截成功",
   拦截失败: "拦截失败",
   已取消: "已取消"
@@ -2107,6 +2108,7 @@ const interceptStatusLabel = {
 const interceptStatusClass = {
   待处理: "is-pending",
   拦截中: "is-processing",
+  已完成: "is-completed",
   拦截成功: "is-success",
   拦截失败: "is-failed",
   已取消: "is-canceled"
@@ -2164,6 +2166,29 @@ const interceptTasks = [
       { time: "2026-07-31 09:11:48", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请暂停发货" },
       { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "取消申请", change: "待处理 → 已取消", note: "客户主动取消" }
     ]
+  },
+  {
+    id: 7, no: "202607300012", waybill: "US0730", container: "OOLU7216038", system: "OOLU7216038-260730", customer: "ABC-US", source: "美仓拦截", warehouse: "美仓1号仓",
+    cargoStatus: "暂存中", inventoryStatus: "暂存", outboundStatus: "未出库", boxes: 6,
+    status: "已完成", completionResult: "拦截完成", reconciliationStatus: "已核销", reason: "客户变更派送计划，申请转入暂存", attachment: "拦截确认单-0730.pdf", customerRemark: "已确认货物转入暂存区", remark: "现场复核完成，货物数量一致",
+    applicant: "客服-张敏", appliedAt: "2026-07-30 09:26:18", handler: "仓库-李明", handleAt: "2026-07-30 11:42:36", failReason: "", actualBoxes: "6", storageNo: "STG202607300007", resultRemark: "6 箱货物已转入 A03-02 暂存库位", archived: false,
+    logs: [
+      { time: "2026-07-30 09:26:18", user: "客服-张敏", action: "提交申请", change: "- → 待处理", note: "客户申请变更派送计划" },
+      { time: "2026-07-30 09:38:42", user: "仓库-李明", action: "确认拦截", change: "待处理 → 处理中", note: "已定位货物并开始处理" },
+      { time: "2026-07-30 11:42:36", user: "仓库-李明", action: "处理完成", change: "处理中 → 已完成", note: "实际处理 6 箱，货物已转入暂存库位" }
+    ]
+  },
+  {
+    id: 8, no: "202607290021", waybill: "BBA9461", container: "BPAI9461644", system: "BPAI9461644-240330", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
+    cargoStatus: "暂存中", inventoryStatus: "暂存", outboundStatus: "未出库", boxes: 3,
+    status: "已完成", completionResult: "拦截完成", reconciliationStatus: "部分核销", reason: "客户要求暂停出库并核对箱唛", attachment: "客户邮件-0729.png", customerRemark: "箱唛已复核，可继续暂存", remark: "已补拍箱唛照片并回传",
+    applicant: "客服-刘洋", appliedAt: "2026-07-29 14:08:51", handler: "仓库-王强", handleAt: "2026-07-29 16:25:09", failReason: "", actualBoxes: "3", storageNo: "STG202607290008", resultRemark: "3 箱箱唛核验完成，已转入 B01-05 暂存库位", archived: true, archivedAt: "2026-07-30 09:12:44",
+    logs: [
+      { time: "2026-07-29 14:08:51", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "客户要求核对箱唛" },
+      { time: "2026-07-29 14:20:16", user: "仓库-王强", action: "确认拦截", change: "待处理 → 处理中", note: "开始核验现场货物" },
+      { time: "2026-07-29 16:25:09", user: "仓库-王强", action: "处理完成", change: "处理中 → 已完成", note: "箱唛核验完成，3 箱已转入暂存" },
+      { time: "2026-07-30 09:12:44", user: "仓库-主管", action: "归档", change: "已完成 → 已完成", note: "处理记录已归档" }
+    ]
   }
 ];
 
@@ -2173,7 +2198,9 @@ const interceptLatestTrackingDefaults = {
   3: "2026-08-03 12:00 货物在库，处理中",
   4: "2026-08-02 14:00 已转入暂存库位 A02-03",
   5: "2026-08-01 16:00 货物已完成出库，已送达",
-  6: "2026-07-31 09:00 已取消，货物正常出库"
+  6: "2026-07-31 09:00 已取消，货物正常出库",
+  7: "2026-07-30 11:42 已转入暂存库位 A03-02",
+  8: "2026-07-29 16:25 已转入暂存库位 B01-05"
 };
 
 interceptTasks.forEach((task) => {
@@ -2186,6 +2213,7 @@ function getInterceptForecastStatus(task) {
   return {
     "待处理": "待预报",
     "拦截中": "预报中",
+    "已完成": "预报成功",
     "拦截成功": "预报成功",
     "拦截失败": "预报失败",
     "已取消": "已取消"
@@ -2813,6 +2841,7 @@ function getVisiblePendingInterceptTasks() {
 
 function getInterceptStatusReasonColumn() {
   const status = interceptActiveTab !== "全部" ? interceptActiveTab : interceptFilters.status.value;
+  if (status === "已完成") return { label: "完成结果", field: "resultRemark" };
   if (status === "拦截失败") return { label: "失败原因", field: "failReason" };
   if (status === "已取消") return { label: "取消原因", field: "cancelReason" };
   return null;
@@ -2832,6 +2861,7 @@ function pruneInterceptSelection() {
 function updateInterceptBatchControls() {
   const isPendingView = interceptActiveTab === "待处理";
   const isInterceptingView = interceptActiveTab === "拦截中";
+  const isCompletedView = interceptActiveTab === "已完成";
   const selectableRows = getVisibleSelectableInterceptTasks();
   const selectedCount = selectableRows.filter((task) => selectedInterceptIds.has(task.id)).length;
   const selectAll = $("#interceptSelectAll");
@@ -2839,6 +2869,8 @@ function updateInterceptBatchControls() {
   const confirmButton = $("#interceptBatchConfirmButton");
   const successButton = $("#interceptBatchSuccessButton");
   const failureButton = $("#interceptBatchFailureButton");
+  const completeButton = $("#interceptBatchCompleteButton");
+  const archiveButton = $("#interceptBatchArchiveButton");
   const noteButton = $("#interceptBatchNoteButton");
   const exportButton = $("#interceptBatchExportButton");
 
@@ -2846,14 +2878,17 @@ function updateInterceptBatchControls() {
   confirmButton.hidden = !isPendingView;
   successButton.hidden = !isInterceptingView;
   failureButton.hidden = !isInterceptingView;
-  noteButton.hidden = false;
+  completeButton.hidden = !isInterceptingView;
+  archiveButton.hidden = !isCompletedView;
+  noteButton.hidden = isCompletedView;
   exportButton.hidden = false;
 
-  [cancelButton, confirmButton, successButton, failureButton, noteButton, exportButton].forEach((button) => {
+  [cancelButton, confirmButton, completeButton, successButton, failureButton, archiveButton, noteButton, exportButton].forEach((button) => {
     button.disabled = false;
   });
 
   selectAll.disabled = selectableRows.length === 0;
+  selectAll.setAttribute("aria-label", isCompletedView ? "全选已完成拦截单" : isInterceptingView ? "全选处理中拦截单" : "全选待处理拦截单");
   selectAll.checked = selectableRows.length > 0 && selectedCount === selectableRows.length;
   selectAll.indeterminate = selectedCount > 0 && selectedCount < selectableRows.length;
 }
@@ -2869,14 +2904,22 @@ function renderInterceptRows() {
     statusReasonHeader.textContent = statusReasonColumn?.label || "";
   }
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
+  const listHint = $("#interceptListHint");
+  if (listHint) listHint.textContent = interceptActiveTab === "已完成"
+    ? "已完成任务支持查看处理结果、日志、批量归档和导出"
+    : "拦截成功后将自动生成暂存单";
   if (!interceptVisibleRows.length) {
     interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${statusReasonColumn ? 20 : 19}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
       const primaryAction = (task.status === "待处理" || task.status === "拦截中") ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>' : "";
+      const completeAction = task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="complete" type="button">完成</button>' : "";
       const retryAction = task.status === "拦截失败" && getInterceptType(task) === "拆柜前拦截"
         ? '<button class="intercept-action" data-intercept-action="retry-after-unpack" type="button">发起拆柜后拦截</button>'
+        : "";
+      const completedActions = task.status === "已完成"
+        ? `<button class="intercept-action" data-intercept-action="result" type="button">查看结果</button>${task.archived ? '<span class="intercept-archived-mark">已归档</span>' : ""}`
         : "";
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
@@ -2889,7 +2932,7 @@ function renderInterceptRows() {
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
         <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>${statusReasonCell}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
-        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
+        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${completeAction}${completedActions}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
   }
@@ -2914,10 +2957,10 @@ function renderInterceptDetail(task, mode = "view") {
   $("#interceptDetailTitle").textContent = `拦截详情 · ${task.no}`;
   $("#interceptDetailSubTitle").innerHTML = `${getInterceptStatusTag(task.status)} <span>${escapeHtml(task.waybill)}</span>`;
 
-  const stepLabels = ["提交申请", "确认拦截", "仓库处理中", task.status === "拦截失败" ? "拦截失败" : task.status === "已取消" ? "已取消" : "完成"];
+  const stepLabels = ["提交申请", "确认拦截", "仓库处理中", task.status === "拦截失败" ? "拦截失败" : task.status === "已取消" ? "已取消" : task.status === "已完成" ? "已完成" : "完成"];
   const currentStep = task.status === "待处理" ? 0 : task.status === "拦截中" ? 2 : 3;
   $("#interceptFlow").innerHTML = stepLabels.map((label, index) => {
-    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && task.status === "拦截成功");
+    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && ["已完成", "拦截成功"].includes(task.status));
     const isActive = index === currentStep;
     return `<div class="intercept-flow-step${isComplete ? " is-complete" : ""}${isActive ? " is-active" : ""}"><i>${isComplete ? "✓" : index + 1}</i><span>${label}</span></div>`;
   }).join("");
@@ -2937,6 +2980,8 @@ function renderInterceptDetail(task, mode = "view") {
     field("出库状态", escapeHtml(task.outboundStatus)),
     field("申请人", escapeHtml(task.applicant)),
     field("申请时间", escapeHtml(task.appliedAt)),
+    task.status === "已完成" ? field("完成结果", escapeHtml(task.resultRemark || "-")) : "",
+    task.status === "已完成" ? field("归档状态", task.archived ? `已归档${task.archivedAt ? `（${escapeHtml(task.archivedAt)}）` : ""}` : "未归档") : "",
     task.status === "拦截失败" ? field("失败原因", escapeHtml(task.failReason || "-")) : "",
     task.status === "已取消" ? field("取消原因", escapeHtml(task.cancelReason || task.resultRemark || "-")) : "",
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
@@ -2954,12 +2999,15 @@ function renderInterceptDetail(task, mode = "view") {
     ? task.status === "待处理"
       ? '<button class="btn" data-detail-action="cancel" type="button">取消申请</button><button class="btn primary" data-detail-action="confirm" type="button">确认拦截</button>'
       : task.status === "拦截中"
-        ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
+        ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn" data-detail-action="complete" type="button">处理完成</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
         : task.status === "拦截成功"
           ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
           : ""
     : retryAction;
-  $("#interceptDetailActions").innerHTML = `<button class="btn" data-detail-action="close" type="button">关闭</button>${actions}${mode === "process" ? retryAction : ""}`;
+  const completedAction = task.status === "已完成" && task.storageNo
+    ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
+    : "";
+  $("#interceptDetailActions").innerHTML = `<button class="btn" data-detail-action="close" type="button">关闭</button>${actions}${completedAction}${mode === "process" ? retryAction : ""}`;
 }
 
 function openInterceptDetail(id, mode = "view") {
@@ -3164,6 +3212,31 @@ function exportInterceptTasks() {
   URL.revokeObjectURL(url);
 }
 
+function archiveSelectedCompletedTasks() {
+  const tasks = getVisibleSelectableInterceptTasks()
+    .filter((task) => selectedInterceptIds.has(task.id) && task.status === "已完成" && !task.archived);
+  if (!tasks.length) {
+    showInterceptToast(selectedInterceptIds.size ? "所选任务均已归档" : "请勾选已完成任务");
+    return;
+  }
+  if (!window.confirm(`确认归档选中的 ${tasks.length} 条已完成任务吗？归档后仍可查看详情和日志。`)) return;
+  const now = formatLocalDateTime();
+  tasks.forEach((task) => {
+    task.archived = true;
+    task.archivedAt = now;
+    task.logs.push({
+      time: now,
+      user: "仓库-主管",
+      action: "归档",
+      change: "已完成 → 已完成",
+      note: "处理记录已归档"
+    });
+  });
+  selectedInterceptIds.clear();
+  refreshInterceptUI();
+  showInterceptToast(`已归档 ${tasks.length} 条任务`);
+}
+
 function batchRemarkInterceptTasks() {
   const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
   if (!tasks.length) {
@@ -3263,6 +3336,38 @@ function getSelectedInterceptingTasks() {
   return [...selectedInterceptIds]
     .map((id) => getInterceptTask(id))
     .filter((task) => task?.status === "拦截中");
+}
+
+function completeInterceptTasks(tasks) {
+  const actionableTasks = tasks.filter((task) => task?.status === "拦截中");
+  if (!actionableTasks.length) {
+    showInterceptToast("请选择处理中的任务");
+    return;
+  }
+  if (!window.confirm(`确认将 ${actionableTasks.length} 条任务标记为已完成吗？`)) return;
+  actionableTasks.forEach((task) => {
+    const previousStatus = task.status;
+    task.status = "已完成";
+    task.completionResult = "处理完成";
+    task.actualBoxes = String(task.actualBoxes || task.boxes || "");
+    task.storageNo ||= `STG${formatLocalDateTime().slice(0, 10).replaceAll("-", "")}${String(task.id).padStart(4, "0")}`;
+    task.cargoStatus = "暂存中";
+    task.inventoryStatus = "暂存";
+    task.outboundStatus = "未出库";
+    task.resultRemark = `已完成 ${task.actualBoxes || task.boxes} 箱货物处理并转入暂存`;
+    task.archived = false;
+    addInterceptLog(task, "处理完成", previousStatus, task.resultRemark);
+    createStorageFromIntercept(task);
+  });
+  selectedInterceptIds.clear();
+  interceptActiveTab = "已完成";
+  closeInterceptDetail();
+  refreshInterceptUI();
+  showInterceptToast(`已完成 ${actionableTasks.length} 条任务`);
+}
+
+function completeSelectedInterceptTasks() {
+  completeInterceptTasks(getSelectedInterceptingTasks());
 }
 
 function batchInterceptSuccess() {
@@ -3471,7 +3576,7 @@ function refreshInterceptFilterOptions() {
 }
 
 function initInterceptManagement() {
-  interceptTasks.filter((task) => task.status === "拦截成功").forEach(createStorageFromIntercept);
+  interceptTasks.filter((task) => ["已完成", "拦截成功"].includes(task.status)).forEach(createStorageFromIntercept);
   refreshInterceptFilterOptions();
   renderInterceptRows();
   $("#navInterceptManagement").addEventListener("click", showInterceptManagement);
@@ -3481,6 +3586,8 @@ function initInterceptManagement() {
   $("#interceptBatchConfirmButton").addEventListener("click", confirmSelectedInterceptTasks);
   $("#interceptBatchSuccessButton").addEventListener("click", batchInterceptSuccess);
   $("#interceptBatchFailureButton").addEventListener("click", batchInterceptFailure);
+  $("#interceptBatchCompleteButton").addEventListener("click", completeSelectedInterceptTasks);
+  $("#interceptBatchArchiveButton").addEventListener("click", archiveSelectedCompletedTasks);
   $("#interceptBatchNoteButton").addEventListener("click", batchRemarkInterceptTasks);
   $("#interceptBatchExportButton").addEventListener("click", exportInterceptTasks);
   $("#interceptSelectAll").addEventListener("change", (event) => {
@@ -3530,6 +3637,14 @@ function initInterceptManagement() {
     }
     if (action === "handle") {
       openInterceptDetail(task.id, "process");
+      return;
+    }
+    if (action === "result") {
+      openInterceptDetail(task.id, "result");
+      return;
+    }
+    if (action === "complete") {
+      completeInterceptTasks([task]);
       return;
     }
     if (action === "retry-after-unpack") {
@@ -3673,6 +3788,7 @@ function initInterceptManagement() {
     if (action === "close") closeInterceptDetail();
     if (action === "handle" && task) openInterceptDetail(task.id, "process");
     if (action === "confirm") confirmInterceptTask();
+    if (action === "complete" && task) completeInterceptTasks([task]);
     if (action === "retry-after-unpack" && task) createAfterUnpackInterceptTask(task);
     if (action === "cancel") cancelInterceptTask();
     if (action === "success" || action === "failure") openInterceptFeedback(action);

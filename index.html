@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260811-intercept-column-order-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260818-intercept-completed-v1" />
 </head>
 <body>
 
@@ -119,7 +119,7 @@
           <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>拦截类型</span><select id="interceptTypeFilter"><option value="">全部拦截类型</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截">拆柜后拦截</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
-          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option value="拦截中">处理中</option><option>拦截成功</option><option>拦截失败</option><option>已取消</option></select></label>
+          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option value="拦截中">处理中</option><option>已完成</option><option>拦截成功</option><option>拦截失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>核销状态</span><select id="interceptReconciliationStatusFilter"><option value="">全部核销状态</option><option>待核销</option><option>部分核销</option><option>已核销</option></select></label>
           <label class="filter-field intercept-date-filter"><span>申请时间</span><span class="date-range"><input id="interceptDateFrom" type="date" /><em>→</em><input id="interceptDateTo" type="date" /><b>□</b></span></label>
@@ -134,14 +134,15 @@
           <div class="status-tabs" id="interceptStatusTabs">
             <button class="status-tab" data-intercept-status="待处理" type="button">待处理(0)</button>
             <button class="status-tab" data-intercept-status="拦截中" type="button">处理中(0)</button>
+            <button class="status-tab" data-intercept-status="已完成" type="button">已完成(0)</button>
             <button class="status-tab" data-intercept-status="拦截成功" type="button">拦截成功(0)</button>
             <button class="status-tab" data-intercept-status="拦截失败" type="button">拦截失败(0)</button>
             <button class="status-tab" data-intercept-status="已取消" type="button">取消(0)</button>
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>确认拦截</button><button class="btn primary" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
+          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>确认拦截</button><button class="btn primary" id="interceptBatchCompleteButton" type="button" hidden>处理完成</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchArchiveButton" type="button" hidden>批量归档</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
         </div>
-        <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span>拦截成功后将自动生成暂存单</span></div>
+        <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span id="interceptListHint">拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
@@ -519,6 +520,6 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260811-intercept-column-order-v1"></script>
+<script src="script.js?v=20260818-intercept-completed-v1"></script>
 </body>
 </html>

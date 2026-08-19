@@ -611,6 +611,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 }
 .intercept-status.is-pending { color: #b96d00; background: #fff7e6; }
 .intercept-status.is-processing { color: #2563eb; background: #eff6ff; }
+.intercept-status.is-completed { color: #047857; background: #ecfdf5; }
 .intercept-status.is-success { color: #15803d; background: #ecfdf3; }
 .intercept-status.is-failed { color: #dc2626; background: #fef2f2; }
 .intercept-status.is-canceled { color: #64748b; background: #f1f5f9; }
@@ -620,6 +621,17 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-action { margin: 0 4px; padding: 0; border: 0; color: #168ff5; background: transparent; cursor: pointer; }
 .intercept-action:hover { color: #0873d5; text-decoration: underline; }
 .intercept-action.danger { color: #e5484d; }
+.intercept-archived-mark {
+  display: inline-flex;
+  margin: 0 4px;
+  padding: 1px 5px;
+  border: 1px solid #d8dee5;
+  border-radius: 3px;
+  color: #7b8792;
+  background: #f7f9fb;
+  font-size: 10px;
+  white-space: nowrap;
+}
 .intercept-empty td { height: 180px; color: #a7aeb5; }
 .intercept-overlay {
   position: fixed;
