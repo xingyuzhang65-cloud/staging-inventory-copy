@@ -610,6 +610,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   line-height: 1.35;
 }
 .intercept-status.is-pending { color: #b96d00; background: #fff7e6; }
+.intercept-status.is-confirmed { color: #2563eb; background: #eff6ff; }
 .intercept-status.is-processing { color: #2563eb; background: #eff6ff; }
 .intercept-status.is-completed { color: #047857; background: #ecfdf5; }
 .intercept-status.is-success { color: #15803d; background: #ecfdf3; }

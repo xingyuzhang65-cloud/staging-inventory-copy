@@ -54,7 +54,7 @@
           <label class="filter-field approval-primary"><span>客户名称</span><select id="customerFilter"><option value="">客户名称</option></select></label>
           <label class="filter-field approval-primary"><span>申请单号</span><input id="requestFilter" type="text" placeholder="申请单号" /></label>
           <label class="filter-field approval-primary"><span>入仓号</span><input id="inboundFilter" type="text" placeholder="批量查询多个用“;”号隔开" /></label>
-          <label class="filter-field approval-primary" id="releaseTypeField"><span>下单类型</span><select id="releaseTypeFilter"><option value="">下单类型</option><option value="放货">放货</option><option value="不放货">不放货</option><option value="销毁">销毁</option></select></label>
+          <label class="filter-field approval-primary" id="releaseTypeField"><span>下单类型</span><select id="releaseTypeFilter"><option value="">下单类型</option><option value="发货">发货</option><option value="增值服务">增值服务</option><option value="销毁">销毁</option></select></label>
           <label class="filter-field approval-primary" id="financialAuditField" hidden><span>财务审核</span><select id="financialAuditFilter"><option value="">财务审核</option><option value="已审核">已审核</option><option value="部分审核">部分审核</option><option value="未审核">未审核</option></select></label>
           <label class="filter-field staging-filter"><span>转运方式</span><select id="transferFilter"><option value="">转运方式</option><option>拆转</option><option>直转</option></select></label>
           <label class="filter-field staging-filter"><span>FBA仓库</span><select id="fbaFilter"><option value="">FBA仓库</option></select></label>
@@ -119,7 +119,7 @@
           <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>拦截类型</span><select id="interceptTypeFilter"><option value="">全部拦截类型</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截">拆柜后拦截</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
-          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option value="拦截中">处理中</option><option>已完成</option><option>拦截成功</option><option>拦截失败</option><option>已取消</option></select></label>
+          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option>待处理</option><option>已确认</option><option>拦截中</option><option>已完成</option><option>取消/驳回</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>核销状态</span><select id="interceptReconciliationStatusFilter"><option value="">全部核销状态</option><option>待核销</option><option>部分核销</option><option>已核销</option></select></label>
           <label class="filter-field intercept-date-filter"><span>申请时间</span><span class="date-range"><input id="interceptDateFrom" type="date" /><em>→</em><input id="interceptDateTo" type="date" /><b>□</b></span></label>
@@ -133,11 +133,10 @@
         <div class="status-bar">
           <div class="status-tabs" id="interceptStatusTabs">
             <button class="status-tab" data-intercept-status="待处理" type="button">待处理(0)</button>
-            <button class="status-tab" data-intercept-status="拦截中" type="button">处理中(0)</button>
+            <button class="status-tab" data-intercept-status="已确认" type="button">已确认(0)</button>
+            <button class="status-tab" data-intercept-status="拦截中" type="button">拦截中(0)</button>
             <button class="status-tab" data-intercept-status="已完成" type="button">已完成(0)</button>
-            <button class="status-tab" data-intercept-status="拦截成功" type="button">拦截成功(0)</button>
-            <button class="status-tab" data-intercept-status="拦截失败" type="button">拦截失败(0)</button>
-            <button class="status-tab" data-intercept-status="已取消" type="button">取消(0)</button>
+            <button class="status-tab" data-intercept-status="取消/驳回" type="button">取消/驳回(0)</button>
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
           <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>确认拦截</button><button class="btn primary" id="interceptBatchCompleteButton" type="button" hidden>处理完成</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchArchiveButton" type="button" hidden>批量归档</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
@@ -351,8 +350,8 @@
         <div class="release-shipping-toggle" id="releaseShippingToggle">
           <span>下单类型</span>
           <div role="radiogroup" aria-label="下单类型">
-            <label><input type="radio" name="releaseOrderType" value="放货" checked />放货</label>
-            <label><input type="radio" name="releaseOrderType" value="不放货" />不放货</label>
+            <label><input type="radio" name="releaseOrderType" value="发货" checked />发货</label>
+            <label><input type="radio" name="releaseOrderType" value="增值服务" />增值服务</label>
             <label><input type="radio" name="releaseOrderType" value="销毁" />销毁</label>
           </div>
         </div>
