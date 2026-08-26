@@ -287,6 +287,35 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   background: #168ff5;
 }
 .status-actions { display: flex; align-items: center; gap: 8px; }
+.intercept-completed-subbar {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 1px solid #eef1f3;
+  background: #fbfcfd;
+}
+.intercept-completed-subtabs { display: flex; align-items: center; gap: 22px; }
+.intercept-completed-subtab {
+  position: relative;
+  height: 38px;
+  padding: 0 2px;
+  border: 0;
+  color: #68737d;
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.intercept-completed-subtab.active { color: #168ff5; font-weight: 600; }
+.intercept-completed-subtab.active::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  content: "";
+  background: #168ff5;
+}
 .split-button span { margin-left: 8px; }
 .summary-bar {
   display: flex;
@@ -471,6 +500,8 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   font-weight: 600;
 }
 .intercept-table tbody tr:hover td { background: #f8fbfe; }
+.intercept-table tbody tr.intercept-row-failed td { background: #fef2f2; }
+.intercept-table tbody tr.intercept-row-failed:hover td { background: #fde8e8; }
 .intercept-table .intercept-check { width: 42px; padding: 0; }
 .intercept-table .intercept-check input {
   width: 14px;
@@ -537,21 +568,9 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-reconciliation-status.is-部分核销 { color: #2b6cb0; background: #ebf8ff; }
 .intercept-reconciliation-status.is-已核销 { color: #2f855a; background: #f0fff4; }
 .intercept-forecast-status {
-  display: inline-flex;
-  min-width: 64px;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 8px;
-  border-radius: 999px;
+  color: #68737d;
   font-size: 11px;
-  font-weight: 700;
-  line-height: 1.35;
 }
-.intercept-forecast-status.is-pending { color: #b96d00; background: #fff7e6; }
-.intercept-forecast-status.is-processing { color: #2563eb; background: #eff6ff; }
-.intercept-forecast-status.is-success { color: #15803d; background: #ecfdf3; }
-.intercept-forecast-status.is-failed { color: #dc2626; background: #fef2f2; }
-.intercept-forecast-status.is-canceled { color: #64748b; background: #f1f5f9; }
 .intercept-attachment-links {
   display: grid;
   gap: 4px;
@@ -616,6 +635,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-status.is-success { color: #15803d; background: #ecfdf3; }
 .intercept-status.is-failed { color: #dc2626; background: #fef2f2; }
 .intercept-status.is-canceled { color: #64748b; background: #f1f5f9; }
+.intercept-result-empty { color: #a7aeb5; }
 .intercept-cargo-status { color: #4d5b67; font-weight: 600; }
 .intercept-cargo-status.is-outbound { color: #dc2626; }
 .intercept-cargo-status.is-storage { color: #15803d; }
