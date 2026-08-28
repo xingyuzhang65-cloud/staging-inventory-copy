@@ -119,7 +119,7 @@
           <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>拦截类型</span><select id="interceptTypeFilter"><option value="">全部拦截类型</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截">拆柜后拦截</option></select></label>
           <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
-          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option value="待处理">待审批</option><option>已确认</option><option>拦截中</option><option value="拦截成功">拦截成功</option><option value="拦截失败">拦截失败</option><option value="已取消">已取消</option><option value="已驳回">已驳回</option></select></label>
+          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option value="待处理">待审批</option><option>拦截中</option><option value="拦截成功">拦截成功</option><option value="拦截失败">拦截失败</option><option value="审批拒绝">审批拒绝</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>核销状态</span><select id="interceptReconciliationStatusFilter"><option value="">全部核销状态</option><option>待核销</option><option>部分核销</option><option>已核销</option></select></label>
           <label class="filter-field intercept-date-filter"><span>申请时间</span><span class="date-range"><input id="interceptDateFrom" type="date" /><em>→</em><input id="interceptDateTo" type="date" /><b>□</b></span></label>
@@ -133,14 +133,13 @@
         <div class="status-bar">
           <div class="status-tabs" id="interceptStatusTabs">
             <button class="status-tab" data-intercept-status="待处理" type="button">待审批(0)</button>
-            <button class="status-tab" data-intercept-status="已确认" type="button">已确认(0)</button>
             <button class="status-tab" data-intercept-status="拦截中" type="button">拦截中(0)</button>
             <button class="status-tab" data-intercept-status="已完成" type="button">已完成(0)</button>
-            <button class="status-tab" data-intercept-status="已取消" type="button">已取消(0)</button>
-            <button class="status-tab" data-intercept-status="已驳回" type="button">已驳回(0)</button>
+            <button class="status-tab" data-intercept-status="审批拒绝" type="button">审批拒绝(0)</button>
+            
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn" id="interceptBatchCancelButton" type="button" hidden>取消拦截</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>确认拦截</button><button class="btn primary" id="interceptBatchCompleteButton" type="button" hidden>处理完成</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchArchiveButton" type="button" hidden>批量归档</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
+          <div class="status-actions"><button class="btn danger" id="interceptBatchCancelButton" type="button" hidden>审批拒绝</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>通过并开始拦截</button><button class="btn primary" id="interceptBatchCompleteButton" type="button" hidden>标记处理完成</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>标记拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>标记拦截失败</button><button class="btn" id="interceptBatchArchiveButton" type="button" hidden>归档记录</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>添加备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出记录</button></div>
         </div>
         <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span id="interceptListHint">拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
@@ -257,8 +256,8 @@
 </div>
 <div class="intercept-overlay" id="interceptCancelReasonOverlay" hidden>
   <section class="intercept-feedback-modal intercept-compact-modal" role="dialog" aria-modal="true" aria-labelledby="interceptCancelReasonTitle">
-    <header><h2 id="interceptCancelReasonTitle">取消拦截</h2><button class="intercept-close" id="interceptCancelReasonClose" type="button" aria-label="关闭取消拦截">×</button></header>
-    <form id="interceptCancelReasonForm"><div class="intercept-feedback-content"><label><span class="required">取消原因</span><textarea id="interceptCancelReasonText" maxlength="200" placeholder="请输入取消拦截的原因" required></textarea></label></div><footer><button class="btn" id="interceptCancelReasonCancel" type="button">取消</button><button class="btn primary" type="submit">确认取消拦截</button></footer></form>
+    <header><h2 id="interceptCancelReasonTitle">处理拦截申请</h2><button class="intercept-close" id="interceptCancelReasonClose" type="button" aria-label="关闭处理弹窗">×</button></header>
+    <form id="interceptCancelReasonForm"><div class="intercept-feedback-content"><p id="interceptCancelReasonHint">请填写处理原因，提交后将记录在拦截日志中。</p><label><span class="required">处理原因</span><textarea id="interceptCancelReasonText" maxlength="200" placeholder="请输入撤回或审批拒绝原因" required></textarea></label></div><footer><button class="btn" id="interceptCancelReasonCancel" type="button">返回</button><button class="btn primary" type="submit">提交处理结果</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay" id="interceptBatchSuccessOverlay" hidden>

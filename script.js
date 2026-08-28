@@ -2098,28 +2098,28 @@ window.addEventListener("resize", () => {
   watermarkTimer = setTimeout(buildWatermarks, 120);
 });
 
-const interceptStatusOrder = ["待处理", "已确认", "拦截中", "拦截成功", "拦截失败", "已取消", "已驳回"];
+const interceptStatusOrder = ["待处理", "拦截中", "拦截成功", "拦截失败", "审批拒绝"];
 const interceptStatusLabel = {
   待处理: "待审批",
-  已确认: "已确认",
+  已确认: "拦截中",
   拦截中: "拦截中",
   已完成: "拦截成功",
   拦截成功: "拦截成功",
   拦截失败: "拦截失败",
-  已取消: "已取消",
-  已驳回: "已驳回",
-  "取消/驳回": "已驳回"
+  已取消: "审批拒绝",
+  已驳回: "审批拒绝",
+  "审批拒绝": "审批拒绝"
 };
 const interceptStatusClass = {
   待处理: "is-pending",
-  已确认: "is-confirmed",
+  已确认: "is-processing",
   拦截中: "is-processing",
   已完成: "is-completed",
   拦截成功: "is-completed",
   拦截失败: "is-failed",
   已取消: "is-canceled",
-  已驳回: "is-canceled",
-  "取消/驳回": "is-canceled"
+  "审批拒绝": "is-canceled",
+  已驳回: "is-canceled"
 };
 const interceptTasks = [
   {
@@ -2165,19 +2165,19 @@ const interceptTasks = [
   {
     id: 5, no: "202608010004", waybill: "72", container: "TLLU2026072", system: "TLLU2026072-260715", customer: "23", source: "美仓拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 3,
-    status: "取消/驳回", terminationType: "驳回", interceptType: "拆柜前拦截", reconciliationStatus: "已核销", reason: "客户临时要求取消发货", attachment: "-", customerRemark: "如已出库请同步实际状态", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "拆柜前未能及时完成拦截，货物已拆柜", terminationReason: "拆柜前未能及时完成拦截，货物已拆柜", actualBoxes: "", storageNo: "", resultRemark: "",
+    status: "审批拒绝", terminationType: "", interceptType: "拆柜前拦截", reconciliationStatus: "已核销", reason: "客户临时要求取消发货", attachment: "-", customerRemark: "如已出库请同步实际状态", remark: "", applicant: "客服-刘洋", appliedAt: "2026-08-01 16:32:09", handler: "系统", handleAt: "2026-08-01 16:32:10", failReason: "拆柜前未能及时完成拦截，货物已拆柜", terminationReason: "拆柜前未能及时完成拦截，货物已拆柜", actualBoxes: "", storageNo: "", resultRemark: "",
     logs: [
       { time: "2026-08-01 16:32:09", user: "客服-刘洋", action: "提交申请", change: "- → 待处理", note: "客户要求取消发货" },
-      { time: "2026-08-01 16:32:10", user: "系统", action: "驳回", change: "待处理 → 取消/驳回", note: "货物已完成出库，无法执行拦截" }
+      { time: "2026-08-01 16:32:10", user: "系统", action: "审批拒绝", change: "待处理 → 审批拒绝", note: "货物已完成出库，无法执行拦截" }
     ]
   },
   {
     id: 6, no: "202607310018", waybill: "2", container: "AAAA0000000", system: "AAAA0000000-241109", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
     cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 4,
-    status: "取消/驳回", terminationType: "取消", reconciliationStatus: "已核销", reason: "客户申请暂停发货", attachment: "-", customerRemark: "客户已撤回本次拦截申请", remark: "客户已自行调整订单", cancelReason: "客户主动取消申请", terminationReason: "客户主动取消申请", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
+    status: "审批拒绝", terminationType: "", reconciliationStatus: "已核销", reason: "客户申请暂停发货", attachment: "-", customerRemark: "客户已撤回本次拦截申请", remark: "客户已自行调整订单", cancelReason: "客户主动取消申请", terminationReason: "客户主动取消申请", applicant: "客服-周悦", appliedAt: "2026-07-31 09:11:48", handler: "客服-周悦", handleAt: "2026-07-31 09:32:24", failReason: "", actualBoxes: "", storageNo: "", resultRemark: "客户主动取消申请",
     logs: [
       { time: "2026-07-31 09:11:48", user: "客服-周悦", action: "提交申请", change: "- → 待处理", note: "客户申请暂停发货" },
-      { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "取消申请", change: "待处理 → 取消/驳回", note: "客户主动取消" }
+      { time: "2026-07-31 09:32:24", user: "客服-周悦", action: "审批拒绝", change: "待处理 → 审批拒绝", note: "客户主动取消" }
     ]
   },
   {
@@ -2233,19 +2233,18 @@ const interceptLegacyStatusMap = {
   处理中: "拦截中",
   拦截成功: "已完成",
   拦截失败: "拦截失败",
-  已取消: "已取消",
-  已驳回: "已驳回"
+  已取消: "审批拒绝",
+  已驳回: "审批拒绝"
 };
 
 interceptTasks.forEach((task) => {
   const legacyStatus = task.status;
   task.status = interceptLegacyStatusMap[legacyStatus] || legacyStatus;
-  if (task.status === "取消/驳回") {
-    task.terminationType ||= task.failReason ? "驳回" : "取消";
+  if (task.status === "已确认") task.status = "拦截中";
+  if (task.status === "审批拒绝") {
+    task.terminationType = "";
     task.terminationReason ||= task.failReason || task.cancelReason || task.resultRemark || "-";
   }
-  if (task.status === "已取消") task.terminationType ||= "取消";
-  if (task.status === "已驳回") task.terminationType ||= "驳回";
   if (task.status === "拦截失败") task.terminationType ||= "拦截失败";
   task.latestTracking ||= interceptLatestTrackingDefaults[task.id] || "-";
   task.interceptType ||= task.cargoStatus === "未拆柜" ? "拆柜前拦截" : "拆柜后拦截";
@@ -2256,11 +2255,7 @@ function getInterceptDisplayStatus(task) {
   if (task.status === "待处理") return "待处理";
   if (task.status === "已完成" || task.status === "拦截成功") return "拦截成功";
   if (task.status === "拦截失败") return "拦截失败";
-  if (task.status === "已取消") return "已取消";
-  if (task.status === "已驳回") return "已驳回";
-  if (task.status === "取消/驳回") {
-    return task.terminationType === "取消" ? "已取消" : task.terminationType === "拦截失败" ? "拦截失败" : "已驳回";
-  }
+  if (["已取消", "已驳回", "审批拒绝"].includes(task.status)) return "审批拒绝";
   return task.status;
 }
 
@@ -2280,7 +2275,7 @@ function getInterceptForecastStatus(task) {
     "拦截失败": "预报失败",
     "已驳回": "预报失败",
     "已取消": "已取消",
-    "取消/驳回": task.terminationType === "取消" ? "已取消" : task.terminationType === "拦截失败" ? "预报失败" : "预报失败"
+    "审批拒绝": "预报失败"
   }[task.status] || "待预报";
 }
 
@@ -2908,29 +2903,15 @@ function getVisiblePendingInterceptTasks() {
   return interceptVisibleRows.filter((task) => task.status === "待处理");
 }
 
-function getInterceptStatusReasonColumn() {
+function getInterceptStatusColumns() {
   const status = interceptActiveTab !== "全部" ? interceptActiveTab : interceptFilters.status.value;
-  if (status === "已取消") return { label: "取消原因", field: "terminationReason" };
-  if (status === "已驳回") return { label: "驳回原因", field: "terminationReason" };
-  return null;
+  return status === "审批拒绝" ? [{ label: "审批拒绝原因", field: "terminationReason" }] : [];
 }
 
 function getSelectedPendingInterceptTasks() {
   return [...selectedInterceptIds]
     .map((id) => getInterceptTask(id))
     .filter((task) => task?.status === "待处理");
-}
-
-function getSelectedConfirmedInterceptTasks() {
-  return [...selectedInterceptIds]
-    .map((id) => getInterceptTask(id))
-    .filter((task) => task?.status === "已确认");
-}
-
-function getSelectedCancelableInterceptTasks() {
-  return [...selectedInterceptIds]
-    .map((id) => getInterceptTask(id))
-    .filter((task) => ["待处理", "已确认"].includes(task?.status));
 }
 
 function pruneInterceptSelection() {
@@ -2940,7 +2921,6 @@ function pruneInterceptSelection() {
 
 function updateInterceptBatchControls() {
   const isPendingView = interceptActiveTab === "待处理";
-  const isConfirmedView = interceptActiveTab === "已确认";
   const isInterceptingView = interceptActiveTab === "拦截中";
   const isCompletedView = interceptActiveTab === "已完成";
   const selectableRows = getVisibleSelectableInterceptTasks();
@@ -2955,23 +2935,29 @@ function updateInterceptBatchControls() {
   const noteButton = $("#interceptBatchNoteButton");
   const exportButton = $("#interceptBatchExportButton");
 
-  cancelButton.hidden = !isPendingView && !isConfirmedView;
-  cancelButton.textContent = isConfirmedView ? "驳回" : "取消拦截";
-  confirmButton.hidden = !isPendingView && !isConfirmedView;
-  confirmButton.textContent = isConfirmedView ? "开始拦截" : "确认拦截";
+  cancelButton.hidden = !isPendingView;
+  cancelButton.textContent = "审批拒绝";
+  confirmButton.hidden = !isPendingView;
+  confirmButton.textContent = "通过并开始拦截";
   successButton.hidden = !isInterceptingView;
+  successButton.textContent = "标记拦截成功";
   failureButton.hidden = !isInterceptingView;
+  failureButton.textContent = "标记拦截失败";
   completeButton.hidden = !isInterceptingView;
+  completeButton.textContent = "标记处理完成";
   archiveButton.hidden = !isCompletedView;
+  archiveButton.textContent = "归档记录";
   noteButton.hidden = isCompletedView;
+  noteButton.textContent = "添加备注";
   exportButton.hidden = false;
+  exportButton.textContent = "导出记录";
 
   [cancelButton, confirmButton, completeButton, successButton, failureButton, archiveButton, noteButton, exportButton].forEach((button) => {
     button.disabled = false;
   });
 
   selectAll.disabled = selectableRows.length === 0;
-  selectAll.setAttribute("aria-label", isCompletedView ? "全选已完成拦截单" : isInterceptingView ? "全选拦截中任务" : isConfirmedView ? "全选已确认拦截单" : "全选待审批拦截单");
+  selectAll.setAttribute("aria-label", isCompletedView ? "全选已完成拦截单" : isInterceptingView ? "全选拦截中任务" : "全选待审批拦截单");
   selectAll.checked = selectableRows.length > 0 && selectedCount === selectableRows.length;
   selectAll.indeterminate = selectedCount > 0 && selectedCount < selectableRows.length;
 }
@@ -2980,25 +2966,26 @@ function renderInterceptRows() {
   renderInterceptStatusTabs();
   interceptVisibleRows = getFilteredInterceptTasks();
   pruneInterceptSelection();
-  const statusReasonColumn = getInterceptStatusReasonColumn();
+  const statusColumns = getInterceptStatusColumns();
   const statusReasonHeader = $("#interceptStatusReasonHeader");
-  if (statusReasonHeader) {
-    statusReasonHeader.hidden = !statusReasonColumn;
-    statusReasonHeader.textContent = statusReasonColumn?.label || "";
-  }
+  if (statusReasonHeader) { const column = statusColumns[0]; statusReasonHeader.hidden = !column; statusReasonHeader.textContent = column?.label || ""; }
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   const listHint = $("#interceptListHint");
   if (listHint) listHint.textContent = interceptActiveTab === "已完成"
     ? "已完成任务可在「拦截结果」列查看拦截成功、拦截失败，支持查看结果、日志和导出"
     : "拦截成功后将自动生成暂存单";
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${statusReasonColumn ? 21 : 20}">暂无匹配的拦截任务</td></tr>`;
+    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${20 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
-      const primaryAction = (["待处理", "已确认", "拦截中"].includes(task.status)) ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理</button>' : "";
-      const completeAction = task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="complete" type="button">完成</button>' : "";
-      const retryAction = ["取消/驳回", "拦截失败"].includes(task.status) && task.failReason && getInterceptType(task) === "拆柜前拦截"
+      const primaryAction = task.status === "待处理"
+        ? '<button class="intercept-action" data-intercept-action="handle" type="button">审核申请</button>'
+        : task.status === "拦截中"
+          ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理任务</button>'
+          : "";
+      const completeAction = task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="complete" type="button">标记完成</button>' : "";
+      const retryAction = ["审批拒绝", "拦截失败"].includes(task.status) && task.failReason && getInterceptType(task) === "拆柜前拦截"
         ? '<button class="intercept-action" data-intercept-action="retry-after-unpack" type="button">发起拆柜后拦截</button>'
         : "";
       const completedActions = ["已完成", "拦截成功", "拦截失败"].includes(getInterceptDisplayStatus(task))
@@ -3007,15 +2994,12 @@ function renderInterceptRows() {
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
-      const statusReasonValue = task[statusReasonColumn?.field];
-      const statusReasonCell = statusReasonColumn
-        ? `<td class="intercept-status-reason-cell" title="${escapeHtml(statusReasonValue || "-")}">${escapeHtml(statusReasonValue || "-")}</td>`
-        : "";
+      const statusColumnCells = statusColumns.map((column) => { const value = task[column.field] || task.failReason || task.resultRemark || "-"; return `<td class="intercept-status-reason-cell" title="${escapeHtml(value)}">${escapeHtml(value)}</td>`; }).join("");
       const rowClass = getInterceptDisplayStatus(task) === "拦截失败" ? ' class="intercept-row-failed"' : "";
       return `<tr data-intercept-id="${task.id}"${rowClass}>
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${getInterceptResultTag(task)}</td>${statusReasonCell}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${getInterceptResultTag(task)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
         <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${completeAction}${completedActions}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
@@ -3043,10 +3027,10 @@ function renderInterceptDetail(task, mode = "view") {
   $("#interceptDetailSubTitle").innerHTML = `${getInterceptStatusTag(getInterceptDisplayStatus(task))} <span>${escapeHtml(task.waybill)}</span>`;
 
   const displayStatus = getInterceptDisplayStatus(task);
-  const stepLabels = ["提交申请", "已确认", "拦截中", ["已取消", "已驳回"].includes(displayStatus) ? displayStatus : displayStatus === "拦截失败" ? "拦截失败" : "拦截成功"];
-  const currentStep = displayStatus === "待处理" ? 0 : displayStatus === "已确认" ? 1 : displayStatus === "拦截中" ? 2 : 3;
+  const stepLabels = ["提交申请", "拦截中", displayStatus === "审批拒绝" ? displayStatus : displayStatus === "拦截失败" ? "拦截失败" : "拦截成功"];
+  const currentStep = displayStatus === "待处理" ? 0 : displayStatus === "拦截中" ? 1 : 2;
   $("#interceptFlow").innerHTML = stepLabels.map((label, index) => {
-    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && ["拦截成功", "拦截失败", "已取消", "已驳回"].includes(displayStatus));
+    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && ["拦截成功", "拦截失败", "审批拒绝"].includes(displayStatus));
     const isActive = index === currentStep;
     return `<div class="intercept-flow-step${isComplete ? " is-complete" : ""}${isActive ? " is-active" : ""}"><i>${isComplete ? "✓" : index + 1}</i><span>${label}</span></div>`;
   }).join("");
@@ -3068,7 +3052,7 @@ function renderInterceptDetail(task, mode = "view") {
     field("申请时间", escapeHtml(task.appliedAt)),
     ["拦截成功", "拦截失败"].includes(displayStatus) ? field(displayStatus === "拦截失败" ? "失败原因" : "完成结果", escapeHtml(task.failReason || task.resultRemark || "-")) : "",
     displayStatus === "拦截成功" ? field("归档状态", task.archived ? `已归档${task.archivedAt ? `（${escapeHtml(task.archivedAt)}）` : ""}` : "未归档") : "",
-    ["已取消", "已驳回"].includes(displayStatus) ? field(displayStatus === "已取消" ? "取消原因" : "驳回原因", escapeHtml(task.terminationReason || task.failReason || task.cancelReason || task.resultRemark || "-")) : "",
+    displayStatus === "审批拒绝" ? field("审批拒绝原因", escapeHtml(task.terminationReason || task.failReason || task.cancelReason || task.resultRemark || "-")) : "",
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
     field("备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑备注" style="margin-left:6px">✎</button>`)
   ].join("");
@@ -3077,17 +3061,15 @@ function renderInterceptDetail(task, mode = "view") {
   renderInterceptOtherInfo(task);
   renderInterceptDetailTabs();
 
-  const retryAction = ["已驳回", "拦截失败"].includes(displayStatus) && task.failReason && getInterceptType(task) === "拆柜前拦截"
+  const retryAction = displayStatus === "拦截失败" && task.failReason && getInterceptType(task) === "拆柜前拦截"
     ? '<button class="btn primary" data-detail-action="retry-after-unpack" type="button">发起拆柜后拦截</button>'
     : "";
   const actions = mode === "process"
     ? task.status === "待处理"
-      ? '<button class="btn" data-detail-action="cancel" type="button">取消申请</button><button class="btn primary" data-detail-action="confirm" type="button">确认拦截</button>'
-      : task.status === "已确认"
-        ? '<button class="btn" data-detail-action="cancel" type="button">驳回</button><button class="btn primary" data-detail-action="start" type="button">开始拦截</button>'
-        : task.status === "拦截中"
-          ? '<button class="btn" data-detail-action="failure" type="button">拦截失败</button><button class="btn" data-detail-action="complete" type="button">处理完成</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
-          : ""
+      ? '<button class="btn danger" data-detail-action="cancel" type="button">\u5ba1\u6279\u62d2\u7edd</button><button class="btn primary" data-detail-action="confirm" type="button">\u901a\u8fc7\u5e76\u5f00\u59cb\u62e6\u622a</button>'
+      : task.status === "拦截中"
+        ? '<button class="btn danger" data-detail-action="failure" type="button">\u6807\u8bb0\u62e6\u622a\u5931\u8d25</button><button class="btn" data-detail-action="complete" type="button">\u6807\u8bb0\u5904\u7406\u5b8c\u6210</button><button class="btn primary" data-detail-action="success" type="button">\u6807\u8bb0\u62e6\u622a\u6210\u529f</button>'
+        : ""
     : retryAction;
   const completedAction = displayStatus === "拦截成功" && task.storageNo
     ? '<button class="btn primary" data-detail-action="storage" type="button">查看暂存详情</button>'
@@ -3137,44 +3119,36 @@ function applyInterceptConfirm(task) {
   if (!task || task.status !== "待处理") return false;
   const previousStatus = task.status;
   if (task.cargoStatus === "已出库") {
-    task.status = "取消/驳回";
-    task.terminationType = "驳回";
+    task.status = "审批拒绝";
+  task.terminationType = "";
     task.failReason = "货物已完成出库";
     task.terminationReason = task.failReason;
     task.resultRemark = "系统校验货物已完成出库，无法执行拦截";
-    addInterceptLog(task, "驳回", previousStatus, task.resultRemark, "系统");
+    addInterceptLog(task, "审批拒绝", previousStatus, task.resultRemark, "系统");
     return true;
   }
-  task.status = "已确认";
-  addInterceptLog(task, "确认拦截", previousStatus, task.cargoStatus === "未拆柜" ? "货物未拆柜，已确认预报拦截申请" : "货物已入库，已确认仓库拦截申请");
-  return true;
-}
-
-function applyInterceptStart(task) {
-  if (!task || task.status !== "已确认") return false;
-  const previousStatus = task.status;
   task.status = "拦截中";
-  addInterceptLog(task, "开始拦截", previousStatus, "仓库已开始执行拦截任务");
+  addInterceptLog(task, "通过并开始拦截", previousStatus, "审批通过，仓库开始执行拦截任务");
   return true;
 }
 
 function applyInterceptCancel(task, reason = "") {
-  if (!task || !["待处理", "已确认"].includes(task.status)) return false;
+  if (!task || task.status !== "待处理") return false;
   const previousStatus = task.status;
-  task.status = "取消/驳回";
-  task.terminationType = previousStatus === "已确认" ? "驳回" : "取消";
+  task.status = "审批拒绝";
+  task.terminationType = "";
   task.cancelReason = reason;
   task.terminationReason = reason;
   task.resultRemark = reason || "取消拦截申请";
-  task.remark = task.remark ? `${task.remark}；取消原因：${reason}` : `取消原因：${reason}`;
-  addInterceptLog(task, previousStatus === "已确认" ? "驳回" : "取消申请", previousStatus, reason || "取消/驳回拦截申请", "客服-张敏");
+  task.remark = task.remark ? `${task.remark}；处理原因：${reason}` : `处理原因：${reason}`;
+  addInterceptLog(task, "审批拒绝", previousStatus, reason || "审批拒绝拦截申请", "客服-张敏");
   return true;
 }
 
 function createAfterUnpackInterceptTask(task) {
-  if (!task || !["取消/驳回", "拦截失败"].includes(task.status) || !task.failReason || getInterceptType(task) !== "拆柜前拦截") return false;
+  if (!task || !["审批拒绝", "拦截失败"].includes(task.status) || !task.failReason || getInterceptType(task) !== "拆柜前拦截") return false;
   const existingRetry = interceptTasks.find((candidate) => (
-    candidate.retryOf === task.no && ["待处理", "已确认", "拦截中"].includes(candidate.status)
+    candidate.retryOf === task.no && ["待处理", "拦截中"].includes(candidate.status)
   ));
   if (existingRetry) {
     showInterceptToast(`该拦截单已有拆柜后拦截任务：${existingRetry.no}`);
@@ -3217,7 +3191,7 @@ function createAfterUnpackInterceptTask(task) {
     time: now,
     user: "客服-张敏",
     action: "发起拆柜后拦截",
-    change: "取消/驳回 → -",
+    change: "审批拒绝 → -",
     note: `已创建新任务 ${nextTask.no}，新任务进入待处理，指令费用需重新录入`
   });
   refreshInterceptFilterOptions();
@@ -3244,19 +3218,12 @@ function confirmInterceptTask() {
   refreshInterceptUI();
 }
 
-function startInterceptTask() {
-  const task = getInterceptTask();
-  if (!task || task.status !== "已确认") return;
-  if (!window.confirm("确认开始执行该拦截任务吗？")) return;
-  applyInterceptStart(task);
-  refreshInterceptUI();
-}
-
 function cancelInterceptTask() {
   const task = getInterceptTask();
-  if (!task || !["待处理", "已确认"].includes(task.status)) return;
+  if (!task || task.status !== "待处理") return;
   interceptCancelContext = { mode: "single", taskId: task.id };
-  $("#interceptCancelReasonTitle").textContent = task.status === "已确认" ? "驳回拦截" : "取消拦截";
+  $("#interceptCancelReasonTitle").textContent = "审批拒绝";
+  $("#interceptCancelReasonHint").textContent = "该申请将进入审批拒绝状态，请填写审批拒绝原因。";
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3271,35 +3238,23 @@ function confirmSelectedInterceptTasks() {
   if (!confirmInterceptWithFeeWarning(tasks)) return;
   const outboundCount = tasks.filter((task) => task.cargoStatus === "已出库").length;
   const message = outboundCount
-    ? `确认选中的 ${tasks.length} 条拦截申请吗？其中 ${outboundCount} 条货物已出库，将自动归入取消/驳回。`
-    : `确认选中的 ${tasks.length} 条拦截申请吗？`;
+    ? `确认通过选中的 ${tasks.length} 条拦截申请吗？其中 ${outboundCount} 条货物已出库，将自动归入审批拒绝。`
+    : `确认通过选中的 ${tasks.length} 条拦截申请吗？`;
   if (!window.confirm(message)) return;
   tasks.forEach(applyInterceptConfirm);
   selectedInterceptIds.clear();
   refreshInterceptUI();
 }
 
-function startSelectedInterceptTasks() {
-  const tasks = getSelectedConfirmedInterceptTasks();
-  if (!tasks.length) {
-    showInterceptToast("请勾选已确认任务");
-    return;
-  }
-  if (!window.confirm(`确认开始处理选中的 ${tasks.length} 条拦截任务吗？`)) return;
-  tasks.forEach(applyInterceptStart);
-  selectedInterceptIds.clear();
-  interceptActiveTab = "拦截中";
-  refreshInterceptUI();
-}
-
 function cancelSelectedInterceptTasks() {
-  const tasks = getSelectedCancelableInterceptTasks();
+  const tasks = getSelectedPendingInterceptTasks();
   if (!tasks.length) {
     showInterceptToast();
     return;
   }
   interceptCancelContext = { mode: "batch", taskIds: tasks.map((t) => t.id) };
-  $("#interceptCancelReasonTitle").textContent = interceptActiveTab === "已确认" ? `批量驳回（${tasks.length}条）` : `批量取消拦截（${tasks.length}条）`;
+  $("#interceptCancelReasonTitle").textContent = `批量审批拒绝（${tasks.length}条）`;
+  $("#interceptCancelReasonHint").textContent = `将有 ${tasks.length} 条申请进入审批拒绝，请填写统一拒绝原因。`;
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3311,9 +3266,9 @@ function exportInterceptTasks() {
     showInterceptToast();
     return;
   }
-  const statusReasonColumn = getInterceptStatusReasonColumn();
+  const statusColumns = getInterceptStatusColumns();
   const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截结果", "拦截箱数", "指令费用", "核销状态", "客户备注", "备注", "拦截来源", "申请人", "申请时间", "处理人", "处理时间"];
-  if (statusReasonColumn) headers.splice(8, 0, statusReasonColumn.label);
+  if (statusColumns.length) headers.splice(8, 0, ...statusColumns.map((column) => column.label));
   const rows = tasks.map((task) => {
     const result = getInterceptDisplayStatus(task);
     return [
@@ -3322,11 +3277,7 @@ function exportInterceptTasks() {
       task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
     ];
   });
-  if (statusReasonColumn) rows.forEach((row, index) => {
-    const task = tasks[index];
-    const value = task[statusReasonColumn.field];
-    row.splice(8, 0, value || "");
-  });
+  if (statusColumns.length) rows.forEach((row, index) => { const task = tasks[index]; row.splice(8, 0, ...statusColumns.map((column) => task[column.field] || "")); });
   const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -3399,7 +3350,7 @@ function submitInterceptCancelReason(event) {
   event.preventDefault();
   const reason = $("#interceptCancelReasonText").value.trim();
   if (!reason) {
-    window.alert("请输入取消原因");
+    window.alert("请填写处理原因后再提交");
     return;
   }
   if (interceptCancelContext.mode === "single") {
@@ -3502,7 +3453,7 @@ function batchInterceptSuccess() {
     return;
   }
   $("#interceptBatchSuccessTitle").textContent = "拦截成功";
-  $("#interceptBatchSuccessSummary").textContent = `已选择 ${tasks.length} 条处理中的记录，确认后将自动生成暂存单。`;
+  $("#interceptBatchSuccessSummary").textContent = `已选择 ${tasks.length} 条拦截中任务，确认成功后将生成暂存单。`;
   $("#interceptBatchSuccessNote").value = "";
   $("#interceptBatchSuccessOverlay").hidden = false;
   $("#interceptBatchSuccessNote").focus();
@@ -3515,7 +3466,7 @@ function batchInterceptFailure() {
     return;
   }
   $("#interceptBatchFailureTitle").textContent = "拦截失败";
-  $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条处理中的记录，请填写失败原因。`;
+  $("#interceptBatchFailureSummary").textContent = `已选择 ${tasks.length} 条拦截中任务，请填写失败原因。`;
   $("#interceptBatchFailureReason").value = "";
   $("#interceptBatchFailureOverlay").hidden = false;
   $("#interceptBatchFailureReason").focus();
@@ -3716,8 +3667,7 @@ function initInterceptManagement() {
   $("#interceptSearchButton").addEventListener("click", renderInterceptRows);
   $("#interceptBatchCancelButton").addEventListener("click", cancelSelectedInterceptTasks);
   $("#interceptBatchConfirmButton").addEventListener("click", () => {
-    if (interceptActiveTab === "已确认") startSelectedInterceptTasks();
-    else confirmSelectedInterceptTasks();
+    confirmSelectedInterceptTasks();
   });
   $("#interceptBatchSuccessButton").addEventListener("click", batchInterceptSuccess);
   $("#interceptBatchFailureButton").addEventListener("click", batchInterceptFailure);
@@ -3923,7 +3873,6 @@ function initInterceptManagement() {
     if (action === "close") closeInterceptDetail();
     if (action === "handle" && task) openInterceptDetail(task.id, "process");
     if (action === "confirm") confirmInterceptTask();
-    if (action === "start") startInterceptTask();
     if (action === "complete" && task) completeInterceptTasks([task]);
     if (action === "retry-after-unpack" && task) createAfterUnpackInterceptTask(task);
     if (action === "cancel") cancelInterceptTask();
