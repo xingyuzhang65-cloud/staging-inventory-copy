@@ -139,13 +139,13 @@
             
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn danger" id="interceptBatchCancelButton" type="button" hidden>审批拒绝</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>通过并开始拦截</button><button class="btn primary" id="interceptBatchCompleteButton" type="button" hidden>标记处理完成</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>标记拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>标记拦截失败</button><button class="btn" id="interceptBatchArchiveButton" type="button" hidden>归档记录</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>添加备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出记录</button></div>
+          <div class="status-actions"><button class="btn danger" id="interceptBatchCancelButton" type="button" hidden>审批拒绝</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>审批通过</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>批量备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
         </div>
         <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span id="interceptListHint">拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
           <table class="intercept-table">
             <thead><tr>
-              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截类型</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>预报单状态</th><th>拦截原因</th><th>拦截结果</th><th id="interceptStatusReasonHeader" hidden></th><th>拦截箱数</th><th>指令费用</th><th>核销状态</th><th>客户备注</th><th>备注</th><th>拦截来源</th><th>申请人</th><th>申请时间</th><th>处理人</th><th>处理时间</th><th>操作</th>
+              <th class="intercept-check"><input id="interceptSelectAll" type="checkbox" aria-label="全选待处理拦截单" /></th><th>客户名称</th><th>拦截类型</th><th>拦截单号</th><th>入仓号</th><th>柜号</th><th>预报单状态</th><th>拦截原因</th><th>拦截结果</th><th id="interceptStatusReasonHeader" hidden></th><th>拦截箱数</th><th>指令费用</th><th>核销状态</th><th>客户备注</th><th>备注</th><th>拦截来源</th><th>申请人</th><th>申请时间</th><th class="intercept-handler-col">处理人</th><th class="intercept-handled-at-col">处理时间</th><th class="intercept-operation-col">操作</th>
             </tr></thead>
             <tbody id="interceptTableBody"></tbody>
           </table>
@@ -272,7 +272,7 @@
     <form id="interceptBatchFailureForm"><div class="intercept-feedback-content"><p id="interceptBatchFailureSummary"></p><label><span class="required">失败原因</span><textarea id="interceptBatchFailureReason" maxlength="200" required placeholder="请填写失败原因"></textarea></label></div><footer><button class="btn" id="interceptBatchFailureCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
-<div class="intercept-overlay" id="interceptBatchNoteOverlay" hidden>>
+<div class="intercept-overlay" id="interceptBatchNoteOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchNoteTitle">
     <header><h2 id="interceptBatchNoteTitle">备注</h2><button class="intercept-close" id="interceptBatchNoteClose" type="button" aria-label="关闭备注">×</button></header>
     <form id="interceptBatchNoteForm"><div class="intercept-feedback-content"><label><span>备注内容</span><textarea id="interceptBatchNoteText" maxlength="200" placeholder="请输入备注内容" required></textarea></label></div><footer><button class="btn" id="interceptBatchNoteCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>

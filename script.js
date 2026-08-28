@@ -2923,6 +2923,8 @@ function updateInterceptBatchControls() {
   const isPendingView = interceptActiveTab === "待处理";
   const isInterceptingView = interceptActiveTab === "拦截中";
   const isCompletedView = interceptActiveTab === "已完成";
+  const isRejectedView = interceptActiveTab === "审批拒绝";
+  const isAllView = interceptActiveTab === "全部";
   const selectableRows = getVisibleSelectableInterceptTasks();
   const selectedCount = selectableRows.filter((task) => selectedInterceptIds.has(task.id)).length;
   const selectAll = $("#interceptSelectAll");
@@ -2930,29 +2932,23 @@ function updateInterceptBatchControls() {
   const confirmButton = $("#interceptBatchConfirmButton");
   const successButton = $("#interceptBatchSuccessButton");
   const failureButton = $("#interceptBatchFailureButton");
-  const completeButton = $("#interceptBatchCompleteButton");
-  const archiveButton = $("#interceptBatchArchiveButton");
   const noteButton = $("#interceptBatchNoteButton");
   const exportButton = $("#interceptBatchExportButton");
 
   cancelButton.hidden = !isPendingView;
   cancelButton.textContent = "审批拒绝";
   confirmButton.hidden = !isPendingView;
-  confirmButton.textContent = "通过并开始拦截";
+  confirmButton.textContent = "审批通过";
   successButton.hidden = !isInterceptingView;
-  successButton.textContent = "标记拦截成功";
+  successButton.textContent = "拦截成功";
   failureButton.hidden = !isInterceptingView;
-  failureButton.textContent = "标记拦截失败";
-  completeButton.hidden = !isInterceptingView;
-  completeButton.textContent = "标记处理完成";
-  archiveButton.hidden = !isCompletedView;
-  archiveButton.textContent = "归档记录";
-  noteButton.hidden = isCompletedView;
-  noteButton.textContent = "添加备注";
+  failureButton.textContent = "拦截失败";
+  noteButton.hidden = isCompletedView || isRejectedView || isAllView;
+  noteButton.textContent = "批量备注";
   exportButton.hidden = false;
-  exportButton.textContent = "导出记录";
+  exportButton.textContent = "导出";
 
-  [cancelButton, confirmButton, completeButton, successButton, failureButton, archiveButton, noteButton, exportButton].forEach((button) => {
+  [cancelButton, confirmButton, successButton, failureButton, noteButton, exportButton].forEach((button) => {
     button.disabled = false;
   });
 
@@ -2984,7 +2980,6 @@ function renderInterceptRows() {
         : task.status === "拦截中"
           ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理任务</button>'
           : "";
-      const completeAction = task.status === "拦截中" ? '<button class="intercept-action" data-intercept-action="complete" type="button">标记完成</button>' : "";
       const retryAction = ["审批拒绝", "拦截失败"].includes(task.status) && task.failReason && getInterceptType(task) === "拆柜前拦截"
         ? '<button class="intercept-action" data-intercept-action="retry-after-unpack" type="button">发起拆柜后拦截</button>'
         : "";
@@ -3000,8 +2995,8 @@ function renderInterceptRows() {
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
         <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${getInterceptResultTag(task)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
-        <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td>${escapeHtml(task.handler || "-")}</td><td>${escapeHtml(task.handleAt || "-")}</td>
-        <td><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${completeAction}${completedActions}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
+        <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td class="intercept-handler-col" title="${escapeHtml(task.handler || "-")}">${escapeHtml(task.handler || "-")}</td><td class="intercept-handled-at-col" title="${escapeHtml(task.handleAt || "-")}">${escapeHtml(task.handleAt || "-")}</td>
+        <td class="intercept-operation-col"><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${completedActions}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
   }
@@ -3066,9 +3061,9 @@ function renderInterceptDetail(task, mode = "view") {
     : "";
   const actions = mode === "process"
     ? task.status === "待处理"
-      ? '<button class="btn danger" data-detail-action="cancel" type="button">\u5ba1\u6279\u62d2\u7edd</button><button class="btn primary" data-detail-action="confirm" type="button">\u901a\u8fc7\u5e76\u5f00\u59cb\u62e6\u622a</button>'
+      ? '<button class="btn danger" data-detail-action="cancel" type="button">审批拒绝</button><button class="btn primary" data-detail-action="confirm" type="button">审批通过</button>'
       : task.status === "拦截中"
-        ? '<button class="btn danger" data-detail-action="failure" type="button">\u6807\u8bb0\u62e6\u622a\u5931\u8d25</button><button class="btn" data-detail-action="complete" type="button">\u6807\u8bb0\u5904\u7406\u5b8c\u6210</button><button class="btn primary" data-detail-action="success" type="button">\u6807\u8bb0\u62e6\u622a\u6210\u529f</button>'
+        ? '<button class="btn danger" data-detail-action="failure" type="button">拦截失败</button><button class="btn primary" data-detail-action="success" type="button">拦截成功</button>'
         : ""
     : retryAction;
   const completedAction = displayStatus === "拦截成功" && task.storageNo
@@ -3128,7 +3123,7 @@ function applyInterceptConfirm(task) {
     return true;
   }
   task.status = "拦截中";
-  addInterceptLog(task, "通过并开始拦截", previousStatus, "审批通过，仓库开始执行拦截任务");
+  addInterceptLog(task, "审批通过", previousStatus, "审批通过，仓库开始执行拦截任务");
   return true;
 }
 
@@ -3671,8 +3666,6 @@ function initInterceptManagement() {
   });
   $("#interceptBatchSuccessButton").addEventListener("click", batchInterceptSuccess);
   $("#interceptBatchFailureButton").addEventListener("click", batchInterceptFailure);
-  $("#interceptBatchCompleteButton").addEventListener("click", completeSelectedInterceptTasks);
-  $("#interceptBatchArchiveButton").addEventListener("click", archiveSelectedCompletedTasks);
   $("#interceptBatchNoteButton").addEventListener("click", batchRemarkInterceptTasks);
   $("#interceptBatchExportButton").addEventListener("click", exportInterceptTasks);
   $("#interceptSelectAll").addEventListener("change", (event) => {

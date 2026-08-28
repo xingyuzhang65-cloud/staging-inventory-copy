@@ -527,17 +527,25 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-table th:nth-child(17) { width: 96px; }
 .intercept-table th:nth-child(16),
 .intercept-table th:nth-child(18) { width: 142px; }
-.intercept-table th:nth-child(19),
-.intercept-table td:nth-child(19) {
+.intercept-table .intercept-handler-col { width: 116px; }
+.intercept-table .intercept-handled-at-col { width: 152px; }
+.intercept-table .intercept-operation-col {
   position: sticky;
   z-index: 3;
   right: 0;
-  width: 168px;
+  width: 214px;
   border-left: 1px solid #e8ebee;
   background: #fff;
   box-shadow: -8px 0 12px rgba(29,42,54,.08);
 }
-.intercept-table td:nth-child(19) { white-space: normal; }
+.intercept-table th.intercept-operation-col {
+  z-index: 4;
+  background: #fafbfc;
+}
+.intercept-table td.intercept-operation-col {
+  white-space: normal;
+  line-height: 22px;
+}
 .intercept-table th:nth-child(10),
 .intercept-table td:nth-child(10) {
   text-align: left;
