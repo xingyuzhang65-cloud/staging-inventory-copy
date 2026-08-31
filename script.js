@@ -386,6 +386,7 @@ let activeStatus = "待审批";
 let visibleRows = [...approvalRows];
 
 const instructionWorkflowRows = [
+  inventoryRows,
   approvalRows,
   instructionPendingRows,
   instructionProcessingRows,
@@ -775,7 +776,7 @@ function renderTableChrome() {
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
-    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="sortable">入库时间</th>
+    <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th><th class="sortable">入库时间</th>
     <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
     <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
   </tr>`;
@@ -795,7 +796,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    const emptyColumns = isDestroyedView() ? 30 : isInstructionView() || isOutboundView() ? 23 : isApprovalView() ? 22 : isTerminalRequestView() ? 22 : 19;
+    const emptyColumns = isDestroyedView() ? 30 : isInstructionView() || isOutboundView() ? 23 : isApprovalView() ? 22 : isTerminalRequestView() ? 22 : 22;
     body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
@@ -841,6 +842,9 @@ function renderRows() {
       <td title="${row.destination}">${row.destination}</td>
       <td title="${row.dispatch}">${row.dispatch}</td>
       <td title="${row.pallet}">${row.pallet}</td>
+      <td class="instruction-remark-col">${renderInstructionRemarkSummary(row)}</td>
+      <td class="instruction-image-col">${renderInstructionImageSummary(row)}</td>
+      <td class="instruction-status-col">${renderInstructionStatusSummary(row)}</td>
       <td>${row.time}</td>
       <td>${row.weight || 0}</td><td>${row.volume || 0}</td><td>${row.boxes}</td>
       <td>${row.pending}</td><td>${row.unsent}</td><td>${row.sent}</td>
@@ -1040,10 +1044,14 @@ $("#exportButton").addEventListener("click", () => {
   requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
   const header = isRequestTableView()
     ? requestHeader
-    : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
+    : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","备注","图片","指令状态","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
   const lines = [header, ...visibleRows.map((r) => {
     if (!isRequestTableView()) {
-      return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
+      const instructionRows = getListInstructionRows(r);
+      const instructionRemarks = instructionRows.map((instruction) => instruction.remark).filter(Boolean).join("；") || "备注";
+      const instructionImages = instructionRows.reduce((total, instruction) => total + (instruction.images?.length || 0), 0);
+      const instructionCompleted = instructionRows.filter((instruction) => instruction.status === "已处理").length;
+      return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,instructionRemarks,instructionImages ? `${instructionImages} 张` : "暂无图片",`${instructionCompleted}/${instructionRows.length} 已处理`,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
     }
     const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,getReleaseType(r),r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
     if (isApprovalView() || isTerminalRequestView()) requestRow.push(getInstructionCount(r), getInstructionText(r));
@@ -1271,12 +1279,14 @@ function addReleaseAttachments(files) {
 
 function renderInstructionList() {
   const target = $("#instructionBody");
+  const listWrap = target?.closest(".instruction-list-wrap");
+  if (listWrap) listWrap.scrollLeft = 0;
   const rows = getActiveInstructionRows();
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="17"><i>▤</i>暂无数据</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="18"><i>▤</i>暂无数据</td></tr>';
     return;
   }
-  target.innerHTML = rows.map((row) => {
+  target.innerHTML = rows.map((row, index) => {
     const originalAmount = Number.isFinite(Number(row.originalAmount))
       ? Number(row.originalAmount)
       : Number(row.price || 0) * Number(row.quantity || 1);
@@ -1295,14 +1305,26 @@ function renderInstructionList() {
     const imageControl = `<div class="instruction-image-cell"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无图片</span>'}</div><div class="instruction-image-actions"><input class="instruction-image-input" data-code="${escapeHtml(row.code)}" type="file" accept="image/*" multiple hidden /><button class="instruction-image-upload" data-code="${escapeHtml(row.code)}" type="button"${instructionImages.length >= 9 ? " disabled" : ""}>上传图片</button><span>${instructionImages.length}/9</span></div></div>`;
     const remarkControl = `<div class="instruction-remark-display"><span title="${escapeHtml(instructionRemark || "-")}">${escapeHtml(instructionRemark || "-")}</span><button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">${instructionRemark ? "编辑" : "添加"}</button></div>`;
     const operationControl = `<button class="instruction-edit" data-code="${row.code}" type="button">编辑</button><button class="instruction-delete" data-code="${row.code}" type="button">删除</button>`;
+    const status = row.status === "已处理" ? "已处理" : "待处理";
+    const statusClass = status === "已处理" ? "is-complete" : "is-pending";
+    const canEditStatus = !activeReleaseReadOnly && ["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus);
+    const statusControl = canEditStatus
+      ? `<select class="instruction-detail-status ${statusClass}" data-instruction-index="${index}" aria-label="设置${escapeHtml(row.name)}状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
+      : `<span class="instruction-detail-status-tag ${statusClass}">${status}</span>`;
     return `<tr>
       <td class="instruction-check-col"><input class="instruction-row-status-check" data-code="${escapeHtml(row.code)}" type="checkbox" aria-label="选择${escapeHtml(row.name)}"${checked} /></td>
       <td>${escapeHtml(row.chargeDate || row.addedAt || "-")}</td><td>${escapeHtml(row.name || "-")}</td><td>${escapeHtml(row.type || "-")}</td><td>${escapeHtml(row.unit || "-")}</td>
       <td>${escapeHtml(row.exchangeRate || "1")}</td><td>${escapeHtml(row.price || "0")}</td><td>${escapeHtml(row.quantity || "1")}</td><td>${escapeHtml(row.currency || "-")}</td>
       <td>${originalAmount.toFixed(2)}</td><td>${cnyAmount.toFixed(2)}</td><td>${escapeHtml(row.addedAt || "-")}</td><td>${escapeHtml(row.addedBy || "-")}</td>
-      <td class="instruction-description">${escapeHtml(row.description || row.rawText || "-")}</td><td>${remarkControl}</td><td>${imageControl}</td><td class="instruction-actions">${operationControl}</td>
+      <td class="instruction-description">${escapeHtml(row.description || row.rawText || "-")}</td><td>${remarkControl}</td><td>${imageControl}</td><td>${statusControl}</td><td class="instruction-actions">${operationControl}</td>
     </tr>`;
   }).join("");
+}
+
+function resetInstructionTableScroll() {
+  document.querySelectorAll(".instruction-list-wrap, .intercept-fee-modal-table-wrap").forEach((wrap) => {
+    wrap.scrollLeft = 0;
+  });
 }
 
 function formatLocalDateTime() {
@@ -1402,6 +1424,119 @@ let activeReleaseReadOnly = false;
 let activeReleaseStatus = "暂存";
 let activeReleaseOrderType = "发货";
 const selectedDetailInstructionCodes = new Set();
+
+function getSubmittedInstructionRows() {
+  const rows = getActiveInstructionRows();
+  if (!selectedDetailInstructionCodes.size) return rows;
+  const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
+  return selectedRows.length ? selectedRows : rows;
+}
+
+function getNextApprovalApplicationNo() {
+  const prefix = formatLocalDateTime().slice(0, 10).replaceAll("-", "");
+  const usedNumbers = approvalRows
+    .map((row) => String(row.applicationNo || ""))
+    .filter((applicationNo) => applicationNo.startsWith(prefix))
+    .map((applicationNo) => Number(applicationNo.slice(prefix.length)))
+    .filter(Number.isFinite);
+  return `${prefix}${String(Math.max(0, ...usedNumbers) + 1).padStart(3, "0")}`;
+}
+
+function getReleaseApplicationTypeValue() {
+  const application = $("#releaseApplication").value;
+  if (application === "FBA") return "FBA仓库";
+  if (application === "私人地址") return "其他地址";
+  return application;
+}
+
+function getReleaseDestinationValue() {
+  if (isPrivateAddressRelease()) return $("#releasePrivateAddress").value.trim() || activeReleaseRow.destination;
+  if (isMarketplaceRelease()) return $("#releaseWarehouseCode").value.trim() || activeReleaseRow.destination;
+  return $("#releaseDestination").value || activeReleaseRow.destination;
+}
+
+function getReleaseDispatchValue() {
+  if (isPrivateAddressRelease()) return $("#releasePrivateDispatch").value || activeReleaseRow.dispatch;
+  if (isMarketplaceRelease()) return $("#releaseMarketplaceDispatch").value || activeReleaseRow.dispatch;
+  return $("#releaseMethod").value || activeReleaseRow.dispatch;
+}
+
+function getReleaseScheduleValue() {
+  const value = isPrivateAddressRelease()
+    ? $("#releasePrivateDate").value
+    : isMarketplaceRelease()
+      ? $("#releaseMarketplaceDate").value
+      : $("#releaseDate").value;
+  return value ? value.replace("T", " ") : "";
+}
+
+function getReleaseRemarkValue() {
+  if (activeReleaseOrderType !== "发货") return $("#releaseShipOutRemark").value.trim();
+  if (isPrivateAddressRelease()) return $("#releasePrivateRemark").value.trim();
+  if (isMarketplaceRelease()) return $("#releaseOverseasRemark").value.trim();
+  return $("#releaseRemark").value.trim();
+}
+
+function createApprovalRequestFromActiveRelease(appliedBoxes) {
+  if (!activeReleaseRow || !activeReleaseSourceRow) return null;
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  const detailRows = getActiveInstructionRows();
+  instructionRowsByInventory.set(detailKey, detailRows);
+  syncInstructionDetails(detailKey, detailRows);
+
+  const submittedInstructionRows = getSubmittedInstructionRows();
+  const nextApprovalId = approvalRows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0) + 1;
+  const appliedBoxCount = Number(appliedBoxes) || 0;
+  const totalBoxes = Math.max(1, Number(activeReleaseRow.boxes || activeReleaseRow.unsent || appliedBoxCount || 1));
+  const appliedVolume = Number(((Number(activeReleaseRow.volume || 0) / totalBoxes) * appliedBoxCount).toFixed(3));
+  const releaseApplication = $("#releaseApplication").value;
+  const requestRow = {
+    ...activeReleaseSourceRow,
+    id: nextApprovalId,
+    applicationNo: getNextApprovalApplicationNo(),
+    blocked: activeReleaseRow.blocked,
+    applicationType: getReleaseApplicationTypeValue(),
+    releaseApplication,
+    releaseType: activeReleaseOrderType,
+    shippingEnabled: activeReleaseOrderType === "发货",
+    shipmentId: isPrivateAddressRelease() ? "" : ($("#releaseShipment").value.trim() || activeReleaseRow.shipmentId || ""),
+    referenceId: isPrivateAddressRelease() ? "" : ($("#releaseReference").value.trim() || activeReleaseRow.referenceId || ""),
+    destination: getReleaseDestinationValue(),
+    dispatch: getReleaseDispatchValue(),
+    transfer: activeReleaseRow.transfer,
+    pallet: activeReleaseRow.pallet,
+    inboundTime: activeReleaseRow.time || activeReleaseRow.inboundTime || "",
+    appliedBoxes: appliedBoxCount,
+    appliedVolume,
+    chargedPallets: activeReleaseSourceRow.chargedPallets || "",
+    approvalStage: "待仓库审批",
+    financialAudit: "未审核",
+    instructionAudit: submittedInstructionRows.length ? "未审核" : "已审核",
+    scheduledShippingTime: getReleaseScheduleValue(),
+    customerRemark: getReleaseRemarkValue(),
+    attachments: getReleaseAttachments().map((attachment) => ({ ...attachment })),
+    instructions: submittedInstructionRows.map((row) => ({
+      text: buildInstructionText(row),
+      completed: row.status === "已处理"
+    })),
+    status: "待审批"
+  };
+  approvalRows.unshift(requestRow);
+  updateStatusTabCount("待审批", approvalRows.length);
+  return requestRow;
+}
+
+function finishReleaseSubmission(appliedBoxes) {
+  const createdApprovalRequest = activeReleaseStatus === "暂存" && Boolean(activeReleaseSourceRow)
+    ? createApprovalRequestFromActiveRelease(appliedBoxes)
+    : null;
+  closeReleaseDrawer();
+  if (createdApprovalRequest) {
+    showStagingInventory("待审批");
+    return;
+  }
+  renderRows();
+}
 
 function normalizeReleaseRow(row) {
   const pallet = row.pallet || "-";
@@ -1562,6 +1697,10 @@ function openReleaseDrawer(sourceRow, options = {}) {
   renderCargoBoxRows(row);
   renderReleaseAttachments();
   renderInstructionList();
+  requestAnimationFrame(() => {
+    resetInstructionTableScroll();
+    requestAnimationFrame(resetInstructionTableScroll);
+  });
   if (!readOnly) requestAnimationFrame(() => (isMarketplaceRelease() ? $("#releaseWarehouseCode") : isPrivateAddressRelease() ? $("#releasePrivateDispatch") : destination).focus());
 }
 
@@ -2051,7 +2190,7 @@ releaseForm.addEventListener("submit", (event) => {
       activeReleaseSourceRow.destroyBoxNo = $("#releaseDestroyBoxNo").value.trim();
       activeReleaseSourceRow.shipOutRemark = $("#releaseShipOutRemark").value;
     }
-    closeReleaseDrawer();
+    finishReleaseSubmission(boxes);
     return;
   }
   const boxesControl = isPrivateAddressRelease()
@@ -2066,8 +2205,9 @@ releaseForm.addEventListener("submit", (event) => {
     return;
   }
   boxesControl.setCustomValidity("");
-  activeReleaseRow.customerRemark = $("#releaseRemark").value.trim();
-  closeReleaseDrawer();
+  activeReleaseRow.customerRemark = getReleaseRemarkValue();
+  if (activeReleaseSourceRow) activeReleaseSourceRow.customerRemark = activeReleaseRow.customerRemark;
+  finishReleaseSubmission(boxes);
 });
 $("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
 $("#releaseMarketplaceBoxes").addEventListener("input", () => $("#releaseMarketplaceBoxes").setCustomValidity(""));
@@ -2302,6 +2442,7 @@ let interceptDetailTab = "cargo";
 let interceptFeeDraftRows = [];
 let interceptFeeDraftSequence = 0;
 let interceptFeeDraftFocusId = null;
+const selectedInterceptFeeIds = new Set();
 let interceptAttachmentRowsByTask = new Map();
 let interceptAttachmentEditingId = null;
 let interceptAttachmentDeletingId = null;
@@ -2469,14 +2610,20 @@ function renderInterceptLog(task) {
 
 function getInterceptInstructionRows(task) {
   if (Array.isArray(task?.fees)) {
-    return task.fees.map((fee) => ({
-      ...fee,
-      name: fee.name || "费用",
-      price: fee.unitPrice,
-      quantity: fee.quantity || 1,
-      currency: fee.currency || "人民币",
-      description: fee.remark || fee.description || ""
-    }));
+    return task.fees.map((fee, index) => {
+      normalizeInterceptFeeRow(fee, task, index);
+      return {
+        ...fee,
+        name: fee.name || "费用",
+        price: fee.price ?? fee.unitPrice,
+        quantity: fee.quantity || 1,
+        currency: fee.currency || "人民币",
+        description: fee.description || fee.remark || "",
+        remark: fee.instructionRemark || "",
+        images: Array.isArray(fee.images) ? fee.images : [],
+        status: fee.status === "已处理" || fee.completed ? "已处理" : "待处理"
+      };
+    });
   }
   const sourceRow = instructionWorkflowRows.flat().find((row) => (
     String(row.container || "") === String(task.container || "")
@@ -2485,7 +2632,7 @@ function getInterceptInstructionRows(task) {
   const sourceRows = sourceRow ? ensureInstructionDetailRows(sourceRow) : [];
   if (sourceRows.length) return sourceRows;
   const fallback = instructionCatalog.find((row) => row.name.startsWith("拦截-")) || instructionCatalog[0];
-  return fallback ? [{ ...fallback, quantity: "1" }] : [];
+  return fallback ? [{ ...fallback, quantity: "1", exchangeRate: "1", status: "待处理" }] : [];
 }
 
 function formatInterceptInstructionFeeAmount(value) {
@@ -2503,7 +2650,7 @@ function formatInterceptInstructionFeeCurrency(currency) {
 function formatInterceptInstructionFee(row) {
   const quantity = Number(row.quantity || 1) || 1;
   const price = Number(row.price ?? row.unitPrice ?? 0) || 0;
-  const total = Number(row.cnyAmount ?? price * quantity);
+  const total = Number(row.originalAmount ?? price * quantity);
   return `${formatInterceptInstructionFeeAmount(total)} ${formatInterceptInstructionFeeCurrency(row.currency)} ${row.name || "费用"} (${formatInterceptInstructionFeeAmount(price)}/${row.unit || "票"})`;
 }
 
@@ -2545,32 +2692,89 @@ function formatInterceptFeeAmount(value) {
   return parseInterceptFeeNumber(value).toFixed(2);
 }
 
+function getInterceptFeePrice(fee) {
+  const rawPrice = fee?.price;
+  return parseInterceptFeeNumber(rawPrice === undefined || rawPrice === "" ? fee?.unitPrice : rawPrice);
+}
+
+function getInterceptFeeQuantity(fee) {
+  const rawQuantity = fee?.quantity;
+  return rawQuantity === undefined || rawQuantity === "" ? 1 : parseInterceptFeeNumber(rawQuantity);
+}
+
+function getInterceptFeeExchangeRate(fee) {
+  return parseInterceptFeeNumber(fee?.exchangeRate) || 1;
+}
+
 function getInterceptFeeOriginalAmount(fee) {
-  return parseInterceptFeeNumber(fee.unitPrice) * (parseInterceptFeeNumber(fee.quantity) || 1);
+  return getInterceptFeePrice(fee) * getInterceptFeeQuantity(fee);
 }
 
 function getInterceptFeeRmbAmount(fee) {
-  return getInterceptFeeOriginalAmount(fee) * (parseInterceptFeeNumber(fee.exchangeRate) || 1);
+  return getInterceptFeeOriginalAmount(fee) * getInterceptFeeExchangeRate(fee);
+}
+
+function normalizeInterceptFeeRow(fee, task = {}, index = 0) {
+  const fallbackTime = task.appliedAt || formatLocalDateTime();
+  const chargeDate = fee.chargeDate || fee.billingTime || fee.addedAt || fallbackTime;
+  const price = getInterceptFeePrice(fee);
+  const quantity = getInterceptFeeQuantity(fee);
+  const exchangeRate = getInterceptFeeExchangeRate(fee);
+  fee.id ||= `${task.id || "intercept"}-fee-${index + 1}`;
+  fee.catalogCode ||= fee.code || "";
+  fee.chargeDate = chargeDate;
+  fee.billingTime = chargeDate;
+  fee.name ||= "费用";
+  fee.type ||= "操作费";
+  fee.unit ||= "票";
+  fee.price = String(fee.price === undefined || fee.price === "" ? (fee.unitPrice ?? price) : fee.price);
+  fee.unitPrice = price;
+  fee.quantity = String(fee.quantity === undefined || fee.quantity === "" ? quantity : fee.quantity);
+  fee.currency ||= "人民币";
+  fee.exchangeRate = String(fee.exchangeRate === undefined || fee.exchangeRate === "" ? exchangeRate : fee.exchangeRate);
+  fee.addedAt ||= fallbackTime;
+  fee.addedBy ||= "系统";
+  fee.description ||= fee.remark || "";
+  fee.remark ||= fee.description || "";
+  fee.instructionRemark ||= "";
+  if (!Array.isArray(fee.images)) fee.images = [];
+  fee.status = fee.status === "已处理" || fee.completed === true ? "已处理" : "待处理";
+  fee.completed = fee.status === "已处理";
+  fee.originalAmount = Number((price * quantity).toFixed(2));
+  fee.cnyAmount = Number((fee.originalAmount * exchangeRate).toFixed(2));
+  fee.total = fee.cnyAmount;
+  return fee;
 }
 
 function getInterceptFeeRows(task) {
-  if (Array.isArray(task.fees)) return task.fees;
+  if (!task) return [];
+  if (Array.isArray(task.fees)) {
+    task.fees.forEach((fee, index) => normalizeInterceptFeeRow(fee, task, index));
+    return task.fees;
+  }
   const instructionRows = getInterceptInstructionRows(task);
   task.fees = instructionRows.map((row, index) => ({
     id: `${task.id}-fee-${index + 1}`,
-    billingTime: row.addedAt || task.appliedAt || formatLocalDateTime(),
+    catalogCode: row.catalogCode || row.code || "",
+    chargeDate: row.chargeDate || row.addedAt || task.appliedAt || formatLocalDateTime(),
+    billingTime: row.chargeDate || row.addedAt || task.appliedAt || formatLocalDateTime(),
     name: row.name || "",
     type: row.type || "操作费",
     unit: row.unit || "票",
-    exchangeRate: row.currency === "人民币" ? 1 : 7.1,
-    unitPrice: parseInterceptFeeNumber(row.price),
-    quantity: parseInterceptFeeNumber(row.quantity) || 1,
+    exchangeRate: row.exchangeRate || (row.currency === "人民币" ? 1 : 7.1),
+    price: String(row.price ?? row.unitPrice ?? 0),
+    unitPrice: parseInterceptFeeNumber(row.price ?? row.unitPrice),
+    quantity: String(row.quantity === undefined || row.quantity === "" ? 1 : row.quantity),
     currency: row.currency || "人民币",
     addedAt: row.addedAt || task.appliedAt || formatLocalDateTime(),
     addedBy: row.addedBy || "系统",
     description: row.description || "",
-    remark: row.remark || row.description || ""
+    remark: row.description || "",
+    instructionRemark: row.remark || "",
+    images: Array.isArray(row.images) ? row.images : [],
+    status: row.status === "已处理" || row.completed ? "已处理" : "待处理"
   }));
+  task.fees.forEach((fee, index) => normalizeInterceptFeeRow(fee, task, index));
   return task.fees;
 }
 
@@ -2578,40 +2782,68 @@ function renderInterceptFee(task) {
   const rows = getInterceptFeeRows(task);
   const originalTotal = rows.reduce((sum, fee) => sum + getInterceptFeeOriginalAmount(fee), 0);
   const rmbTotal = rows.reduce((sum, fee) => sum + getInterceptFeeRmbAmount(fee), 0);
-  const body = rows.length ? rows.map((fee) => `<tr>
-    <td>${escapeHtml(fee.billingTime || fee.addedAt || "-")}</td>
+  const body = rows.length ? rows.map((fee) => {
+    const images = Array.isArray(fee.images) ? fee.images : [];
+    const imageList = images.map((image, index) => `<span class="instruction-image-item"><a class="instruction-image-preview intercept-fee-image-preview" href="${escapeHtml(image.url || '')}" data-image-name="${escapeHtml(image.name || `图片${index + 1}`)}"><img src="${escapeHtml(image.url || '')}" alt="${escapeHtml(image.name || '图片')}" /></a><button class="instruction-image-remove intercept-fee-image-remove" data-intercept-fee-id="${escapeHtml(fee.id)}" data-image-index="${index}" type="button" aria-label="删除图片">×</button></span>`).join("");
+    const imageControl = `<div class="instruction-image-cell"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无图片</span>'}</div><div class="instruction-image-actions"><input class="intercept-fee-image-input" data-intercept-fee-id="${escapeHtml(fee.id)}" type="file" accept="image/*" multiple hidden /><button class="intercept-fee-image-upload" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button"${images.length >= 9 ? " disabled" : ""}>上传图片</button><span>${images.length}/9</span></div></div>`;
+    const checked = selectedInterceptFeeIds.has(String(fee.id)) ? " checked" : "";
+    const status = fee.status === "已处理" || fee.completed ? "已处理" : "待处理";
+    const statusClass = status === "已处理" ? "is-complete" : "is-pending";
+    const canEditStatus = ["待处理", "拦截中"].includes(task.status) && interceptDetailMode !== "result";
+    const statusControl = canEditStatus
+      ? `<select class="intercept-fee-status-control instruction-detail-status ${statusClass}" data-intercept-fee-id="${escapeHtml(fee.id)}" aria-label="设置${escapeHtml(fee.name)}状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
+      : `<span class="instruction-detail-status-tag ${statusClass}">${status}</span>`;
+    return `<tr>
+    <td class="instruction-check-col"><input class="intercept-fee-select" data-intercept-fee-id="${escapeHtml(fee.id)}" type="checkbox" aria-label="选择${escapeHtml(fee.name)}"${checked} /></td>
+    <td>${escapeHtml(fee.chargeDate || fee.billingTime || fee.addedAt || "-")}</td>
     <td>${escapeHtml(fee.name || "-")}</td>
     <td>${escapeHtml(fee.type || "其他")}</td>
     <td>${escapeHtml(fee.unit || "票")}</td>
     <td>${parseInterceptFeeNumber(fee.exchangeRate || 1).toFixed(3)}</td>
-    <td>${formatInterceptFeeAmount(fee.unitPrice)}</td>
+    <td>${formatInterceptFeeAmount(fee.price ?? fee.unitPrice)}</td>
     <td>${parseInterceptFeeNumber(fee.quantity).toFixed(2).replace(/\.00$/, "")}</td>
     <td>${escapeHtml(fee.currency || "人民币")}</td>
     <td class="intercept-fee-amount">${formatInterceptFeeAmount(getInterceptFeeOriginalAmount(fee))}</td>
     <td class="intercept-fee-amount">${formatInterceptFeeAmount(getInterceptFeeRmbAmount(fee))}</td>
-    <td>${escapeHtml(fee.remark || fee.description || "-")}</td>
     <td>${escapeHtml(fee.addedAt || "-")}</td>
     <td>${escapeHtml(fee.addedBy || "系统")}</td>
+    <td class="intercept-fee-description">${escapeHtml(fee.description || fee.remark || "-")}</td>
+    <td><button class="intercept-fee-instruction-remark" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button">${escapeHtml(fee.instructionRemark ? "编辑" : "添加")}</button></td>
+    <td>${imageControl}</td>
+    <td>${statusControl}</td>
     <td><button class="intercept-action" data-intercept-fee-action="edit" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button">编辑</button><button class="intercept-action danger" data-intercept-fee-action="delete" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button">删除</button></td>
-  </tr>`).join("") : '<tr><td colspan="14" class="intercept-fee-empty">暂无费用记录</td></tr>';
+  </tr>`;
+  }).join("") : '<tr><td colspan="18" class="intercept-fee-empty">暂无费用记录</td></tr>';
   $("#interceptFeeContent").innerHTML = `<div class="intercept-fee-detail-toolbar">
     <div><h3 class="intercept-fee-detail-title">指令费用</h3><div class="intercept-fee-detail-summary"><span>共 <strong>${rows.length}</strong> 条</span><span>原币合计 <strong>${formatInterceptFeeAmount(originalTotal)}</strong></span><span>人民币合计 <strong>${formatInterceptFeeAmount(rmbTotal)}</strong></span></div></div>
     <button class="btn primary" data-intercept-fee-action="add" type="button">新增指令费用</button>
-  </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*单价</th><th>*数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>添加时间</th><th>添加人</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th class="instruction-check-col"><input class="intercept-fee-select-all" type="checkbox" aria-label="全选操作指令" /></th><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*计费单价</th><th>*计费数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>指令状态</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  const selectAll = $("#interceptFeeContent .intercept-fee-select-all");
+  if (selectAll) {
+    const selectedCount = rows.filter((fee) => selectedInterceptFeeIds.has(String(fee.id))).length;
+    selectAll.checked = rows.length > 0 && selectedCount === rows.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < rows.length;
+  }
 }
 
 function createInterceptFeeDraft(fee) {
   return {
     id: fee.id,
-    billingTime: fee.billingTime || fee.addedAt || formatLocalDateTime(),
+    billingTime: fee.chargeDate || fee.billingTime || fee.addedAt || formatLocalDateTime(),
+    catalogCode: fee.catalogCode || fee.code || "",
     name: fee.name || "",
     type: fee.type || "操作费",
     unit: fee.unit || "票",
     exchangeRate: String(fee.exchangeRate ?? 1),
-    unitPrice: String(fee.unitPrice ?? 0),
+    unitPrice: String(fee.price ?? fee.unitPrice ?? 0),
     quantity: String(fee.quantity ?? 1),
     currency: fee.currency || "人民币",
-    remark: fee.remark || fee.description || ""
+    addedAt: fee.addedAt || "",
+    addedBy: fee.addedBy || "系统",
+    remark: fee.description || fee.remark || "",
+    instructionRemark: fee.instructionRemark || "",
+    status: fee.status === "已处理" || fee.completed ? "已处理" : "待处理",
+    images: Array.isArray(fee.images) ? fee.images : []
   };
 }
 
@@ -2620,6 +2852,7 @@ function createEmptyInterceptFeeDraft() {
   return {
     id: `new-fee-${Date.now()}-${interceptFeeDraftSequence}`,
     billingTime: formatLocalDateTime(),
+    catalogCode: "",
     name: "",
     type: "操作费",
     unit: "票",
@@ -2627,7 +2860,12 @@ function createEmptyInterceptFeeDraft() {
     unitPrice: "0",
     quantity: "1",
     currency: "人民币",
-    remark: ""
+    addedAt: "",
+    addedBy: "仓库-李明",
+    remark: "",
+    instructionRemark: "",
+    status: "待处理",
+    images: []
   };
 }
 
@@ -2636,7 +2874,8 @@ function getInterceptFeeDraft(id) {
 }
 
 function getInterceptFeeDraftOriginalAmount(row) {
-  return parseInterceptFeeNumber(row.unitPrice) * (parseInterceptFeeNumber(row.quantity) || 1);
+  const quantity = row.quantity === undefined || row.quantity === "" ? 1 : parseInterceptFeeNumber(row.quantity);
+  return parseInterceptFeeNumber(row.unitPrice) * quantity;
 }
 
 function getInterceptFeeDraftRmbAmount(row) {
@@ -2655,8 +2894,10 @@ function renderInterceptFeeDraftRows() {
   $("#interceptFeeCatalog").innerHTML = instructionCatalog.map((row) => `<option value="${escapeHtml(row.name)}">${escapeHtml(row.code)}</option>`).join("");
   renderInterceptFeeDraftSummary();
   const body = $("#interceptFeeDraftBody");
+  const feeWrap = body?.closest(".intercept-fee-modal-table-wrap");
+  if (feeWrap) feeWrap.scrollLeft = 0;
   if (!interceptFeeDraftRows.length) {
-    body.innerHTML = '<tr><td colspan="12" class="intercept-fee-empty">暂无数据</td></tr>';
+    body.innerHTML = '<tr><td colspan="17" class="intercept-fee-empty">暂无数据</td></tr>';
     return;
   }
   body.innerHTML = interceptFeeDraftRows.map((row) => {
@@ -2664,17 +2905,22 @@ function renderInterceptFeeDraftRows() {
     const rmbAmount = getInterceptFeeDraftRmbAmount(row);
     const focused = String(row.id) === String(interceptFeeDraftFocusId) ? " is-focused" : "";
     return `<tr class="${focused}" data-intercept-fee-draft-id="${escapeHtml(row.id)}">
-      <td><input class="intercept-fee-form-field" data-intercept-fee-field="billingTime" value="${escapeHtml(row.billingTime)}" aria-label="计费时间" /></td>
+      <td><input class="intercept-fee-form-field" data-intercept-fee-field="billingTime" type="datetime-local" value="${escapeHtml(String(row.billingTime).replace(" ", "T").slice(0, 16))}" aria-label="计费时间" /></td>
       <td><input class="intercept-fee-form-field intercept-fee-name" data-intercept-fee-field="name" list="interceptFeeCatalog" value="${escapeHtml(row.name)}" placeholder="请选择或输入费用名称" aria-label="费用名称" /></td>
-      <td><input class="intercept-fee-form-field" data-intercept-fee-field="type" value="${escapeHtml(row.type)}" aria-label="费用类型" /></td>
-      <td><select class="intercept-fee-form-field" data-intercept-fee-field="unit" aria-label="计费单位"><option value="票" ${row.unit === "票" ? "selected" : ""}>票</option><option value="箱" ${row.unit === "箱" ? "selected" : ""}>箱</option><option value="KG" ${row.unit === "KG" ? "selected" : ""}>KG</option><option value="CBM" ${row.unit === "CBM" ? "selected" : ""}>CBM</option></select></td>
+      <td><select class="intercept-fee-form-field" data-intercept-fee-field="type" aria-label="费用类型"><option value="仓储费" ${row.type === "仓储费" ? "selected" : ""}>仓储费</option><option value="操作费" ${row.type === "操作费" ? "selected" : ""}>操作费</option></select></td>
+      <td><select class="intercept-fee-form-field" data-intercept-fee-field="unit" aria-label="计费单位"><option value="票" ${row.unit === "票" ? "selected" : ""}>票</option><option value="箱" ${row.unit === "箱" ? "selected" : ""}>箱</option><option value="KG" ${row.unit === "KG" ? "selected" : ""}>KG</option></select></td>
       <td><input type="number" min="0" step="any" class="intercept-fee-form-field" data-intercept-fee-field="exchangeRate" value="${escapeHtml(row.exchangeRate)}" aria-label="汇率" /></td>
       <td><input type="number" min="0" step="any" class="intercept-fee-form-field" data-intercept-fee-field="unitPrice" value="${escapeHtml(row.unitPrice)}" aria-label="单价" /></td>
       <td><input type="number" min="0" step="any" class="intercept-fee-form-field" data-intercept-fee-field="quantity" value="${escapeHtml(row.quantity)}" aria-label="数量" /></td>
       <td><select class="intercept-fee-form-field" data-intercept-fee-field="currency" aria-label="币种"><option value="人民币" ${row.currency === "人民币" ? "selected" : ""}>人民币</option><option value="USD" ${row.currency === "USD" ? "selected" : ""}>USD</option></select></td>
       <td class="intercept-fee-amount intercept-fee-draft-original">${formatInterceptFeeAmount(originalAmount)}</td>
       <td class="intercept-fee-amount intercept-fee-draft-rmb">${formatInterceptFeeAmount(rmbAmount)}</td>
+      <td class="intercept-fee-draft-meta">${escapeHtml(row.addedAt || "-")}</td>
+      <td class="intercept-fee-draft-meta">${escapeHtml(row.addedBy || "仓库-李明")}</td>
       <td><input class="intercept-fee-form-field" data-intercept-fee-field="remark" value="${escapeHtml(row.remark)}" aria-label="费用备注" /></td>
+      <td><input class="intercept-fee-form-field" data-intercept-fee-field="instructionRemark" value="${escapeHtml(row.instructionRemark || "")}" aria-label="指令备注" /></td>
+      <td><span>${(row.images || []).length}/9</span></td>
+      <td><select class="intercept-fee-form-field intercept-fee-draft-status" data-intercept-fee-field="status" aria-label="指令状态"><option value="待处理" ${row.status !== "已处理" ? "selected" : ""}>待处理</option><option value="已处理" ${row.status === "已处理" ? "selected" : ""}>已处理</option></select></td>
       <td><button class="intercept-fee-delete" data-intercept-fee-draft-remove="${escapeHtml(row.id)}" type="button" aria-label="删除费用" title="删除费用明细">删除</button></td>
     </tr>`;
   }).join("");
@@ -2699,27 +2945,47 @@ function saveInterceptFeeDraftRows(event) {
   event.preventDefault();
   const task = getInterceptTask();
   if (!task) return;
+  for (const row of interceptFeeDraftRows) {
+    const price = Number(row.unitPrice);
+    const quantity = Number(row.quantity);
+    const rate = Number(row.exchangeRate);
+    if (!row.billingTime || !row.name.trim() || !Number.isFinite(price) || price < 0 || !Number.isFinite(quantity) || quantity < 0 || !Number.isFinite(rate) || rate <= 0) {
+      window.alert("请完善费用名称、计费时间、单价、数量和汇率");
+      return;
+    }
+  }
   const confirmedAt = formatLocalDateTime();
   const existingRows = getInterceptFeeRows(task);
   task.fees = interceptFeeDraftRows.map((row, index) => {
     const existing = existingRows.find((fee) => String(fee.id) === String(row.id));
     const originalAmount = getInterceptFeeDraftOriginalAmount(row);
     const exchangeRate = parseInterceptFeeNumber(row.exchangeRate) || 1;
+    const billingTime = row.billingTime.trim() || existing?.billingTime || existing?.addedAt || confirmedAt;
+    const quantity = row.quantity === undefined || row.quantity === "" ? 1 : parseInterceptFeeNumber(row.quantity);
     return {
       id: row.id,
-      billingTime: row.billingTime.trim() || existing?.billingTime || existing?.addedAt || confirmedAt,
+      chargeDate: billingTime,
+      billingTime,
+      catalogCode: row.catalogCode || existing?.catalogCode || "CUSTOM",
       name: row.name.trim() || `费用${index + 1}`,
-      type: row.type.trim() || "其他",
+      type: row.type.trim() || "操作费",
       unit: row.unit.trim() || "票",
       exchangeRate,
+      price: String(parseInterceptFeeNumber(row.unitPrice)),
       unitPrice: parseInterceptFeeNumber(row.unitPrice),
-      quantity: parseInterceptFeeNumber(row.quantity) || 1,
-      currency: row.currency,
-      total: originalAmount * exchangeRate,
+      quantity: String(quantity),
+      currency: row.currency || "人民币",
+      originalAmount,
+      cnyAmount: Number((originalAmount * exchangeRate).toFixed(2)),
+      total: Number((originalAmount * exchangeRate).toFixed(2)),
       addedAt: existing?.addedAt || confirmedAt,
-      addedBy: existing?.addedBy || "仓库-李明",
+      addedBy: existing?.addedBy || row.addedBy || "仓库-李明",
       description: row.remark.trim(),
-      remark: row.remark.trim()
+      remark: row.remark.trim(),
+      instructionRemark: row.instructionRemark || existing?.instructionRemark || "",
+      status: row.status === "已处理" ? "已处理" : "待处理",
+      completed: row.status === "已处理",
+      images: Array.isArray(row.images) ? row.images : (existing?.images || [])
     };
   });
   closeInterceptFeeModal();
@@ -2968,24 +3234,13 @@ function renderInterceptRows() {
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   const listHint = $("#interceptListHint");
   if (listHint) listHint.textContent = interceptActiveTab === "已完成"
-    ? "已完成任务可在「拦截结果」列查看拦截成功、拦截失败，支持查看结果、日志和导出"
+    ? "已完成任务可在「拦截结果」列查看拦截成功、拦截失败，支持日志和导出"
     : "拦截成功后将自动生成暂存单";
   if (!interceptVisibleRows.length) {
     interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${20 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
-      const primaryAction = task.status === "待处理"
-        ? '<button class="intercept-action" data-intercept-action="handle" type="button">审核申请</button>'
-        : task.status === "拦截中"
-          ? '<button class="intercept-action" data-intercept-action="handle" type="button">处理任务</button>'
-          : "";
-      const retryAction = ["审批拒绝", "拦截失败"].includes(task.status) && task.failReason && getInterceptType(task) === "拆柜前拦截"
-        ? '<button class="intercept-action" data-intercept-action="retry-after-unpack" type="button">发起拆柜后拦截</button>'
-        : "";
-      const completedActions = ["已完成", "拦截成功", "拦截失败"].includes(getInterceptDisplayStatus(task))
-        ? `<button class="intercept-action" data-intercept-action="result" type="button">查看结果</button>${task.archived ? '<span class="intercept-archived-mark">已归档</span>' : ""}`
-        : "";
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
@@ -2996,7 +3251,7 @@ function renderInterceptRows() {
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
         <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${getInterceptResultTag(task)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td class="intercept-handler-col" title="${escapeHtml(task.handler || "-")}">${escapeHtml(task.handler || "-")}</td><td class="intercept-handled-at-col" title="${escapeHtml(task.handleAt || "-")}">${escapeHtml(task.handleAt || "-")}</td>
-        <td class="intercept-operation-col"><button class="intercept-action" data-intercept-action="detail" type="button">详情</button>${primaryAction}${completedActions}${retryAction}<button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
+        <td class="intercept-operation-col"><button class="intercept-action" data-intercept-action="detail" type="button">详情</button><button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
   }
@@ -3787,6 +4042,49 @@ function initInterceptManagement() {
     if (event.target === $("#interceptAttachmentDeleteOverlay")) closeInterceptAttachmentDelete();
   });
   $("#interceptFeeContent").addEventListener("click", (event) => {
+    const feeSelect = event.target.closest(".intercept-fee-select");
+    if (feeSelect) {
+      feeSelect.checked ? selectedInterceptFeeIds.add(String(feeSelect.dataset.interceptFeeId)) : selectedInterceptFeeIds.delete(String(feeSelect.dataset.interceptFeeId));
+      return;
+    }
+    const imageUpload = event.target.closest(".intercept-fee-image-upload");
+    if (imageUpload) {
+      event.target.closest("td")?.querySelector(`.intercept-fee-image-input[data-intercept-fee-id="${CSS.escape(imageUpload.dataset.interceptFeeId)}"]`)?.click();
+      return;
+    }
+    const imagePreview = event.target.closest(".intercept-fee-image-preview");
+    if (imagePreview) {
+      event.preventDefault();
+      const image = imagePreview.querySelector("img");
+      if (image?.src) {
+        $("#instructionImagePreview").src = image.src;
+        $("#instructionImagePreview").alt = imagePreview.dataset.imageName || image.alt || "图片预览";
+        $("#instructionImagePreviewOverlay").hidden = false;
+      }
+      return;
+    }
+    const imageRemove = event.target.closest(".intercept-fee-image-remove");
+    if (imageRemove) {
+      const task = getInterceptTask();
+      const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(imageRemove.dataset.interceptFeeId));
+      const imageIndex = Number(imageRemove.dataset.imageIndex);
+      if (fee?.images?.[imageIndex]) {
+        const image = fee.images[imageIndex];
+        if (String(image.url || "").startsWith("blob:")) URL.revokeObjectURL(image.url);
+        fee.images.splice(imageIndex, 1);
+        renderInterceptFee(task);
+      }
+      return;
+    }
+    const instructionRemark = event.target.closest(".intercept-fee-instruction-remark");
+    if (instructionRemark) {
+      const task = getInterceptTask();
+      const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(instructionRemark.dataset.interceptFeeId));
+      if (!fee) return;
+      const next = window.prompt("请输入指令备注", fee.instructionRemark || "");
+      if (next !== null) { fee.instructionRemark = next.slice(0, 200); renderInterceptFee(task); }
+      return;
+    }
     const button = event.target.closest("[data-intercept-fee-action]");
     if (!button) return;
     const task = getInterceptTask();
@@ -3807,6 +4105,35 @@ function initInterceptManagement() {
       renderInterceptFee(task);
       refreshInterceptUI();
     }
+  });
+  $("#interceptFeeContent").addEventListener("change", (event) => {
+    const statusControl = event.target.closest(".intercept-fee-status-control");
+    if (statusControl) {
+      const task = getInterceptTask();
+      const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(statusControl.dataset.interceptFeeId));
+      if (!fee) return;
+      fee.status = statusControl.value === "已处理" ? "已处理" : "待处理";
+      fee.completed = fee.status === "已处理";
+      renderInterceptFee(task);
+      renderInterceptRows();
+      return;
+    }
+    const selectAll = event.target.closest(".intercept-fee-select-all");
+    if (!selectAll) return;
+    const task = getInterceptTask();
+    getInterceptFeeRows(task).forEach((fee) => selectAll.checked ? selectedInterceptFeeIds.add(String(fee.id)) : selectedInterceptFeeIds.delete(String(fee.id)));
+    renderInterceptFee(task);
+  });
+  $("#interceptFeeContent").addEventListener("change", (event) => {
+    const input = event.target.closest(".intercept-fee-image-input");
+    if (!input) return;
+    const task = getInterceptTask();
+    const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(input.dataset.interceptFeeId));
+    if (!fee) return;
+    fee.images ||= [];
+    [...(input.files || [])].filter((file) => file.type.startsWith("image/")).slice(0, Math.max(0, 9 - fee.images.length)).forEach((file) => fee.images.push({ name: file.name, url: URL.createObjectURL(file) }));
+    input.value = "";
+    renderInterceptFee(task);
   });
   $("#interceptFeeClose").addEventListener("click", closeInterceptFeeModal);
   $("#interceptFeeCancel").addEventListener("click", closeInterceptFeeModal);
@@ -3849,6 +4176,24 @@ function initInterceptManagement() {
     if (!row) return;
     const field = control.dataset.interceptFeeField;
     row[field] = control.value;
+    if (field === "billingTime") {
+      row.billingTime = control.value;
+      return;
+    }
+    if (field === "name") {
+      const catalog = instructionCatalog.find((item) => item.name === row.name || item.code === row.name);
+      if (catalog) {
+        row.catalogCode = catalog.code;
+        row.name = catalog.name;
+        row.type = catalog.type;
+        row.unit = catalog.unit;
+        row.unitPrice = catalog.price;
+        row.currency = catalog.currency;
+        row.exchangeRate = catalog.currency === "人民币" ? "1" : (row.exchangeRate === "1" ? "7.1" : row.exchangeRate);
+        renderInterceptFeeDraftRows();
+      }
+      return;
+    }
     if (field === "currency") {
       row.exchangeRate = row.currency === "人民币" ? "1" : (row.exchangeRate === "1" ? "7.1" : row.exchangeRate);
       renderInterceptFeeDraftRows();

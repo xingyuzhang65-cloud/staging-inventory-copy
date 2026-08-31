@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260826-intercept-result-column-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260831-b12131f02" />
 </head>
 <body>
 
@@ -208,7 +208,7 @@
     <form id="interceptFeeForm">
       <div class="intercept-fee-modal-body">
         <div class="intercept-fee-summary"><span>指令费用明细</span><div><span>共 <strong id="interceptFeeCount">0</strong> 条</span><span>原币合计 <strong id="interceptFeeOriginalTotal">0.00</strong></span><span>人民币合计 <strong id="interceptFeeRmbTotal">0.00</strong></span></div></div>
-        <div class="intercept-fee-modal-table-wrap"><datalist id="interceptFeeCatalog"></datalist><table class="intercept-fee-table intercept-storage-fee-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*单位</th><th>*汇率</th><th>*单价</th><th>*数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>费用备注</th><th>操作</th></tr></thead><tbody id="interceptFeeDraftBody"></tbody></table></div>
+        <div class="intercept-fee-modal-table-wrap"><datalist id="interceptFeeCatalog"></datalist><table class="intercept-fee-table intercept-storage-fee-table"><thead><tr><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*计费单价</th><th>*计费数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>指令状态</th><th>操作</th></tr></thead><tbody id="interceptFeeDraftBody"></tbody></table></div>
       </div>
       <footer class="intercept-fee-modal-footer"><button class="btn" id="interceptFeeCancel" type="button">取消</button><button class="btn primary" type="submit">确认</button></footer>
     </form>
@@ -434,7 +434,7 @@
     <table class="instruction-table">
       <thead><tr>
         <th class="instruction-check-col"><input id="instructionDetailSelectAll" type="checkbox" aria-label="全选操作指令" /></th><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*计费单价</th><th>*计费数量</th>
-        <th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>操作</th>
+        <th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>指令状态</th><th>操作</th>
       </tr></thead>
       <tbody id="instructionBody"></tbody>
     </table>
@@ -519,6 +519,6 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260826-intercept-result-column-v1"></script>
+<script src="script.js?v=20260831-b12131f02"></script>
 </body>
 </html>

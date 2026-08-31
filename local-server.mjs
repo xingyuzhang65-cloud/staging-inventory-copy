@@ -30,6 +30,23 @@ http.createServer((req, res) => {
   fs.stat(file, (statErr, stat) => {
     const target = !statErr && stat.isDirectory() ? path.join(file, 'index.html') : file;
     fs.readFile(target, (readErr, data) => {
+      if (readErr && !path.extname(pathname)) {
+        fs.readFile(path.join(root, 'index.html'), (indexErr, indexData) => {
+          if (indexErr) {
+            res.writeHead(404);
+            res.end('Not found');
+            return;
+          }
+
+          res.writeHead(200, {
+            'Content-Type': types['.html'],
+            'Cache-Control': 'no-cache',
+          });
+          res.end(indexData);
+        });
+        return;
+      }
+
       if (readErr) {
         res.writeHead(404);
         res.end('Not found');
