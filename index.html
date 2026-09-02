@@ -118,7 +118,6 @@
           <label class="filter-field"><span>客户名称</span><select id="interceptCustomerFilter"><option value="">全部客户</option></select></label>
           <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>拦截类型</span><select id="interceptTypeFilter"><option value="">全部拦截类型</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截">拆柜后拦截</option></select></label>
-          <label class="filter-field"><span>货物状态</span><select id="interceptCargoStatusFilter"><option value="">全部货物状态</option><option>未拆柜</option><option>已拆柜</option><option>已出库</option><option>暂存中</option></select></label>
           <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option value="待处理">待审批</option><option>拦截中</option><option value="拦截成功">拦截成功</option><option value="拦截失败">拦截失败</option><option value="审批拒绝">审批拒绝</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>核销状态</span><select id="interceptReconciliationStatusFilter"><option value="">全部核销状态</option><option>待核销</option><option>部分核销</option><option>已核销</option></select></label>
@@ -159,7 +158,6 @@
   <aside class="intercept-drawer intercept-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="interceptDetailTitle">
     <header class="intercept-drawer-header"><div><h2 id="interceptDetailTitle">拦截详情</h2><p id="interceptDetailSubTitle">-</p></div><button class="intercept-close" id="interceptDetailClose" type="button" aria-label="关闭拦截详情">×</button></header>
     <div class="intercept-detail-content">
-      <section class="intercept-flow-section"><div class="intercept-flow" id="interceptFlow"></div></section>
       <section class="intercept-detail-section"><h3>基础信息</h3><dl class="intercept-detail-grid" id="interceptBasicInfo"></dl></section>
       <nav class="intercept-detail-tabs" id="interceptDetailTabs" role="tablist" aria-label="拦截详情信息分类">
         <button class="intercept-detail-tab active" id="interceptCargoTab" data-intercept-detail-tab="cargo" type="button" role="tab" aria-selected="true" aria-controls="interceptCargoPanel">货箱信息</button>

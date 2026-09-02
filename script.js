@@ -2470,7 +2470,6 @@ const interceptFilters = {
   customer: $("#interceptCustomerFilter"),
   source: $("#interceptSourceFilter"),
   type: $("#interceptTypeFilter"),
-  cargoStatus: $("#interceptCargoStatusFilter"),
   status: $("#interceptStatusFilter"),
   forecastStatus: $("#interceptForecastStatusFilter"),
   reconciliationStatus: $("#interceptReconciliationStatusFilter"),
@@ -3152,7 +3151,6 @@ function getFilteredInterceptTasks() {
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
     && (!interceptFilters.source.value || task.source === interceptFilters.source.value)
     && (!interceptFilters.type.value || getInterceptType(task) === interceptFilters.type.value)
-    && (!interceptFilters.cargoStatus.value || task.cargoStatus === interceptFilters.cargoStatus.value)
     && (!interceptFilters.status.value || interceptStatusMatches(task, interceptFilters.status.value))
     && (!interceptFilters.forecastStatus.value || getInterceptForecastStatus(task) === interceptFilters.forecastStatus.value)
     && (!interceptFilters.reconciliationStatus.value || getInterceptReconciliationStatus(task) === interceptFilters.reconciliationStatus.value)
@@ -3277,13 +3275,6 @@ function renderInterceptDetail(task, mode = "view") {
   $("#interceptDetailSubTitle").innerHTML = `${getInterceptStatusTag(getInterceptDisplayStatus(task))} <span>${escapeHtml(task.waybill)}</span>`;
 
   const displayStatus = getInterceptDisplayStatus(task);
-  const stepLabels = ["提交申请", "拦截中", displayStatus === "审批拒绝" ? displayStatus : displayStatus === "拦截失败" ? "拦截失败" : "拦截成功"];
-  const currentStep = displayStatus === "待处理" ? 0 : displayStatus === "拦截中" ? 1 : 2;
-  $("#interceptFlow").innerHTML = stepLabels.map((label, index) => {
-    const isComplete = index < currentStep || (currentStep === 3 && index === 3 && ["拦截成功", "拦截失败", "审批拒绝"].includes(displayStatus));
-    const isActive = index === currentStep;
-    return `<div class="intercept-flow-step${isComplete ? " is-complete" : ""}${isActive ? " is-active" : ""}"><i>${isComplete ? "✓" : index + 1}</i><span>${label}</span></div>`;
-  }).join("");
 
   const field = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
   $("#interceptBasicInfo").innerHTML = [
@@ -3295,9 +3286,6 @@ function renderInterceptDetail(task, mode = "view") {
     field("柜号", escapeHtml(task.container || "-")),
     field("拦截原因", escapeHtml(task.reason)),
     field("拦截箱数", `${escapeHtml(task.actualBoxes || task.boxes || "-")} 箱`),
-    field("货物状态", getInterceptCargoTag(task.cargoStatus)),
-    field("所在仓库", escapeHtml(task.warehouse)),
-    field("出库状态", escapeHtml(task.outboundStatus)),
     field("申请人", escapeHtml(task.applicant)),
     field("申请时间", escapeHtml(task.appliedAt)),
     ["拦截成功", "拦截失败"].includes(displayStatus) ? field(displayStatus === "拦截失败" ? "失败原因" : "完成结果", escapeHtml(task.failReason || task.resultRemark || "-")) : "",
