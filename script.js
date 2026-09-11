@@ -2449,9 +2449,7 @@ let interceptAttachmentDeletingId = null;
 let interceptAttachmentFile = null;
 let interceptAttachmentForm = {
   fileName: "",
-  fileSize: "",
-  type: "其他",
-  customerVisible: "可见"
+  fileSize: ""
 };
 let interceptToastTimer = null;
 let interceptFeedbackMode = "";
@@ -2534,16 +2532,12 @@ function getInterceptAttachmentItems(task) {
   return [{ name: raw, url: getInterceptAttachmentUrl(task, raw) }];
 }
 
-const interceptAttachmentTypeOptions = ["POD", "ISA", "报关资料", "底单", "其他", "其它", "税金单", "递延资料", "提单"];
-
 function getInterceptAttachmentRows(task) {
   if (!task) return [];
   if (interceptAttachmentRowsByTask.has(task.id)) return interceptAttachmentRowsByTask.get(task.id);
   const rows = getInterceptAttachmentItems(task).map((item, index) => ({
     id: `INTERCEPT-ATT-${task.id}-${index}-${item.name}`,
     name: item.name,
-    type: "其他",
-    customerVisible: "可见",
     fileSize: "-",
     uploadedBy: task.handler || task.applicant || "系统",
     uploadedAt: task.appliedAt || "-",
@@ -2993,32 +2987,25 @@ function saveInterceptFeeDraftRows(event) {
 
 function renderInterceptOtherInfo(task) {
   const rows = getInterceptAttachmentRows(task);
-  $("#interceptAttachmentType").innerHTML = interceptAttachmentTypeOptions.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
   $("#interceptAttachmentBody").innerHTML = rows.length ? rows.map((row) => `<tr data-intercept-attachment-id="${escapeHtml(row.id)}">
     <td title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
-    <td>${escapeHtml(row.type)}</td>
-    <td>${escapeHtml(row.customerVisible)}</td>
     <td>${escapeHtml(row.fileSize || "-")}</td>
     <td>${escapeHtml(row.uploadedBy || "-")}</td>
     <td class="intercept-attachment-time">${escapeHtml(row.uploadedAt || "-")}</td>
     <td><button class="intercept-action" data-intercept-attachment-action="edit" type="button">编辑</button><button class="intercept-action" data-intercept-attachment-action="download" type="button">下载</button><button class="intercept-action danger" data-intercept-attachment-action="delete" type="button">删除</button></td>
-  </tr>`).join("") : '<tr><td colspan="7" class="intercept-attachment-empty"><span class="intercept-attachment-empty-icon" aria-hidden="true">▧</span>暂无附件</td></tr>';
+  </tr>`).join("") : '<tr><td colspan="5" class="intercept-attachment-empty"><span class="intercept-attachment-empty-icon" aria-hidden="true">▧</span>暂无附件</td></tr>';
 }
 
 function resetInterceptAttachmentForm() {
-  interceptAttachmentForm = { fileName: "", fileSize: "", type: "其他", customerVisible: "可见" };
+  interceptAttachmentForm = { fileName: "", fileSize: "" };
   interceptAttachmentFile = null;
 }
 
 function renderInterceptAttachmentForm() {
   $("#interceptAttachmentTitle").textContent = interceptAttachmentEditingId ? "编辑附件" : "上传附件";
-  $("#interceptAttachmentType").value = interceptAttachmentForm.type;
   $("#interceptAttachmentFileName").textContent = interceptAttachmentForm.fileName;
   $("#interceptAttachmentFileSize").textContent = interceptAttachmentForm.fileSize || "-";
   $("#interceptAttachmentFileRow").hidden = !interceptAttachmentForm.fileName;
-  document.querySelectorAll('input[name="interceptAttachmentCustomerVisible"]').forEach((control) => {
-    control.checked = control.value === interceptAttachmentForm.customerVisible;
-  });
 }
 
 function openInterceptAttachmentModal(rowId = null) {
@@ -3027,8 +3014,8 @@ function openInterceptAttachmentModal(rowId = null) {
   const row = rowId ? getInterceptAttachmentRows(task).find((item) => String(item.id) === String(rowId)) : null;
   interceptAttachmentEditingId = row?.id || null;
   interceptAttachmentForm = row
-    ? { fileName: row.name, fileSize: row.fileSize || "", type: row.type, customerVisible: row.customerVisible }
-    : { fileName: "", fileSize: "", type: "其他", customerVisible: "可见" };
+    ? { fileName: row.name, fileSize: row.fileSize || "" }
+    : { fileName: "", fileSize: "" };
   interceptAttachmentFile = null;
   $("#interceptAttachmentFileInput").value = "";
   $("#interceptAttachmentOverlay").hidden = false;
@@ -3079,13 +3066,11 @@ function saveInterceptAttachment() {
   const existingRows = getInterceptAttachmentRows(task);
   const nextRows = interceptAttachmentEditingId
     ? existingRows.map((row) => String(row.id) === String(interceptAttachmentEditingId)
-      ? { ...row, name: fileName, type: interceptAttachmentForm.type, customerVisible: interceptAttachmentForm.customerVisible, fileSize: interceptAttachmentForm.fileSize || row.fileSize, file: interceptAttachmentFile || row.file, url: interceptAttachmentFile ? "" : getInterceptAttachmentUrl(task, fileName) }
+      ? { ...row, name: fileName, fileSize: interceptAttachmentForm.fileSize || row.fileSize, file: interceptAttachmentFile || row.file, url: interceptAttachmentFile ? "" : getInterceptAttachmentUrl(task, fileName) }
       : row)
     : [...existingRows, {
         id: `INTERCEPT-ATT-${task.id}-${Date.now()}`,
         name: fileName,
-        type: interceptAttachmentForm.type,
-        customerVisible: interceptAttachmentForm.customerVisible,
         fileSize: interceptAttachmentForm.fileSize || "-",
         uploadedBy: "仓库-李明",
         uploadedAt: formatLocalDateTime(),
@@ -4016,12 +4001,6 @@ function initInterceptManagement() {
     $("#interceptAttachmentFileInput").value = "";
     renderInterceptAttachmentForm();
   });
-  $("#interceptAttachmentType").addEventListener("change", (event) => {
-    interceptAttachmentForm.type = event.currentTarget.value;
-  });
-  document.querySelectorAll('input[name="interceptAttachmentCustomerVisible"]').forEach((control) => control.addEventListener("change", (event) => {
-    interceptAttachmentForm.customerVisible = event.currentTarget.value;
-  }));
   $("#interceptAttachmentConfirm").addEventListener("click", saveInterceptAttachment);
   $("#interceptAttachmentDeleteClose").addEventListener("click", closeInterceptAttachmentDelete);
   $("#interceptAttachmentDeleteCancel").addEventListener("click", closeInterceptAttachmentDelete);

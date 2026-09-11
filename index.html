@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260831-b12131f02" />
+  <link rel="stylesheet" href="styles.css?v=20260911-1" />
 </head>
 <body>
 
@@ -186,7 +186,7 @@
             <div class="intercept-other-toolbar"><h3>其它信息</h3><button class="btn" id="interceptAttachmentUploadButton" type="button">上传附件</button></div>
             <div class="intercept-attachment-table-wrap">
               <table class="intercept-attachment-table">
-                <thead><tr><th>附件名称</th><th>附件类型</th><th>客户可见</th><th>文件大小</th><th>上传人</th><th>上传时间</th><th>操作</th></tr></thead>
+                <thead><tr><th>附件名称</th><th>文件大小</th><th>上传人</th><th>上传时间</th><th>操作</th></tr></thead>
                 <tbody id="interceptAttachmentBody"></tbody>
               </table>
             </div>
@@ -217,16 +217,13 @@
     <header><h2 id="interceptAttachmentTitle">上传附件</h2><button class="intercept-close" id="interceptAttachmentClose" type="button" aria-label="关闭附件弹窗">×</button></header>
     <div class="intercept-attachment-content">
       <div class="intercept-attachment-upload-row">
-        <span class="intercept-attachment-label"><b>*</b> 文件附件：</span>
+        <span class="intercept-attachment-label"><b>*</b> 附件：</span>
         <div class="intercept-attachment-upload-main">
           <label class="intercept-attachment-upload-button">点击上传<input id="interceptAttachmentFileInput" type="file" /></label>
           <div class="intercept-attachment-tip">文件大小不超过 50M</div>
-          <div class="intercept-attachment-warning">若为报关件资料，文件类型请选择“报关资料”</div>
           <div class="intercept-attachment-file-row" id="interceptAttachmentFileRow" hidden><span id="interceptAttachmentFileName"></span><span class="intercept-attachment-file-size" id="interceptAttachmentFileSize">-</span><button id="interceptAttachmentFileRemove" type="button">删除</button></div>
         </div>
       </div>
-      <label class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 文件类型：</span><select class="intercept-attachment-form-field" id="interceptAttachmentType"></select></label>
-      <div class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 客户是否可见：</span><div class="intercept-attachment-radio-group"><label><input type="radio" name="interceptAttachmentCustomerVisible" value="不可见" />不可见</label><label><input type="radio" name="interceptAttachmentCustomerVisible" value="可见" />可见</label></div></div>
     </div>
     <footer><button class="btn" id="interceptAttachmentCancel" type="button">取消</button><button class="btn primary" id="interceptAttachmentConfirm" type="button">确定</button></footer>
   </section>
@@ -517,6 +514,8 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260831-b12131f02"></script>
+<script src="script.js?v=20260911-1"></script>
+<link rel="stylesheet" href="forecast.css?v=20260911-1" />
+<script src="forecast.js?v=20260911-1"></script>
 </body>
 </html>
