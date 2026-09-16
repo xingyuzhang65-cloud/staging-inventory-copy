@@ -2500,6 +2500,17 @@ function getInterceptResultTag(task) {
   return '<span class="intercept-result-empty">-</span>';
 }
 
+function getInterceptResultText(task) {
+  const status = getInterceptDisplayStatus(task);
+  return status === "拦截成功" || status === "拦截失败" ? status : "-";
+}
+
+function getInterceptFailureReason(task) {
+  const status = getInterceptDisplayStatus(task);
+  if (status === "拦截失败") return task.failReason || task.terminationReason || "未填写失败原因";
+  return "-";
+}
+
 function getInterceptForecastStatusTag(task) {
   const status = getInterceptForecastStatus(task);
   return `<span class="intercept-forecast-status ${getInterceptForecastStatusClass(status)}">${escapeHtml(status)}</span>`;
@@ -3153,8 +3164,18 @@ function getVisiblePendingInterceptTasks() {
 }
 
 function getInterceptStatusColumns() {
-  const status = interceptActiveTab !== "全部" ? interceptActiveTab : interceptFilters.status.value;
-  return status === "审批拒绝" ? [{ label: "审批拒绝原因", field: "terminationReason" }] : [];
+  const status = interceptActiveTab !== "全部" ? interceptActiveTab : "";
+  if (interceptActiveTab === "全部") {
+    return [{ label: "拦截结果", getValue: getInterceptResultText, renderValue: getInterceptResultTag }];
+  }
+  if (status === "已完成") {
+    return [
+      { label: "拦截结果", getValue: getInterceptResultText, renderValue: getInterceptResultTag },
+      { label: "失败原因", getValue: getInterceptFailureReason }
+    ];
+  }
+  if (status === "审批拒绝") return [{ label: "审批拒绝原因", field: "terminationReason" }];
+  return [];
 }
 
 function getSelectedPendingInterceptTasks() {
@@ -3193,7 +3214,7 @@ function updateInterceptBatchControls() {
   failureButton.hidden = !isInterceptingView;
   failureButton.textContent = "拦截失败";
   noteButton.hidden = isCompletedView || isRejectedView || isAllView;
-  noteButton.textContent = "批量备注";
+  noteButton.textContent = "批量内部备注";
   exportButton.hidden = false;
   exportButton.textContent = "导出";
 
@@ -3212,28 +3233,36 @@ function renderInterceptRows() {
   interceptVisibleRows = getFilteredInterceptTasks();
   pruneInterceptSelection();
   const statusColumns = getInterceptStatusColumns();
-  const statusReasonHeader = $("#interceptStatusReasonHeader");
-  if (statusReasonHeader) { const column = statusColumns[0]; statusReasonHeader.hidden = !column; statusReasonHeader.textContent = column?.label || ""; }
+  [$("#interceptStatusReasonHeader"), $("#interceptFailureReasonHeader")].forEach((header, index) => {
+    if (!header) return;
+    const column = statusColumns[index];
+    header.hidden = !column;
+    header.textContent = column?.label || "";
+  });
   $("#interceptListSummary").textContent = `共 ${interceptVisibleRows.length} 条拦截任务`;
   const listHint = $("#interceptListHint");
   if (listHint) listHint.textContent = interceptActiveTab === "已完成"
-    ? "已完成任务可在「拦截结果」列查看拦截成功、拦截失败，支持日志和导出"
+    ? "已完成任务可在「拦截结果」列区分成功和失败，失败任务会展示失败原因"
     : "拦截成功后将自动生成暂存单";
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${20 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
+    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${17 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
       const instructionRows = getInterceptInstructionRows(task);
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
-      const statusColumnCells = statusColumns.map((column) => { const value = task[column.field] || task.failReason || task.resultRemark || "-"; return `<td class="intercept-status-reason-cell" title="${escapeHtml(value)}">${escapeHtml(value)}</td>`; }).join("");
+      const statusColumnCells = statusColumns.map((column) => {
+        const value = column.getValue ? column.getValue(task) : (task[column.field] || task.failReason || task.resultRemark || "-");
+        const content = column.renderValue ? column.renderValue(task) : escapeHtml(value);
+        return `<td class="intercept-status-reason-cell" title="${escapeHtml(value)}">${content}</td>`;
+      }).join("");
       const rowClass = getInterceptDisplayStatus(task) === "拦截失败" ? ' class="intercept-row-failed"' : "";
       return `<tr data-intercept-id="${task.id}"${rowClass}>
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td><td>${getInterceptResultTag(task)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
-        <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td><td class="intercept-handler-col" title="${escapeHtml(task.handler || "-")}">${escapeHtml(task.handler || "-")}</td><td class="intercept-handled-at-col" title="${escapeHtml(task.handleAt || "-")}">${escapeHtml(task.handleAt || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
+        <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td>
         <td class="intercept-operation-col"><button class="intercept-action" data-intercept-action="detail" type="button">详情</button><button class="intercept-action" data-intercept-action="log" type="button">日志</button></td>
       </tr>`;
     }).join("");
@@ -3490,17 +3519,19 @@ function exportInterceptTasks() {
     return;
   }
   const statusColumns = getInterceptStatusColumns();
-  const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截结果", "拦截箱数", "指令费用", "核销状态", "客户备注", "备注", "拦截来源", "申请人", "申请时间", "处理人", "处理时间"];
-  if (statusColumns.length) headers.splice(8, 0, ...statusColumns.map((column) => column.label));
+  const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截箱数", "指令费用", "核销状态", "客户备注", "内部备注", "拦截来源", "申请人", "申请时间"];
+  if (statusColumns.length) headers.splice(7, 0, ...statusColumns.map((column) => column.label));
   const rows = tasks.map((task) => {
-    const result = getInterceptDisplayStatus(task);
     return [
       task.customer, getInterceptType(task), task.no, task.waybill, task.container || "",
-      getInterceptForecastStatus(task), task.reason, ["拦截成功", "拦截失败"].includes(result) ? result : "", task.actualBoxes || task.boxes || "", getInterceptInstructionRows(task).map(formatInterceptInstructionFee).join("；"), getInterceptReconciliationStatus(task), task.customerRemark || "", task.remark || "", task.source || "",
-      task.applicant, task.appliedAt, task.handler || "", task.handleAt || ""
+      getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", getInterceptInstructionRows(task).map(formatInterceptInstructionFee).join("；"), getInterceptReconciliationStatus(task), task.customerRemark || "", task.remark || "", task.source || "",
+      task.applicant, task.appliedAt
     ];
   });
-  if (statusColumns.length) rows.forEach((row, index) => { const task = tasks[index]; row.splice(8, 0, ...statusColumns.map((column) => task[column.field] || "")); });
+  if (statusColumns.length) rows.forEach((row, index) => {
+    const task = tasks[index];
+    row.splice(7, 0, ...statusColumns.map((column) => column.getValue ? column.getValue(task) : (task[column.field] || "")));
+  });
   const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);

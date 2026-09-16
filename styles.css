@@ -527,8 +527,6 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-table th:nth-child(17) { width: 96px; }
 .intercept-table th:nth-child(16),
 .intercept-table th:nth-child(18) { width: 142px; }
-.intercept-table .intercept-handler-col { width: 116px; }
-.intercept-table .intercept-handled-at-col { width: 152px; }
 .intercept-table .intercept-operation-col {
   position: sticky;
   z-index: 3;
@@ -974,7 +972,8 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-log-table th:nth-child(3) { width: 190px; }
 .intercept-log-table th:nth-child(4) { width: 120px; }
 .intercept-log-table th:nth-child(5) { width: 150px; }
-.intercept-feedback-overlay { align-items: center; justify-content: center; }
+.intercept-feedback-overlay,
+#interceptBatchFailureOverlay { align-items: center; justify-content: center; padding: 16px; }
 .intercept-feedback-modal { width: 480px; border-radius: 3px; background: #fff; box-shadow: 0 12px 36px rgba(0,0,0,.24); }
 .intercept-feedback-modal > header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e8edf1; }
 .intercept-feedback-content { display: grid; gap: 16px; padding: 24px 38px; }
