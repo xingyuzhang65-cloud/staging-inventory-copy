@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260916-e65d2e3" />
+  <link rel="stylesheet" href="styles.css?v=20260916-approved-full" />
 </head>
 <body>
 
@@ -118,7 +118,6 @@
           <label class="filter-field"><span>客户名称</span><select id="interceptCustomerFilter"><option value="">全部客户</option></select></label>
           <label class="filter-field"><span>拦截来源</span><select id="interceptSourceFilter"><option value="">全部拦截来源</option><option value="美仓拦截">美仓拦截</option><option value="天图拦截">天图拦截</option></select></label>
           <label class="filter-field"><span>拦截类型</span><select id="interceptTypeFilter"><option value="">全部拦截类型</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截">拆柜后拦截</option></select></label>
-          <label class="filter-field"><span>拦截状态</span><select id="interceptStatusFilter"><option value="">全部拦截状态</option><option value="待处理">待审批</option><option>拦截中</option><option value="拦截成功">拦截成功</option><option value="拦截失败">拦截失败</option><option value="审批拒绝">审批拒绝</option></select></label>
           <label class="filter-field"><span>预报单状态</span><select id="interceptForecastStatusFilter"><option value="">全部预报单状态</option><option>待预报</option><option>预报中</option><option>预报成功</option><option>预报失败</option><option>已取消</option></select></label>
           <label class="filter-field"><span>核销状态</span><select id="interceptReconciliationStatusFilter"><option value="">全部核销状态</option><option>待核销</option><option>部分核销</option><option>已核销</option></select></label>
           <label class="filter-field intercept-date-filter"><span>申请时间</span><span class="date-range"><input id="interceptDateFrom" type="date" /><em>→</em><input id="interceptDateTo" type="date" /><b>□</b></span></label>
@@ -138,7 +137,7 @@
             
             <button class="status-tab active" data-intercept-status="全部" type="button">全部(0)</button>
           </div>
-          <div class="status-actions"><button class="btn danger" id="interceptBatchCancelButton" type="button" hidden>审批拒绝</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>审批通过</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>批量备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
+          <div class="status-actions"><button class="btn danger" id="interceptBatchCancelButton" type="button" hidden>审批拒绝</button><button class="btn primary" id="interceptBatchConfirmButton" type="button" hidden>审批通过</button><button class="btn" id="interceptBatchSuccessButton" type="button" hidden>拦截成功</button><button class="btn danger" id="interceptBatchFailureButton" type="button" hidden>拦截失败</button><button class="btn" id="interceptBatchNoteButton" type="button" hidden>批量内部备注</button><button class="btn" id="interceptBatchExportButton" type="button" hidden>导出</button></div>
         </div>
         <div class="intercept-list-summary"><span id="interceptListSummary">共 0 条拦截任务</span><span id="interceptListHint">拦截成功后将自动生成暂存单</span></div>
         <div class="table-scroll">
@@ -186,7 +185,7 @@
             <div class="intercept-other-toolbar"><h3>其它信息</h3><button class="btn" id="interceptAttachmentUploadButton" type="button">上传附件</button></div>
             <div class="intercept-attachment-table-wrap">
               <table class="intercept-attachment-table">
-                <thead><tr><th>附件名称</th><th>文件大小</th><th>上传人</th><th>上传时间</th><th>操作</th></tr></thead>
+                <thead><tr><th>附件名称</th><th>附件类型</th><th>客户可见</th><th>文件大小</th><th>上传人</th><th>上传时间</th><th>操作</th></tr></thead>
                 <tbody id="interceptAttachmentBody"></tbody>
               </table>
             </div>
@@ -217,13 +216,16 @@
     <header><h2 id="interceptAttachmentTitle">上传附件</h2><button class="intercept-close" id="interceptAttachmentClose" type="button" aria-label="关闭附件弹窗">×</button></header>
     <div class="intercept-attachment-content">
       <div class="intercept-attachment-upload-row">
-        <span class="intercept-attachment-label"><b>*</b> 附件：</span>
+        <span class="intercept-attachment-label"><b>*</b> 文件附件：</span>
         <div class="intercept-attachment-upload-main">
           <label class="intercept-attachment-upload-button">点击上传<input id="interceptAttachmentFileInput" type="file" /></label>
           <div class="intercept-attachment-tip">文件大小不超过 50M</div>
+          <div class="intercept-attachment-warning">若为报关件资料，文件类型请选择“报关资料”</div>
           <div class="intercept-attachment-file-row" id="interceptAttachmentFileRow" hidden><span id="interceptAttachmentFileName"></span><span class="intercept-attachment-file-size" id="interceptAttachmentFileSize">-</span><button id="interceptAttachmentFileRemove" type="button">删除</button></div>
         </div>
       </div>
+      <label class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 文件类型：</span><select class="intercept-attachment-form-field" id="interceptAttachmentType"></select></label>
+      <div class="intercept-attachment-form-row"><span class="intercept-attachment-label"><b>*</b> 客户是否可见：</span><div class="intercept-attachment-radio-group"><label><input type="radio" name="interceptAttachmentCustomerVisible" value="不可见" />不可见</label><label><input type="radio" name="interceptAttachmentCustomerVisible" value="可见" />可见</label></div></div>
     </div>
     <footer><button class="btn" id="interceptAttachmentCancel" type="button">取消</button><button class="btn primary" id="interceptAttachmentConfirm" type="button">确定</button></footer>
   </section>
@@ -245,8 +247,8 @@
 </div>
 <div class="intercept-overlay" id="interceptRemarkOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptRemarkTitle">
-    <header><h2 id="interceptRemarkTitle">编辑备注</h2><button class="intercept-close" id="interceptRemarkClose" type="button" aria-label="关闭备注编辑">×</button></header>
-    <form id="interceptRemarkForm"><div class="intercept-feedback-content"><p id="interceptRemarkContext"></p><label><span id="interceptRemarkLabel">备注内容</span><textarea id="interceptRemarkText" maxlength="200" placeholder="请输入备注内容"></textarea></label></div><footer><button class="btn" id="interceptRemarkCancelBtn" type="button">取消</button><button class="btn primary" type="submit">保存</button></footer></form>
+    <header><h2 id="interceptRemarkTitle">编辑内部备注</h2><button class="intercept-close" id="interceptRemarkClose" type="button" aria-label="关闭内部备注编辑">×</button></header>
+    <form id="interceptRemarkForm"><div class="intercept-feedback-content"><p id="interceptRemarkContext"></p><label><span id="interceptRemarkLabel">内部备注</span><textarea id="interceptRemarkText" maxlength="200" placeholder="请输入内部备注"></textarea></label></div><footer><button class="btn" id="interceptRemarkCancelBtn" type="button">取消</button><button class="btn primary" type="submit">保存</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay" id="interceptCancelReasonOverlay" hidden>
@@ -269,8 +271,8 @@
 </div>
 <div class="intercept-overlay" id="interceptBatchNoteOverlay" hidden>
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptBatchNoteTitle">
-    <header><h2 id="interceptBatchNoteTitle">备注</h2><button class="intercept-close" id="interceptBatchNoteClose" type="button" aria-label="关闭备注">×</button></header>
-    <form id="interceptBatchNoteForm"><div class="intercept-feedback-content"><label><span>备注内容</span><textarea id="interceptBatchNoteText" maxlength="200" placeholder="请输入备注内容" required></textarea></label></div><footer><button class="btn" id="interceptBatchNoteCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
+    <header><h2 id="interceptBatchNoteTitle">内部备注</h2><button class="intercept-close" id="interceptBatchNoteClose" type="button" aria-label="关闭内部备注">×</button></header>
+    <form id="interceptBatchNoteForm"><div class="intercept-feedback-content"><label><span>内部备注内容</span><textarea id="interceptBatchNoteText" maxlength="200" placeholder="请输入内部备注内容" required></textarea></label></div><footer><button class="btn" id="interceptBatchNoteCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
   </section>
 </div>
 <div class="intercept-overlay intercept-feedback-overlay" id="interceptFeedbackOverlay" hidden>
@@ -514,7 +516,7 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260916-e65d2e3"></script>
+<script src="script.js?v=20260916-approved-full"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
 <script src="forecast.js?v=20260911-1"></script>
 </body>

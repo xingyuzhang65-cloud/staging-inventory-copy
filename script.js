@@ -2355,6 +2355,28 @@ const interceptTasks = [
       { time: "2026-07-28 10:31:17", user: "仓库-王强", action: "开始拦截", change: "已确认 → 拦截中", note: "开始定位货物" },
       { time: "2026-07-28 12:08:42", user: "仓库-王强", action: "拦截失败", change: "拦截中 → 拦截失败", note: "部分货物已出库，剩余货物无法定位" }
     ]
+  },
+  {
+    id: 10, no: "202607270014", waybill: "US0727", container: "SEGU7726140", system: "SEGU7726140-260727", customer: "TTTX", source: "天图拦截", warehouse: "美仓1号仓",
+    cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "已出库", boxes: 5,
+    status: "拦截失败", terminationType: "拦截失败", reconciliationStatus: "待核销", reason: "客户要求撤回已下发的出库指令", attachment: "客户撤回邮件-0727.png", customerRemark: "若已出库请提供失败原因", remark: "司机已完成提货，无法追回", applicant: "客服-张敏", appliedAt: "2026-07-27 13:18:09", handler: "仓库-李明", handleAt: "2026-07-27 14:02:36", failReason: "出库指令已完成，司机已提货离仓", terminationReason: "出库指令已完成，司机已提货离仓", actualBoxes: "", storageNo: "", resultRemark: "",
+    logs: [
+      { time: "2026-07-27 13:18:09", user: "客服-张敏", action: "提交申请", change: "- → 待审批", note: "客户申请撤回出库指令" },
+      { time: "2026-07-27 13:31:24", user: "仓库-李明", action: "确认拦截", change: "待审批 → 已确认", note: "仓库核实货物状态" },
+      { time: "2026-07-27 13:42:18", user: "仓库-李明", action: "开始拦截", change: "已确认 → 拦截中", note: "联系现场确认车辆状态" },
+      { time: "2026-07-27 14:02:36", user: "仓库-李明", action: "拦截失败", change: "拦截中 → 拦截失败", note: "出库指令已完成，司机已提货离仓" }
+    ]
+  },
+  {
+    id: 11, no: "202607260019", waybill: "BOS2607", container: "MSKU2607195", system: "MSKU2607195-260726", customer: "ABC-US", source: "美仓拦截", warehouse: "美仓1号仓",
+    cargoStatus: "已拆柜", inventoryStatus: "已入库", outboundStatus: "未出库", boxes: 12,
+    status: "拦截失败", terminationType: "拦截失败", reconciliationStatus: "部分核销", reason: "客户要求暂停出库并重新贴标", attachment: "重贴标申请-0726.pdf", customerRemark: "请反馈未完成原因，后续重新下单", remark: "货箱混放在复核区，短时间无法完成全量定位", applicant: "客服-周悦", appliedAt: "2026-07-26 09:45:33", handler: "仓库-王强", handleAt: "2026-07-26 11:16:08", failReason: "现场仅定位到 7 箱，剩余 5 箱暂未完成库位复核", terminationReason: "现场仅定位到 7 箱，剩余 5 箱暂未完成库位复核", actualBoxes: "7", storageNo: "", resultRemark: "",
+    logs: [
+      { time: "2026-07-26 09:45:33", user: "客服-周悦", action: "提交申请", change: "- → 待审批", note: "客户申请暂停出库并重新贴标" },
+      { time: "2026-07-26 09:58:14", user: "仓库-王强", action: "确认拦截", change: "待审批 → 已确认", note: "仓库受理拦截任务" },
+      { time: "2026-07-26 10:04:42", user: "仓库-王强", action: "开始拦截", change: "已确认 → 拦截中", note: "现场开始核对货箱库位" },
+      { time: "2026-07-26 11:16:08", user: "仓库-王强", action: "拦截失败", change: "拦截中 → 拦截失败", note: "现场仅定位到 7 箱，剩余 5 箱暂未完成库位复核" }
+    ]
   }
 ];
 
@@ -2366,7 +2388,10 @@ const interceptLatestTrackingDefaults = {
   5: "2026-08-01 16:00 货物已完成出库，已送达",
   6: "2026-07-31 09:00 已取消，货物正常出库",
   7: "2026-07-30 11:42 已转入暂存库位 A03-02",
-  8: "2026-07-29 16:25 已转入暂存库位 B01-05"
+  8: "2026-07-29 16:25 已转入暂存库位 B01-05",
+  9: "2026-07-28 12:08 拦截失败，部分货物已出库",
+  10: "2026-07-27 14:02 拦截失败，司机已提货离仓",
+  11: "2026-07-26 11:16 拦截失败，剩余货箱仍在库位复核中"
 };
 
 const interceptLegacyStatusMap = {
@@ -2449,7 +2474,9 @@ let interceptAttachmentDeletingId = null;
 let interceptAttachmentFile = null;
 let interceptAttachmentForm = {
   fileName: "",
-  fileSize: ""
+  fileSize: "",
+  type: "其他",
+  customerVisible: "可见"
 };
 let interceptToastTimer = null;
 let interceptFeedbackMode = "";
@@ -2468,7 +2495,6 @@ const interceptFilters = {
   customer: $("#interceptCustomerFilter"),
   source: $("#interceptSourceFilter"),
   type: $("#interceptTypeFilter"),
-  status: $("#interceptStatusFilter"),
   forecastStatus: $("#interceptForecastStatusFilter"),
   reconciliationStatus: $("#interceptReconciliationStatusFilter"),
   dateFrom: $("#interceptDateFrom"),
@@ -2543,12 +2569,16 @@ function getInterceptAttachmentItems(task) {
   return [{ name: raw, url: getInterceptAttachmentUrl(task, raw) }];
 }
 
+const interceptAttachmentTypeOptions = ["POD", "ISA", "报关资料", "底单", "其他", "其它", "税金单", "递延资料", "提单"];
+
 function getInterceptAttachmentRows(task) {
   if (!task) return [];
   if (interceptAttachmentRowsByTask.has(task.id)) return interceptAttachmentRowsByTask.get(task.id);
   const rows = getInterceptAttachmentItems(task).map((item, index) => ({
     id: `INTERCEPT-ATT-${task.id}-${index}-${item.name}`,
     name: item.name,
+    type: "其他",
+    customerVisible: "可见",
     fileSize: "-",
     uploadedBy: task.handler || task.applicant || "系统",
     uploadedAt: task.appliedAt || "-",
@@ -2998,25 +3028,32 @@ function saveInterceptFeeDraftRows(event) {
 
 function renderInterceptOtherInfo(task) {
   const rows = getInterceptAttachmentRows(task);
+  $("#interceptAttachmentType").innerHTML = interceptAttachmentTypeOptions.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
   $("#interceptAttachmentBody").innerHTML = rows.length ? rows.map((row) => `<tr data-intercept-attachment-id="${escapeHtml(row.id)}">
     <td title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+    <td>${escapeHtml(row.type)}</td>
+    <td>${escapeHtml(row.customerVisible)}</td>
     <td>${escapeHtml(row.fileSize || "-")}</td>
     <td>${escapeHtml(row.uploadedBy || "-")}</td>
     <td class="intercept-attachment-time">${escapeHtml(row.uploadedAt || "-")}</td>
     <td><button class="intercept-action" data-intercept-attachment-action="edit" type="button">编辑</button><button class="intercept-action" data-intercept-attachment-action="download" type="button">下载</button><button class="intercept-action danger" data-intercept-attachment-action="delete" type="button">删除</button></td>
-  </tr>`).join("") : '<tr><td colspan="5" class="intercept-attachment-empty"><span class="intercept-attachment-empty-icon" aria-hidden="true">▧</span>暂无附件</td></tr>';
+  </tr>`).join("") : '<tr><td colspan="7" class="intercept-attachment-empty"><span class="intercept-attachment-empty-icon" aria-hidden="true">▧</span>暂无附件</td></tr>';
 }
 
 function resetInterceptAttachmentForm() {
-  interceptAttachmentForm = { fileName: "", fileSize: "" };
+  interceptAttachmentForm = { fileName: "", fileSize: "", type: "其他", customerVisible: "可见" };
   interceptAttachmentFile = null;
 }
 
 function renderInterceptAttachmentForm() {
   $("#interceptAttachmentTitle").textContent = interceptAttachmentEditingId ? "编辑附件" : "上传附件";
+  $("#interceptAttachmentType").value = interceptAttachmentForm.type;
   $("#interceptAttachmentFileName").textContent = interceptAttachmentForm.fileName;
   $("#interceptAttachmentFileSize").textContent = interceptAttachmentForm.fileSize || "-";
   $("#interceptAttachmentFileRow").hidden = !interceptAttachmentForm.fileName;
+  document.querySelectorAll('input[name="interceptAttachmentCustomerVisible"]').forEach((control) => {
+    control.checked = control.value === interceptAttachmentForm.customerVisible;
+  });
 }
 
 function openInterceptAttachmentModal(rowId = null) {
@@ -3025,8 +3062,8 @@ function openInterceptAttachmentModal(rowId = null) {
   const row = rowId ? getInterceptAttachmentRows(task).find((item) => String(item.id) === String(rowId)) : null;
   interceptAttachmentEditingId = row?.id || null;
   interceptAttachmentForm = row
-    ? { fileName: row.name, fileSize: row.fileSize || "" }
-    : { fileName: "", fileSize: "" };
+    ? { fileName: row.name, fileSize: row.fileSize || "", type: row.type, customerVisible: row.customerVisible }
+    : { fileName: "", fileSize: "", type: "其他", customerVisible: "可见" };
   interceptAttachmentFile = null;
   $("#interceptAttachmentFileInput").value = "";
   $("#interceptAttachmentOverlay").hidden = false;
@@ -3077,11 +3114,13 @@ function saveInterceptAttachment() {
   const existingRows = getInterceptAttachmentRows(task);
   const nextRows = interceptAttachmentEditingId
     ? existingRows.map((row) => String(row.id) === String(interceptAttachmentEditingId)
-      ? { ...row, name: fileName, fileSize: interceptAttachmentForm.fileSize || row.fileSize, file: interceptAttachmentFile || row.file, url: interceptAttachmentFile ? "" : getInterceptAttachmentUrl(task, fileName) }
+      ? { ...row, name: fileName, type: interceptAttachmentForm.type, customerVisible: interceptAttachmentForm.customerVisible, fileSize: interceptAttachmentForm.fileSize || row.fileSize, file: interceptAttachmentFile || row.file, url: interceptAttachmentFile ? "" : getInterceptAttachmentUrl(task, fileName) }
       : row)
     : [...existingRows, {
         id: `INTERCEPT-ATT-${task.id}-${Date.now()}`,
         name: fileName,
+        type: interceptAttachmentForm.type,
+        customerVisible: interceptAttachmentForm.customerVisible,
         fileSize: interceptAttachmentForm.fileSize || "-",
         uploadedBy: "仓库-李明",
         uploadedAt: formatLocalDateTime(),
@@ -3147,7 +3186,6 @@ function getFilteredInterceptTasks() {
     && (!interceptFilters.customer.value || task.customer === interceptFilters.customer.value)
     && (!interceptFilters.source.value || task.source === interceptFilters.source.value)
     && (!interceptFilters.type.value || getInterceptType(task) === interceptFilters.type.value)
-    && (!interceptFilters.status.value || interceptStatusMatches(task, interceptFilters.status.value))
     && (!interceptFilters.forecastStatus.value || getInterceptForecastStatus(task) === interceptFilters.forecastStatus.value)
     && (!interceptFilters.reconciliationStatus.value || getInterceptReconciliationStatus(task) === interceptFilters.reconciliationStatus.value)
     && (!from || formatInterceptDate(task.appliedAt) >= from)
@@ -3306,7 +3344,7 @@ function renderInterceptDetail(task, mode = "view") {
     displayStatus === "拦截成功" ? field("归档状态", task.archived ? `已归档${task.archivedAt ? `（${escapeHtml(task.archivedAt)}）` : ""}` : "未归档") : "",
     displayStatus === "审批拒绝" ? field("审批拒绝原因", escapeHtml(task.terminationReason || task.failReason || task.cancelReason || task.resultRemark || "-")) : "",
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
-    field("备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑备注" style="margin-left:6px">✎</button>`)
+    field("内部备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑内部备注" style="margin-left:6px">✎</button>`)
   ].join("");
   renderInterceptCargoBoxes(task);
   renderInterceptFee(task);
@@ -3582,14 +3620,14 @@ function submitInterceptBatchNote(event) {
   event.preventDefault();
   const note = $("#interceptBatchNoteText").value.trim();
   if (!note) {
-    window.alert("请输入备注内容");
+    window.alert("请输入内部备注内容");
     return;
   }
   const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
   tasks.forEach((task) => {
     const previousRemark = task.remark || "";
     task.remark = previousRemark ? `${previousRemark}；${note}` : note;
-    addInterceptLog(task, "备注", task.status, note);
+    addInterceptLog(task, "内部备注", task.status, note);
   });
   $("#interceptBatchNoteOverlay").hidden = true;
   selectedInterceptIds.clear();
@@ -3631,10 +3669,10 @@ function openInterceptRemark(taskId, field = "remark") {
   interceptRemarkContext = task.id;
   interceptRemarkField = field;
   const isCustomerRemark = field === "customerRemark";
-  $("#interceptRemarkTitle").textContent = isCustomerRemark ? "编辑客户备注" : "编辑备注";
+  $("#interceptRemarkTitle").textContent = isCustomerRemark ? "编辑客户备注" : "编辑内部备注";
   $("#interceptRemarkContext").textContent = `拦截单号：${task.no}`;
-  $("#interceptRemarkLabel").textContent = isCustomerRemark ? "客户备注" : "备注内容";
-  $("#interceptRemarkText").placeholder = isCustomerRemark ? "请输入客户备注" : "请输入备注内容";
+  $("#interceptRemarkLabel").textContent = isCustomerRemark ? "客户备注" : "内部备注内容";
+  $("#interceptRemarkText").placeholder = isCustomerRemark ? "请输入客户备注" : "请输入内部备注";
   $("#interceptRemarkText").value = task[field] || "";
   $("#interceptRemarkOverlay").hidden = false;
   $("#interceptRemarkText").focus();
@@ -3649,7 +3687,7 @@ function submitInterceptRemark(event) {
   const field = interceptRemarkField;
   const previousRemark = task[field] || "";
   task[field] = remark;
-  addInterceptLog(task, field === "customerRemark" ? "修改客户备注" : "修改备注", task.status, `"${previousRemark || "-"}" → "${remark || "-"}"`);
+  addInterceptLog(task, field === "customerRemark" ? "修改客户备注" : "修改内部备注", task.status, `"${previousRemark || "-"}" → "${remark || "-"}"`);
   $("#interceptRemarkOverlay").hidden = true;
   interceptRemarkContext = null;
   interceptRemarkField = "remark";
@@ -4032,6 +4070,12 @@ function initInterceptManagement() {
     $("#interceptAttachmentFileInput").value = "";
     renderInterceptAttachmentForm();
   });
+  $("#interceptAttachmentType").addEventListener("change", (event) => {
+    interceptAttachmentForm.type = event.currentTarget.value;
+  });
+  document.querySelectorAll('input[name="interceptAttachmentCustomerVisible"]').forEach((control) => control.addEventListener("change", (event) => {
+    interceptAttachmentForm.customerVisible = event.currentTarget.value;
+  }));
   $("#interceptAttachmentConfirm").addEventListener("click", saveInterceptAttachment);
   $("#interceptAttachmentDeleteClose").addEventListener("click", closeInterceptAttachmentDelete);
   $("#interceptAttachmentDeleteCancel").addEventListener("click", closeInterceptAttachmentDelete);
