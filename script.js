@@ -3262,7 +3262,7 @@ function updateInterceptBatchControls() {
   const exportButton = $("#interceptBatchExportButton");
 
   cancelButton.hidden = !isPendingView && !isInterceptingView;
-  cancelButton.textContent = isInterceptingView ? "取消下单" : "审批驳回";
+  cancelButton.textContent = isInterceptingView ? "取消拦截" : "审批驳回";
   confirmButton.hidden = !isPendingView;
   confirmButton.textContent = "审批通过";
   successButton.hidden = !isInterceptingView;
@@ -3315,7 +3315,7 @@ function renderInterceptRows() {
       }).join("");
       const rowClass = getInterceptDisplayStatus(task) === "拦截失败" ? ' class="intercept-row-failed"' : "";
       const cancelOrderAction = task.status === "拦截中"
-        ? '<button class="intercept-action danger" data-intercept-action="cancel-order" type="button">取消下单</button>'
+        ? '<button class="intercept-action danger" data-intercept-action="cancel-order" type="button">取消拦截</button>'
         : "";
       return `<tr data-intercept-id="${task.id}"${rowClass}>
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
@@ -3483,7 +3483,7 @@ function configureInterceptCancelDialog(isOrderCancellation) {
   $("#interceptCancelReasonText").placeholder = isOrderCancellation ? "请填写取消原因" : "请填写驳回原因";
   $("#interceptCancelReasonCancel").textContent = isOrderCancellation ? "取消" : "返回";
   overlay.querySelector('button[type="submit"]').textContent = isOrderCancellation ? "确认提交" : "提交处理结果";
-  $("#interceptCancelReasonClose").setAttribute("aria-label", isOrderCancellation ? "关闭取消下单" : "关闭处理弹窗");
+  $("#interceptCancelReasonClose").setAttribute("aria-label", isOrderCancellation ? "关闭取消拦截" : "关闭处理弹窗");
 }
 
 function cancelInterceptOrders(tasks) {
@@ -3491,7 +3491,7 @@ function cancelInterceptOrders(tasks) {
   if (!eligible.length) return showInterceptToast("请勾选拦截中任务");
   interceptCancelContext = { mode: "cancel-order", taskIds: eligible.map((task) => task.id) };
   configureInterceptCancelDialog(true);
-  $("#interceptCancelReasonTitle").textContent = "取消下单";
+  $("#interceptCancelReasonTitle").textContent = "取消拦截";
   $("#interceptCancelReasonHint").textContent = `已选择 ${eligible.length} 条拦截中任务，取消后将流转到已取消，请填写取消原因。`;
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
@@ -3721,7 +3721,7 @@ function submitInterceptCancelReason(event) {
     selectedInterceptIds.clear();
     interceptActiveTab = "已取消/已驳回";
     interceptFilters.status.value = "";
-    showInterceptToast("已取消下单，任务已流转到已取消");
+    showInterceptToast("已取消拦截，任务已流转到已取消");
   } else if (interceptCancelContext.mode === "single") {
     const task = getInterceptTask(interceptCancelContext.taskId);
     if (task) applyInterceptCancel(task, reason);
