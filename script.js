@@ -2246,8 +2246,8 @@ const interceptStatusLabel = {
   已完成: "拦截成功",
   拦截成功: "拦截成功",
   拦截失败: "拦截失败",
-  已取消: "已取消",
-  已驳回: "已驳回"
+  已取消: "取消",
+  已驳回: "驳回"
 };
 const interceptStatusClass = {
   待处理: "is-pending",
@@ -3167,7 +3167,7 @@ function renderInterceptStatusTabs() {
   document.querySelectorAll("[data-intercept-status]").forEach((tab) => {
     const status = tab.dataset.interceptStatus;
     const count = status === "全部" ? interceptTasks.length : interceptTasks.filter((task) => interceptStatusMatches(task, status)).length;
-    tab.textContent = `${status === "待处理" ? "待审批" : status}(${count})`;
+    tab.textContent = `${status === "待处理" ? "待审批" : status === "已取消/已驳回" ? "取消/驳回" : status}(${count})`;
     tab.classList.toggle("active", status === interceptActiveTab);
   });
 }
@@ -3211,15 +3211,8 @@ function getInterceptTerminationReason(task) {
   return "-";
 }
 
-function getInterceptTerminationSource(task) {
-  const status = getInterceptDisplayStatus(task);
-  if (status === "已取消") return task.cancelSource || task.terminationType || "客户取消";
-  return status === "已驳回" ? "审批驳回" : "-";
-}
-
 function getInterceptStatusColumns() {
   const terminationColumns = [
-    { label: "处理类型", getValue: getInterceptTerminationSource },
     { label: "取消/驳回原因", getValue: getInterceptTerminationReason }
   ];
   const statusColumn = { label: "拦截状态", getValue: (task) => interceptStatusLabel[getInterceptDisplayStatus(task)] || getInterceptDisplayStatus(task),
@@ -3289,7 +3282,7 @@ function renderInterceptRows() {
   interceptVisibleRows = getFilteredInterceptTasks();
   pruneInterceptSelection();
   const statusColumns = getInterceptStatusColumns();
-  [$("#interceptStatusReasonHeader"), $("#interceptFailureReasonHeader"), $("#interceptTerminationSourceHeader"), $("#interceptTerminationReasonHeader")].forEach((header, index) => {
+  [$("#interceptStatusReasonHeader"), $("#interceptFailureReasonHeader"), $("#interceptTerminationReasonHeader")].forEach((header, index) => {
     if (!header) return;
     const column = statusColumns[index];
     header.hidden = !column;
@@ -3336,7 +3329,7 @@ function addInterceptLog(task, action, previousStatus, note, user = "仓库-李�
     time: now,
     user,
     action,
-    change: `${interceptStatusLabel[previousStatus] || previousStatus || "-"} → ${getInterceptDisplayStatus(task) || task.status}`,
+    change: `${interceptStatusLabel[previousStatus] || previousStatus || "-"} → ${interceptStatusLabel[getInterceptDisplayStatus(task)] || getInterceptDisplayStatus(task) || task.status}`,
     note
   });
   task.handler = user;
@@ -3363,7 +3356,6 @@ function renderInterceptDetail(task, mode = "view") {
     field("申请时间", escapeHtml(task.appliedAt)),
     ["拦截成功", "拦截失败"].includes(displayStatus) ? field(displayStatus === "拦截失败" ? "失败原因" : "完成结果", escapeHtml(task.failReason || task.resultRemark || "-")) : "",
     displayStatus === "拦截成功" ? field("归档状态", task.archived ? `已归档${task.archivedAt ? `（${escapeHtml(task.archivedAt)}）` : ""}` : "未归档") : "",
-    ["已取消", "已驳回"].includes(displayStatus) ? field("处理类型", escapeHtml(getInterceptTerminationSource(task))) : "",
     ["已取消", "已驳回"].includes(displayStatus) ? field(displayStatus === "已取消" ? "取消原因" : "驳回原因", escapeHtml(getInterceptTerminationReason(task))) : "",
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
     field("内部备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑内部备注" style="margin-left:6px">✎</button>`)
@@ -3492,7 +3484,7 @@ function cancelInterceptOrders(tasks) {
   interceptCancelContext = { mode: "cancel-order", taskIds: eligible.map((task) => task.id) };
   configureInterceptCancelDialog(true);
   $("#interceptCancelReasonTitle").textContent = "取消拦截";
-  $("#interceptCancelReasonHint").textContent = `已选择 ${eligible.length} 条拦截中任务，取消后将流转到已取消，请填写取消原因。`;
+  $("#interceptCancelReasonHint").textContent = `已选择 ${eligible.length} 条拦截中任务，取消后将流转到取消，请填写取消原因。`;
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3580,7 +3572,7 @@ function cancelInterceptTask() {
   if (!task || task.status !== "待处理") return;
   interceptCancelContext = { mode: "single", taskId: task.id };
   $("#interceptCancelReasonTitle").textContent = "审批驳回";
-  $("#interceptCancelReasonHint").textContent = "该申请将进入已驳回状态，请填写驳回原因。";
+  $("#interceptCancelReasonHint").textContent = "该申请将进入驳回状态，请填写驳回原因。";
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3595,7 +3587,7 @@ function confirmSelectedInterceptTasks() {
   if (!confirmInterceptWithFeeWarning(tasks)) return;
   const outboundCount = tasks.filter((task) => task.cargoStatus === "已出库").length;
   const message = outboundCount
-    ? `确认通过选中的 ${tasks.length} 条拦截申请吗？其中 ${outboundCount} 条货物已出库，将自动归入已驳回。`
+    ? `确认通过选中的 ${tasks.length} 条拦截申请吗？其中 ${outboundCount} 条货物已出库，将自动归入驳回。`
     : `确认通过选中的 ${tasks.length} 条拦截申请吗？`;
   if (!window.confirm(message)) return;
   tasks.forEach(applyInterceptConfirm);
@@ -3615,7 +3607,7 @@ function cancelSelectedInterceptTasks() {
   }
   interceptCancelContext = { mode: "batch", taskIds: tasks.map((t) => t.id) };
   $("#interceptCancelReasonTitle").textContent = `批量审批驳回（${tasks.length}条）`;
-  $("#interceptCancelReasonHint").textContent = `将有 ${tasks.length} 条申请进入已驳回，请填写统一拒绝原因。`;
+  $("#interceptCancelReasonHint").textContent = `将有 ${tasks.length} 条申请进入驳回，请填写统一拒绝原因。`;
   $("#interceptCancelReasonText").value = "";
   $("#interceptCancelReasonOverlay").hidden = false;
   $("#interceptCancelReasonText").focus();
@@ -3721,7 +3713,7 @@ function submitInterceptCancelReason(event) {
     selectedInterceptIds.clear();
     interceptActiveTab = "已取消/已驳回";
     interceptFilters.status.value = "";
-    showInterceptToast("已取消拦截，任务已流转到已取消");
+    showInterceptToast("已取消拦截，任务已流转到取消");
   } else if (interceptCancelContext.mode === "single") {
     const task = getInterceptTask(interceptCancelContext.taskId);
     if (task) applyInterceptCancel(task, reason);
