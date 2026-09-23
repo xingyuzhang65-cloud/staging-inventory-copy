@@ -176,6 +176,10 @@
     overlay.querySelector('.fc-detail-body').addEventListener('scroll',closeMoreMenu,true);
   }
   function open(){
+    if (!confirmDiscardInstructionStatusDrafts()) return;
+    document.querySelector("#instructionManagementPage").hidden=true;
+    document.querySelectorAll(".side-nav button.active").forEach(button=>button.classList.remove("active"));
+    document.querySelector("#navOverseasTransfer").classList.remove("current-section");
     document.querySelector('#inventoryPage').hidden=true;
     document.querySelector('#interceptPage').hidden=true;
     document.querySelector('#navStagingInventory').classList.remove('active');
@@ -208,8 +212,7 @@
   });
   const inbound=[...document.querySelectorAll('.side-nav > .nav-item')].find(x=>x.textContent.includes('入库管理'));
   const sub=document.createElement('div');sub.className='nav-children';sub.hidden=true;sub.innerHTML='<button type="button" id="navForecast"><span>▤</span>预报单</button>';inbound.after(sub);inbound.addEventListener('click',()=>{sub.hidden=!sub.hidden;inbound.classList.toggle('expanded',!sub.hidden)});sub.querySelector('button').onclick=open;
-  document.querySelector('#navStagingInventory').addEventListener('click',close);
-  document.querySelector('#navInterceptManagement').addEventListener('click',close);
-  render();open();
+  document.addEventListener('warehouse-page-change',close);
+  render();
 })();
 

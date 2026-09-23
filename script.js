@@ -382,8 +382,10 @@ let editingRemarkInstructionCode = "";
 let deletingInstructionCode = "";
 const selected = new Set();
 const instructionStatusDrafts = new Map();
-let activeStatus = "待审批";
-let visibleRows = [...approvalRows];
+let activeStatus = "暂存";
+let activeInventoryPage = "staging";
+let lastInstructionStatus = "待审批";
+let visibleRows = [...inventoryRows];
 
 const instructionWorkflowRows = [
   inventoryRows,
@@ -396,11 +398,11 @@ const instructionWorkflowRows = [
   rejectedRows
 ];
 
-const blockedStatusOptions = ["拆柜前拦截", "拆柜后拦截，待确认", "拆柜后拦截成功", "拆柜后拦截失败", "暂存"];
+const blockedStatusOptions = ["暂存", "拦截", "退换货"];
 
 instructionWorkflowRows.forEach((rows) => {
   rows.forEach((row, index) => {
-    if (!blockedStatusOptions.includes(row.blocked)) row.blocked = blockedStatusOptions[index % blockedStatusOptions.length];
+    row.blocked = normalizeInventoryType(row.blocked);
     if (row.releaseType === "放货") row.releaseType = "发货";
     if (row.releaseType === "不放货") row.releaseType = "增值服务";
     if (!["发货", "增值服务", "销毁"].includes(row.releaseType)) {
@@ -631,15 +633,15 @@ function renderInstructionAudit(status) {
   return `<span class="workflow-status ${instructionAuditTone[status] || "status-neutral"}">${status || "-"}</span>`;
 }
 
+function normalizeInventoryType(value) {
+  const type = String(value || "");
+  if (blockedStatusOptions.includes(type)) return type;
+  return type.includes("拦截") || type === "是" ? "拦截" : "暂存";
+}
+
 function renderBlockedStatus(status) {
-  const normalized = blockedStatusOptions.includes(status) ? status : "暂存";
-  const tone = {
-    "拆柜前拦截": "is-before",
-    "拆柜后拦截，待确认": "is-pending",
-    "拆柜后拦截成功": "is-success",
-    "拆柜后拦截失败": "is-failed",
-    "暂存": "is-storage"
-  }[normalized];
+  const normalized = normalizeInventoryType(status);
+  const tone = ["is-storage", "is-blocked", "is-return"][blockedStatusOptions.indexOf(normalized)];
   return `<span class="blocked-status ${tone}" title="${escapeHtml(normalized)}" aria-label="${escapeHtml(normalized)}">${escapeHtml(normalized)}</span>`;
 }
 
@@ -763,7 +765,7 @@ function renderTableChrome() {
 
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
-    <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
+    <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>库存类型</th>
     <th>运单类型</th><th class="release-type-col">下单类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
@@ -775,7 +777,7 @@ function renderTableChrome() {
     <th class="operation-col">操作</th>
   </tr>` : `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
-    <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>是否拦截</th>
+    <th class="sortable">客户名称</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>库存类型</th>
     <th>转运方式</th><th>目的地</th><th>派送方式</th><th>托盘标签</th><th class="instruction-remark-col">备注</th><th class="instruction-image-col">图片</th><th class="instruction-status-col">指令状态</th><th class="sortable">入库时间</th>
     <th class="sortable">重量</th><th class="sortable">体积</th><th class="sortable">总箱数</th>
     <th class="sortable">待审核箱数</th><th class="sortable">未发货箱数</th><th class="sortable">已发货箱数</th><th class="operation-col">操作</th>
@@ -997,6 +999,7 @@ document.querySelectorAll(".status-tab[data-status]").forEach((tab) => {
     document.querySelectorAll(".status-tab[data-status]").forEach((item) => item.classList.remove("active"));
     tab.classList.add("active");
     activeStatus = tab.dataset.status;
+    if (activeInventoryPage === "instructions") lastInstructionStatus = activeStatus;
     selected.clear();
     $("#filterCard").classList.toggle("approval-filter", isRequestTableView());
     $("#filterCard").classList.remove("approval-expanded", "collapsed");
@@ -1038,13 +1041,13 @@ $("#exportButton").addEventListener("click", () => {
     window.alert("请先保存或放弃指令修改，再执行导出");
     return;
   }
-  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","是否拦截","运单类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","库存类型","运单类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
   if (isApprovalView() || isTerminalRequestView()) requestHeader.push("指令数量", "指令");
   else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令数量", "指令");
   requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
   const header = isRequestTableView()
     ? requestHeader
-    : ["客户名称","柜号","系统柜号","入仓号","是否拦截","转运方式","目的地","派送方式","托盘标签","备注","图片","指令状态","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
+    : ["客户名称","柜号","系统柜号","入仓号","库存类型","转运方式","目的地","派送方式","托盘标签","备注","图片","指令状态","入库时间","重量","体积","总箱数","待审核箱数","未发货箱数","已发货箱数"];
   const lines = [header, ...visibleRows.map((r) => {
     if (!isRequestTableView()) {
       const instructionRows = getListInstructionRows(r);
@@ -1532,7 +1535,7 @@ function finishReleaseSubmission(appliedBoxes) {
     : null;
   closeReleaseDrawer();
   if (createdApprovalRequest) {
-    showStagingInventory("待审批");
+    showInstructionList("待审批");
     return;
   }
   renderRows();
@@ -1548,7 +1551,7 @@ function normalizeReleaseRow(row) {
     container: row.container || "-",
     system: row.system || "/",
     inbound: row.inbound || "-",
-    blocked: blockedStatusOptions.includes(row.blocked) ? row.blocked : "暂存",
+    blocked: normalizeInventoryType(row.blocked),
     transfer: row.transfer || "拆转",
     destination: row.destination || palletDestination || (row.applicationType === "其他地址" ? "FEDEX" : "ABE2"),
     dispatch: row.dispatch || "Truck-Amazon",
@@ -3928,7 +3931,7 @@ function createStorageFromIntercept(task) {
     container: task.container || task.waybill,
     system: task.system || task.container || task.waybill,
     inbound: task.waybill,
-    blocked: "暂存",
+    blocked: "拦截",
     transfer: "-",
     destination: "暂存库",
     dispatch: "-",
@@ -3983,16 +3986,36 @@ function submitInterceptFeedback(event) {
   refreshInterceptUI();
 }
 
-function showStagingInventory(status = activeStatus) {
-  interceptPage.hidden = true;
-  inventoryPage.hidden = false;
-  $("#navInterceptManagement").classList.remove("active");
-  $("#navStagingInventory").classList.add("active");
-  $("#currentPageName").textContent = "暂存库存";
-  document.title = "暂存库存 - 美仓海外仓系统";
+function activateWarehousePage(page, title, navId) {
+  document.dispatchEvent(new CustomEvent("warehouse-page-change"));
+  inventoryPage.hidden = page !== "staging" && page !== "instructions";
+  interceptPage.hidden = page !== "intercepts";
+  $("#instructionManagementPage").hidden = page !== "instruction-management";
+  document.querySelectorAll(".side-nav button.active").forEach((button) => button.classList.remove("active"));
+  $(navId).classList.add("active");
+  $("#navOverseasTransfer").classList.toggle("current-section", page === "instructions" || page === "instruction-management");
+  $("#currentPageName").textContent = title;
+  document.title = title + " - 美仓海外仓系统";
+}
+
+function showInventorySection(page, status) {
+  if (!confirmDiscardInstructionStatusDrafts()) return;
+  if (activeInventoryPage !== page) {
+    Object.values(filters).forEach((control) => { control.value = ""; });
+    $("#dateFrom").value = "";
+    $("#dateTo").value = "";
+  }
+  activeInventoryPage = page;
+  const staging = page === "staging";
+  activateWarehousePage(page, staging ? "暂存库存" : "指令列表", staging ? "#navStagingInventory" : "#navInstructionList");
   activeStatus = status;
-  document.querySelectorAll(".status-tab").forEach((tab) => {
-    if (tab.dataset.status) tab.classList.toggle("active", tab.dataset.status === activeStatus);
+  if (!staging) lastInstructionStatus = status;
+  const stagingStatuses = new Set(["暂存", "待出库", "已出库"]);
+  const instructionStatuses = new Set(["待审批", "指令待处理", "指令处理中", "销毁", "审批拒绝"]);
+  document.querySelectorAll(".status-tab[data-status]").forEach((tab) => {
+    const status = tab.dataset.status;
+    tab.hidden = staging ? !stagingStatuses.has(status) : !instructionStatuses.has(status);
+    tab.classList.toggle("active", status === activeStatus);
   });
   selected.clear();
   $("#filterCard").classList.toggle("approval-filter", isRequestTableView());
@@ -4001,14 +4024,22 @@ function showStagingInventory(status = activeStatus) {
   applyFilters();
 }
 
+function showStagingInventory() {
+  showInventorySection("staging", "暂存");
+}
+
+function showInstructionList(status = lastInstructionStatus) {
+  showInventorySection("instructions", status);
+}
+
+function showInstructionManagement() {
+  if (!confirmDiscardInstructionStatusDrafts()) return;
+  activateWarehousePage("instruction-management", "指令管理", "#navInstructionManagement");
+}
+
 function showInterceptManagement() {
   if (!confirmDiscardInstructionStatusDrafts()) return;
-  inventoryPage.hidden = true;
-  interceptPage.hidden = false;
-  $("#navStagingInventory").classList.remove("active");
-  $("#navInterceptManagement").classList.add("active");
-  $("#currentPageName").textContent = "拦截管理";
-  document.title = "拦截管理 - 美仓海外仓系统";
+  activateWarehousePage("intercepts", "拦截管理", "#navInterceptManagement");
   renderInterceptRows();
 }
 
@@ -4024,7 +4055,10 @@ function initInterceptManagement() {
   refreshInterceptFilterOptions();
   renderInterceptRows();
   $("#navInterceptManagement").addEventListener("click", showInterceptManagement);
-  $("#navStagingInventory").addEventListener("click", () => showStagingInventory(activeStatus));
+  $("#navStagingInventory").addEventListener("click", showStagingInventory);
+  $("#navOverseasTransfer").addEventListener("click", () => showInstructionList());
+  $("#navInstructionList").addEventListener("click", () => showInstructionList());
+  $("#navInstructionManagement").addEventListener("click", showInstructionManagement);
   $("#interceptSearchButton").addEventListener("click", renderInterceptRows);
   interceptFilters.status.addEventListener("change", () => {
     selectedInterceptIds.clear();
@@ -4080,7 +4114,7 @@ function initInterceptManagement() {
     }
     if (action === "storage") {
       createStorageFromIntercept(task);
-      showStagingInventory("暂存");
+      showStagingInventory();
       return;
     }
     if (action === "log") {
@@ -4338,7 +4372,7 @@ function initInterceptManagement() {
       const task = getInterceptTask();
       if (task) createStorageFromIntercept(task);
       closeInterceptDetail();
-      showStagingInventory("暂存");
+      showStagingInventory();
     }
     if (action === "editRemark" || action === "editCustomerRemark") {
       const task = getInterceptTask();
@@ -4405,5 +4439,5 @@ function initInterceptManagement() {
 }
 
 initInterceptManagement();
-renderRows();
+showStagingInventory();
 buildWatermarks();

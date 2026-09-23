@@ -23,9 +23,9 @@ button { cursor: pointer; }
   position: relative;
   z-index: 5;
   display: flex;
-  flex: 0 0 160px;
+  flex: 0 0 190px;
   flex-direction: column;
-  width: 160px;
+  width: 190px;
   min-height: 100vh;
   color: #9fb0c2;
   background: var(--nav);
@@ -82,6 +82,12 @@ button { cursor: pointer; }
 .nav-children button { gap: 10px; height: 38px; padding: 0 10px 0 39px; }
 .nav-children button span { width: 13px; text-align: center; }
 .nav-children button.active { color: #fff; background: var(--blue); }
+.nav-children #navOverseasTransfer.current-section { color: #fff; }
+.transfer-children button { padding-left: 62px; }
+.instruction-management-placeholder { min-height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.instruction-management-placeholder .placeholder-icon { color: #9eb0c1; font-size: 36px; }
+.instruction-management-placeholder h2 { margin: 16px 0 8px; font-size: 18px; font-weight: 500; }
+.instruction-management-placeholder p { margin: 0; color: var(--muted); }
 .sidebar-collapse {
   position: absolute;
   right: 0;
@@ -430,6 +436,8 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .blocked-status.is-success { color: #2f855a; background: #f0fff4; }
 .blocked-status.is-failed { color: #dc2626; background: #fef2f2; }
 .blocked-status.is-storage { color: #475569; background: #f1f5f9; }
+.blocked-status.is-blocked { color: #dc2626; background: #fef2f2; }
+.blocked-status.is-return { color: #2563eb; background: #eff6ff; }
 .action-link { margin: 0 6px; border: 0; color: #168ff5; background: transparent; }
 .empty-row { height: 180px !important; color: #a7aeb5; }
 .table-footer {

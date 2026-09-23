@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260916-approved-full" />
+  <link rel="stylesheet" href="styles.css?v=20260922-inventory-types" />
 </head>
 <body>
 
@@ -20,6 +20,11 @@
       <div class="nav-children inventory-children">
         <button><span>♙</span>常规库存</button>
         <button class="active" id="navStagingInventory" type="button"><span>♙</span>暂存库存</button>
+        <button id="navOverseasTransfer" type="button"><span>♙</span>海外中转单管理</button>
+        <div class="nav-children transfer-children">
+          <button id="navInstructionList" type="button"><span>▤</span>指令列表</button>
+          <button id="navInstructionManagement" type="button"><span>⚙</span>指令管理</button>
+        </div>
         <button id="navInterceptManagement" type="button"><span>♙</span>拦截管理</button>
         <button><span>♙</span>库存盘点</button>
       </div>
@@ -65,7 +70,7 @@
           <label class="filter-field staging-filter">
             <span>入库时间</span><span class="date-range"><input id="dateFrom" type="text" placeholder="开始日期" /><em>→</em><input id="dateTo" type="text" placeholder="结束日期" /><b>□</b></span>
           </label>
-          <label class="filter-field staging-filter"><span>是否拦截</span><select id="blockedFilter"><option value="">全部拦截状态</option><option value="拆柜前拦截">拆柜前拦截</option><option value="拆柜后拦截，待确认">拆柜后拦截，待确认</option><option value="拆柜后拦截成功">拆柜后拦截成功</option><option value="拆柜后拦截失败">拆柜后拦截失败</option><option value="暂存">暂存</option></select></label>
+          <label class="filter-field staging-filter"><span>库存类型</span><select id="blockedFilter"><option value="">全部库存类型</option><option value="暂存">暂存</option><option value="拦截">拦截</option><option value="退换货">退换货</option></select></label>
         </div>
         <div class="filter-actions">
           <button class="btn primary" id="searchButton">搜索</button><button class="btn" id="resetButton">重置</button>
@@ -76,8 +81,8 @@
       <section class="inventory-card">
         <div class="status-bar">
           <div class="status-tabs" id="statusTabs">
-            <button class="status-tab" data-status="暂存">暂存(273)</button>
-            <button class="status-tab active" data-status="待审批">待审批(8)</button>
+            <button class="status-tab active" data-status="暂存">暂存(273)</button>
+            <button class="status-tab" data-status="待审批">待审批(8)</button>
             <button class="status-tab" data-status="指令待处理">指令待处理(8)</button>
             <button class="status-tab" data-status="指令处理中">指令处理中(8)</button>
             <button class="status-tab" data-status="待出库">指令处理完成，待出库(95)</button>
@@ -106,6 +111,13 @@
           </table>
         </div>
         <div class="table-footer" id="tableFooter"></div>
+      </section>
+    </main>
+    <main class="content instruction-management-page" id="instructionManagementPage" hidden>
+      <section class="inventory-card instruction-management-placeholder">
+        <div class="placeholder-icon" aria-hidden="true">▤</div>
+        <h2>指令管理</h2>
+        <p>指令管理页面待配置。</p>
       </section>
     </main>
     <main class="content intercept-page" id="interceptPage" hidden>
@@ -517,8 +529,8 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260919-cancel-reject-labels"></script>
+<script src="script.js?v=20260922-inventory-types"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
-<script src="forecast.js?v=20260911-1"></script>
+<script src="forecast.js?v=20260922-inventory-types"></script>
 </body>
 </html>
