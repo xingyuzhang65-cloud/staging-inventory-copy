@@ -2,3 +2,8 @@
 server.out.log
 server-8086.err.log
 server-8086.out.log
+
+.clearance-import-support/
+.returns-import-support/
+node_modules/
+*.xlsx.inspect.ndjson

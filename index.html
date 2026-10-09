@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20260922-inventory-types" />
+  <link rel="stylesheet" href="styles.css?v=20261008-warehouse-nav" />
 </head>
 <body>
 
@@ -18,15 +18,13 @@
       <button class="nav-item"><span class="nav-icon">♙</span><span>出库管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item expanded"><span class="nav-icon">♙</span><span>库内管理</span><span class="nav-arrow">⌃</span></button>
       <div class="nav-children inventory-children">
-        <button><span>♙</span>常规库存</button>
+        <button id="navRegularInventory" type="button"><span>♙</span>常规库存</button>
         <button class="active" id="navStagingInventory" type="button"><span>♙</span>暂存库存</button>
-        <button id="navOverseasTransfer" type="button"><span>♙</span>海外中转单管理</button>
-        <div class="nav-children transfer-children">
-          <button id="navInstructionList" type="button"><span>▤</span>指令列表</button>
-          <button id="navInstructionManagement" type="button"><span>⚙</span>指令管理</button>
-        </div>
+        <button id="navInstructionManagement" type="button"><span>▤</span>指令管理</button>
         <button id="navInterceptManagement" type="button"><span>♙</span>拦截管理</button>
-        <button><span>♙</span>库存盘点</button>
+        <button id="navClearanceManagement" type="button"><span>♙</span>清货管理</button>
+        <button id="navReturnsManagement" type="button"><span>♙</span>退换货管理</button>
+        <button id="navStocktaking" type="button"><span>♙</span>库存盘点</button>
       </div>
       <button class="nav-item"><span class="nav-icon">⌂</span><span>客户管理</span><span class="nav-arrow">⌄</span></button>
       <button class="nav-item"><span class="nav-icon">⌂</span><span>仓库管理</span><span class="nav-arrow">⌄</span></button>
@@ -113,11 +111,11 @@
         <div class="table-footer" id="tableFooter"></div>
       </section>
     </main>
-    <main class="content instruction-management-page" id="instructionManagementPage" hidden>
+    <main class="content instruction-management-page" id="warehousePlaceholderPage" hidden>
       <section class="inventory-card instruction-management-placeholder">
         <div class="placeholder-icon" aria-hidden="true">▤</div>
-        <h2>指令管理</h2>
-        <p>指令管理页面待配置。</p>
+        <h2 id="warehousePlaceholderTitle"></h2>
+        <p>该页面待配置。</p>
       </section>
     </main>
     <main class="content intercept-page" id="interceptPage" hidden>
@@ -529,8 +527,11 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20260922-inventory-types"></script>
+<script src="script.js?v=20261009-returns-1"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
-<script src="forecast.js?v=20260922-inventory-types"></script>
-</body>
+<script src="forecast.js?v=20261008-warehouse-nav"></script>
+<link rel="stylesheet" href="clearance.css?v=20261009-16" /><script type="module" src="clearance.js?v=20261009-16"></script>
+<link rel="stylesheet" href="returns.css?v=20261009-3" />
+<script src="returns-bridge.js?v=20261009-1"></script>
+<script type="module" src="returns.js?v=20261009-3"></script></body>
 </html>

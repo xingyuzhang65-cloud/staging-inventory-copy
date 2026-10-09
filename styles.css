@@ -82,8 +82,6 @@ button { cursor: pointer; }
 .nav-children button { gap: 10px; height: 38px; padding: 0 10px 0 39px; }
 .nav-children button span { width: 13px; text-align: center; }
 .nav-children button.active { color: #fff; background: var(--blue); }
-.nav-children #navOverseasTransfer.current-section { color: #fff; }
-.transfer-children button { padding-left: 62px; }
 .instruction-management-placeholder { min-height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .instruction-management-placeholder .placeholder-icon { color: #9eb0c1; font-size: 36px; }
 .instruction-management-placeholder h2 { margin: 16px 0 8px; font-size: 18px; font-weight: 500; }

@@ -3990,10 +3990,9 @@ function activateWarehousePage(page, title, navId) {
   document.dispatchEvent(new CustomEvent("warehouse-page-change"));
   inventoryPage.hidden = page !== "staging" && page !== "instructions";
   interceptPage.hidden = page !== "intercepts";
-  $("#instructionManagementPage").hidden = page !== "instruction-management";
+  $("#warehousePlaceholderPage").hidden = page !== "placeholder";
   document.querySelectorAll(".side-nav button.active").forEach((button) => button.classList.remove("active"));
   $(navId).classList.add("active");
-  $("#navOverseasTransfer").classList.toggle("current-section", page === "instructions" || page === "instruction-management");
   $("#currentPageName").textContent = title;
   document.title = title + " - 美仓海外仓系统";
 }
@@ -4007,7 +4006,7 @@ function showInventorySection(page, status) {
   }
   activeInventoryPage = page;
   const staging = page === "staging";
-  activateWarehousePage(page, staging ? "暂存库存" : "指令列表", staging ? "#navStagingInventory" : "#navInstructionList");
+  activateWarehousePage(page, staging ? "暂存库存" : "指令管理", staging ? "#navStagingInventory" : "#navInstructionManagement");
   activeStatus = status;
   if (!staging) lastInstructionStatus = status;
   const stagingStatuses = new Set(["暂存", "待出库", "已出库"]);
@@ -4032,9 +4031,10 @@ function showInstructionList(status = lastInstructionStatus) {
   showInventorySection("instructions", status);
 }
 
-function showInstructionManagement() {
+function showWarehousePlaceholder(title, navId) {
   if (!confirmDiscardInstructionStatusDrafts()) return;
-  activateWarehousePage("instruction-management", "指令管理", "#navInstructionManagement");
+  $("#warehousePlaceholderTitle").textContent = title;
+  activateWarehousePage("placeholder", title, navId);
 }
 
 function showInterceptManagement() {
@@ -4056,9 +4056,11 @@ function initInterceptManagement() {
   renderInterceptRows();
   $("#navInterceptManagement").addEventListener("click", showInterceptManagement);
   $("#navStagingInventory").addEventListener("click", showStagingInventory);
-  $("#navOverseasTransfer").addEventListener("click", () => showInstructionList());
-  $("#navInstructionList").addEventListener("click", () => showInstructionList());
-  $("#navInstructionManagement").addEventListener("click", showInstructionManagement);
+  $("#navInstructionManagement").addEventListener("click", () => showInstructionList());
+  $("#navRegularInventory").addEventListener("click", () => showWarehousePlaceholder("常规库存", "#navRegularInventory"));
+  $("#navClearanceManagement").addEventListener("click", () => window.ClearanceUI?.open());
+  $("#navReturnsManagement").addEventListener("click", () => window.ReturnsUI?.open());
+  $("#navStocktaking").addEventListener("click", () => showWarehousePlaceholder("库存盘点", "#navStocktaking"));
   $("#interceptSearchButton").addEventListener("click", renderInterceptRows);
   interceptFilters.status.addEventListener("change", () => {
     selectedInterceptIds.clear();
