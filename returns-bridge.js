@@ -1,4 +1,4 @@
-/* Connect received returns to the existing inventory and instruction workflow. */
+/* Connect returns to the instruction workflow; stock remains in returns management. */
 (() => {
   'use strict';
   const storageKey = 'mw-returns-instruction-bridge-v1';
@@ -25,6 +25,7 @@
     try { localStorage.setItem(storageKey, JSON.stringify(snapshots)); } catch { /* UI stores the source separately. */ }
   }
   function counts() {
+    updateStatusTabCount('暂存', inventoryRows.length);
     stages.forEach(([stage, rows]) => updateStatusTabCount(stage, rows.length));
   }
   function refresh() {
@@ -97,33 +98,14 @@
   }
 
   function sync(orders) {
-    const received = new Map();
     for (const order of orders || []) {
       for (const instruction of order.instructions || []) {
         if (!find(instruction.id)) publish(order, instruction, true);
       }
-      for (const box of order.boxes || []) {
-        const departed = stages.some(([stage, rows]) => ['已出库', '销毁'].includes(stage)
-          && rows.some(row => own(row) && !service(row) && row.returnSource === order.id && row.returnBoxIds.includes(box.id)));
-        if (!box.receivedAt || box.outbound || departed) continue;
-        const key = `${order.id}::${box.id}`;
-        const current = inventoryRows.find(row => row.returnBoxKey === key);
-        const available = box.claimed && box.customerCode && box.customerCode === order.customerCode && !box.reservedBy;
-        received.set(key, {
-          id: current?.id || nextId(inventoryRows), returnSource: order.id, returnBoxKey: key,
-          returnBoxId: box.id, returnAvailable: Boolean(available), customer: box.customer || '待识别货主',
-          container: order.id, system: order.id, inbound: order.id, blocked: '退换货', transfer: '退换货',
-          destination: order.warehouse || '-', dispatch: '-', pallet: box.storageNo || box.id,
-          time: box.receivedAt, weight: 0, volume: 0, boxes: 1,
-          pending: box.reservedBy ? 1 : 0, unsent: 1, sent: 0, status: '暂存',
-          instructions: [{ text: `${box.counted ? '已清点' : '未清点'} · ${box.claimed ? '已认领' : '待认领'}${box.reservedBy ? ' · 指令占用' : ''}`, completed: false }]
-        });
-        if (current) Object.assign(current, received.get(key));
-        else inventoryRows.unshift(received.get(key));
-      }
     }
+    // Remove rows created by earlier versions without changing the source receipts or boxes.
     for (let index = inventoryRows.length - 1; index >= 0; index--) {
-      if (inventoryRows[index].returnBoxKey && !received.has(inventoryRows[index].returnBoxKey)) inventoryRows.splice(index, 1);
+      if (inventoryRows[index].returnSource || inventoryRows[index].returnBoxKey || inventoryRows[index].blocked === '退换货') inventoryRows.splice(index, 1);
     }
     refresh();
   }
@@ -136,15 +118,30 @@
   function openInstruction(id) {
     const entry = find(id);
     if (!entry) throw new Error('未找到关联指令');
-    if (window.confirmDiscardInstructionStatusDrafts && !window.confirmDiscardInstructionStatusDrafts()) return;
-    if (['待出库', '已出库'].includes(entry.stage)) showInventorySection('staging', entry.stage);
-    else showInstructionList(entry.stage);
+    if (window.confirmDiscardInstructionStatusDrafts && !window.confirmDiscardInstructionStatusDrafts()) return false;
+    if (['待出库', '已出库'].includes(entry.stage)) {
+      openReleaseDrawer(entry.row, { readOnly: true, status: entry.stage });
+      return true;
+    }
+    showInstructionList(entry.stage);
     Object.values(filters).forEach(control => { control.value = ''; });
     for (const selector of ['#dateFrom', '#dateTo']) {
       const control = document.querySelector(selector); if (control) control.value = '';
     }
     filters.request.value = entry.row.applicationNo;
     applyFilters();
+    return true;
+  }
+
+  function confirmOutbound(id) {
+    const entry = find(id);
+    if (!entry || entry.stage !== '待出库' || service(entry.row) || entry.row.returnCompleted) return false;
+    if (!window.confirm(`确认 ${entry.row.applicationNo} 的 ${entry.row.appliedBoxes} 箱已实际${entry.row.returnType === '销毁' ? '销毁' : '出库'}？确认后将扣除退换货在库箱数。`)) return false;
+    const destination = entry.row.returnType === '销毁' ? destroyedRows : shippedRows;
+    destination.unshift({ ...entry.row, id: nextId(destination), status: entry.row.returnType === '销毁' ? '销毁' : '已出库', processingFinishedAt: new Date().toISOString() });
+    entry.rows.splice(entry.rows.indexOf(entry.row), 1);
+    refresh();
+    return true;
   }
 
   // Allow warehouse progress updates in the existing read-only instruction detail.
@@ -163,46 +160,14 @@
     });
   };
 
-  // Extend the existing table only for rows originating from returns.
+  // Save progress made through the unified instruction list for the next visit.
   const originalRenderRows = renderRows;
   renderRows = function (...args) {
     originalRenderRows(...args);
-    const rendered = body.querySelectorAll('tr');
-    visibleRows.forEach((row, index) => {
-      if (!row.returnSource || !rendered[index]) return;
-      const cell = rendered[index].querySelector('.operation-col');
-      if (!cell) return;
-      if (row.returnBoxKey) {
-        const button = cell.querySelector('.release-button');
-        if (button) {
-          button.textContent = row.returnAvailable ? '退换货下指令' : '查看退换货';
-          button.title = row.returnAvailable ? '通过退换货单选择可用箱' : '未认领、未识别或被占用的箱不能下指令';
-        }
-      } else if (activeStatus === '待出库' && own(row)) {
-        if (service(row)) {
-          const label = document.createElement('span'); label.className = 'action-link'; label.textContent = '增值服务已完成';
-          cell.prepend(label);
-        } else {
-          const button = document.createElement('button'); button.className = 'action-link returns-confirm-outbound';
-          button.dataset.instruction = row.returnInstructionId;
-          button.textContent = row.returnType === '销毁' ? '确认实际销毁' : row.returnType === '自提' ? '确认实际提货' : '确认实际出库';
-          cell.prepend(button);
-        }
-      }
-    });
     persist();
   };
 
   document.addEventListener('click', event => {
-    const release = event.target.closest('.release-button');
-    if (release) {
-      const row = inventoryRows.find(item => item.id === Number(release.dataset.id));
-      if (row?.returnSource) {
-        event.preventDefault(); event.stopImmediatePropagation();
-        window.ReturnsUI?.open(row.returnSource);
-        return;
-      }
-    }
     if (event.target.closest('#approvalReviewConfirm') && own(activeApprovalReviewRow || {})) {
       event.preventDefault(); event.stopImmediatePropagation();
       if (!approvalReviewDecision) { window.alert('请先选择通过或拒绝，再确认审批'); return; }
@@ -215,21 +180,7 @@
       closeApprovalReview(); refresh();
       return;
     }
-    const outbound = event.target.closest('.returns-confirm-outbound');
-    if (!outbound) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const entry = find(outbound.dataset.instruction);
-    if (!entry || entry.stage !== '待出库' || service(entry.row)) return;
-    if (!window.confirm(`确认 ${entry.row.applicationNo} 的 ${entry.row.appliedBoxes} 箱已实际${entry.row.returnType === '销毁' ? '销毁' : '出库'}？确认后将扣除暂存库存。`)) return;
-    const destination = entry.row.returnType === '销毁' ? destroyedRows : shippedRows;
-    const departed = { ...entry.row, id: nextId(destination), status: entry.row.returnType === '销毁' ? '销毁' : '已出库', processingFinishedAt: new Date().toISOString() };
-    destination.unshift(departed); entry.rows.splice(entry.rows.indexOf(entry.row), 1);
-    for (let index = inventoryRows.length - 1; index >= 0; index--) {
-      const row = inventoryRows[index];
-      if (row.returnSource === departed.returnSource && departed.returnBoxIds.includes(row.returnBoxId)) inventoryRows.splice(index, 1);
-    }
-    refresh();
   }, true);
-  window.ReturnsBridge = { sync, publish, status, openInstruction };
+  window.ReturnsBridge = { sync, publish, status, openInstruction, confirmOutbound };
   counts();
 })();
