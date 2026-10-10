@@ -17,7 +17,16 @@ export function productReceipt(o,p){
 }
 export function templateValue(o,p,key,{reported=false}={}){
   if(key==='customer')return o.customer||'';
-  if(!p)return '';
+  if(!p){
+    const r=productReceipt(o,null);
+    if(key==='name')return o.unclaimedDescription||'待核实货物';
+    if(key==='quantity')return o.registrationType==='unforecasted'?'未预报':'';
+    if(key==='tracking')return r.tracking.filter(Boolean).join('；');
+    if(key==='reportedReceivedAt')return r.times.filter(Boolean).join('；');
+    if(key==='reportedReceived')return r.unknown.length?(r.received?r.received+' + 未清点':'未清点'):r.received;
+    if(key==='reportedBoxes')return r.boxes;
+    return '';
+  }
   if(key==='dimensions')return (p.dimensions||[]).join(' × ');
   if(reported)return p[key]??'';
   const r=productReceipt(o,p);
@@ -43,5 +52,10 @@ export function matchesProductFilters(o,f){
 }
 export function exportProductGrid(orders){
   const business=[['id','退换货单号'],['warehouse','退回仓库'],['source','退件来源'],['status','退换货状态'],['created','申请时间'],['updated','最近更新时间']];
-  return [[...business.map(([,label])=>label),...TEMPLATE_FIELDS.map(f=>f.label)],...orders.flatMap(o=>(o.products.length?o.products:[null]).map(p=>[...business.map(([key])=>o[key]||''),...TEMPLATE_FIELDS.map(({key})=>templateValue(o,p,key))]))];
+  return [[...business.map(([,label])=>label),...TEMPLATE_FIELDS.map(f=>f.key==='reportedReceivedAt'?'到仓时间':f.label),'出仓时间'],...orders.flatMap(o=>(o.products.length?o.products:[null]).map(p=>[...business.map(([key])=>o[key]||''),...TEMPLATE_FIELDS.map(({key})=>templateValue(o,p,key)),productStorage(o,p).outboundAt]))];
+}
+export function productStorage(o,p=null){
+  const receipt=productReceipt(o,p),boxes=[...receipt.known,...receipt.unknown];
+  const times=[...new Set(boxes.filter(b=>b.outbound&&b.outboundAt).map(b=>b.outboundAt))].sort();
+  return {arrivedAt:[...receipt.times].sort().join('；'),outboundAt:times.join('；'),inStock:boxes.filter(b=>!b.outbound).length,hasMissingTime:boxes.some(b=>b.outbound&&!b.outboundAt)};
 }

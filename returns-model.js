@@ -40,6 +40,11 @@ function product(data){
 export function migrate(orders){
   if(!Array.isArray(orders))return seed();
   for(const o of orders)for(const p of o.products||[])Object.assign(p,{tracking:str(p.tracking),requirement:str(p.requirement),location:str(p.location),reportedReceivedAt:str(p.reportedReceivedAt),reportedReceived:p.reportedReceived??null,reportedBoxes:p.reportedBoxes??null});
+  for(const o of orders){
+    o.registrationType ||= !o.customer&&o.boxes?.length?'unforecasted':'template';
+    for(const receipt of o.receipts||[])receipt.imageVisibility='warehouse';
+    for(const box of o.boxes||[])box.outboundAt=str(box.outboundAt);
+  }
   return orders;
 }
 function parcel(data,products,existing=[]){
@@ -86,6 +91,7 @@ export function refresh(o){
   return o;
 }
 export function can(o,action){
+  if(action==='warehouse')return STATUSES.includes(o.status);
   if(action==='accept'||action==='reject')return o.status==='待受理'&&!o.boxes.length&&!activeInstructions(o).length;
   if(action==='edit')return ['待受理','待退回'].includes(o.status)&&!o.boxes.length&&!activeInstructions(o).length;
   if(action==='close')return live(o)&&!o.boxes.length&&!activeInstructions(o).length;
@@ -100,10 +106,32 @@ export function can(o,action){
 function allowed(o,action){assert(can(o,action),`当前状态不可执行${({edit:'编辑预报',accept:'受理',reject:'拒绝受理',close:'关闭',track:'登记包裹',receive:'登记收货',claim:'认领',notify:'通知认领',instruct:'下指令',fee:'登记费用'})[action]||action}`);}
 export function log(o,action,note=''){assert(str(action),'日志操作不能为空');const time=now();o.logs.push({time,operator:OPERATOR,action:str(action),note:str(note)});o.updated=time;refresh(o);return o;}
 export function createOrder(data){
-  const normalized=orderData(data),time=now();const o={id:id('RT'),...normalized,status:'待受理',created:time,updated:time,acceptedAt:'',acceptedBy:'',closedReason:'',receipts:[],boxes:[],instructions:[],fees:[],logs:[]};
+  const normalized=orderData(data),time=now();const o={id:id('RT'),...normalized,registrationType:'template',status:'待受理',created:time,updated:time,acceptedAt:'',acceptedBy:'',closedReason:'',receipts:[],boxes:[],instructions:[],fees:[],logs:[]};
   log(o,'提交退换货申请','等待仓库受理');return o;
 }
 export function editOrder(o,data){allowed(o,'edit');const next=orderData(data);Object.assign(o,next);return log(o,'编辑预报','更新客户、产品及包裹预报');}
+export function registerUnclaimedReturn(data){
+  assert(data.confirmed===true,'请确认货物已实际到达海外仓');
+  assert(WAREHOUSES.includes(data.warehouse),'请选择退回仓库');
+  const time=date(data.time,'实际到仓时间',true),boxes=integer(data.boxes,'实际到仓箱数',1);
+  const o=createOrder({warehouse:data.warehouse,source:'其他',reason:'未预报到仓，货主待核实',request:'核实货主后按客户指令处理',remark:str(data.note),products:[],packages:[]});
+  o.registrationType='unforecasted';o.unclaimedDescription=str(data.description)||'待核实退回货物';
+  o.acceptedAt=now();o.acceptedBy=OPERATOR;
+  const p={id:id('PK'),tracking:str(data.tracking),carrier:str(data.carrier)||'待核实',forecast:null,items:[],returnedAt:'',shipped:'',eta:'',logistics:'物流已妥投',note:str(data.note),received:false,unforecasted:true};
+  o.packages.push(p);
+  receive(o,{packageId:p.id,time,boxes,counted:false,items:[],note:str(data.note),image:str(data.image),complete:true});
+  log(o,'登记无主退换货',`${o.warehouse} · 实际到仓 ${boxes} 箱 · 待核实货主`);
+  return o;
+}
+export function editWarehouse(o,warehouse){
+  allowed(o,'warehouse');assert(WAREHOUSES.includes(warehouse),'请选择有效退回仓库');
+  if(o.warehouse===warehouse)return o;
+  const previous=o.warehouse,status=o.status;o.warehouse=warehouse;o.returnAddress='';
+  for(const p of o.products)if(p.location===previous+' · 退件区')p.location=warehouse+' · 退件区';
+  log(o,'修改退回仓库',`${previous} → ${warehouse}`);o.status=status;return o;
+}
+// Warehouse receipt photos never appear in customer-facing data or exports.
+export function receiptImage(receipt,audience='customer'){return audience==='warehouse'?str(receipt?.image):'';}
 export function accept(o){allowed(o,'accept');o.acceptedAt=now();o.acceptedBy=OPERATOR;return log(o,'受理申请','仓库已确认可接收退件');}
 export function close(o,reason,rejected=false){allowed(o,rejected?'reject':'close');reason=str(reason);assert(reason,'请填写关闭原因');o.closedReason=reason;o.status='已关闭';return log(o,rejected?'拒绝受理':'关闭申请',reason);}
 export function addPackage(o,data){allowed(o,'track');const p=parcel(data,o.products,o.packages);assert(!o.packages.some(k=>k.id===p.id),'包裹编号重复');o.packages.push(p);log(o,'登记退回包裹',p.tracking);return p;}
@@ -116,9 +144,9 @@ export function receive(o,data){
   const time=date(data.time,'实际入库时间',true),boxes=integer(data.boxes,'入库箱数',1);assert(typeof data.counted==='boolean','请确认是否清点内件');
   assert(data.complete===undefined||typeof data.complete==='boolean','收齐标记无效');const counted=data.counted;
   const items=counted?mappings(data.items??[],o.products,true):[];if(!counted)assert((data.items??[]).length===0,'未清点不能填写实际产品数量');
-  const receipt={id:id('RC'),packageId:p.id,time,boxes,counted,items,note:str(data.note),difference:str(data.difference),image:str(data.image)};
+  const receipt={id:id('RC'),packageId:p.id,time,boxes,counted,items,note:str(data.note),difference:str(data.difference),image:str(data.image),imageVisibility:'warehouse'};
   // Allocate each SKU as integers across the actual boxes; totals always equal the receipt.
-  const actual=Array.from({length:boxes},(_,index)=>({id:id('BX'),packageId:p.id,storageNo:id('TS'),receivedAt:time,counted,items:items.map(i=>({productId:i.productId,quantity:Math.floor(i.quantity/boxes)+(index<i.quantity%boxes?1:0)})).filter(i=>i.quantity>0),claimed:false,customer:o.customer,customerCode:o.customerCode,notifiedAt:'',claimedAt:'',claimedBy:'',claimNote:'',reservedBy:'',outbound:false}));
+  const actual=Array.from({length:boxes},(_,index)=>({id:id('BX'),packageId:p.id,storageNo:id('TS'),receivedAt:time,counted,items:items.map(i=>({productId:i.productId,quantity:Math.floor(i.quantity/boxes)+(index<i.quantity%boxes?1:0)})).filter(i=>i.quantity>0),claimed:false,customer:o.customer,customerCode:o.customerCode,notifiedAt:'',claimedAt:'',claimedBy:'',claimNote:'',reservedBy:'',outbound:false,outboundAt:''}));
   o.receipts.push(receipt);o.boxes.push(...actual);if(data.complete!==false)p.received=true;
   log(o,'登记实际收货',`${p.tracking} · ${boxes} 箱 · ${counted?items.reduce((n,i)=>n+i.quantity,0)+' 个':'内件未清点'}`);return receipt;
 }
@@ -134,7 +162,7 @@ export function instruct(o,data){
   const i={id:id('INS'),source:o.id,type:data.type,boxIds:boxes.map(b=>b.id),note:str(data.note),status:'待审批',created:now(),operator:OPERATOR};
   o.instructions.push(i);for(const b of boxes)b.reservedBy=i.id;log(o,'提交处理指令',`${i.id} · ${i.type} · ${boxes.length} 箱`);return i;
 }
-export function syncInstruction(o,instructionId,status){
+export function syncInstruction(o,instructionId,status,{outboundAt=''}={}){
   const i=o.instructions.find(i=>i.id===instructionId);assert(i,'指令不存在');assert(INSTRUCTION_STATUSES.includes(status),'指令状态无效');if(i.status===status)return i;
   if(terminal(i)){
     assert(status==='已完成'&&(i.status==='已出库'||i.type==='库内增值服务'&&i.status==='指令处理完成'),'已结束指令不能重新进入处理流程');
@@ -145,8 +173,18 @@ export function syncInstruction(o,instructionId,status){
   const outbound=i.type!=='库内增值服务'&&['已出库','已完成'].includes(status);
   assert(i.type!=='库内增值服务'||!['已出库','指令处理完成、待出库','待出库'].includes(status),'库内增值服务不产生出库');
   assert(boxes.every(b=>b.reservedBy===i.id&&!b.outbound),'指令箱已失去有效占用');
-  i.status=status;for(const b of boxes){if(outbound)b.outbound=true;if(cancelled||outbound||(i.type==='库内增值服务'&&finished))b.reservedBy='';}
+  const suppliedTime=outboundAt&&/Z$/.test(outboundAt)?new Date(outboundAt).toLocaleString('sv-SE'):outboundAt;
+  const time=outbound?date(suppliedTime||now(),'实际出仓时间',true):'';
+  if(outbound)assert(boxes.every(b=>!b.receivedAt||time>=b.receivedAt.replace('T',' ')),'出仓时间不能早于实际到仓时间');
+  i.status=status;if(outbound)i.outboundAt=time;for(const b of boxes){if(outbound){b.outbound=true;b.outboundAt=time;}if(cancelled||outbound||(i.type==='库内增值服务'&&finished))b.reservedBy='';}
   log(o,'同步指令状态',`${i.id} · ${status}`);return i;
+}
+export function updateOutboundTime(o,instructionId,value){
+  const i=o.instructions.find(i=>i.id===instructionId);assert(i&&i.type!=='库内增值服务'&&['已出库','已完成'].includes(i.status),'请选择已实际出仓的指令');
+  const boxes=i.boxIds.map(id=>o.boxes.find(b=>b.id===id));assert(boxes.length&&boxes.every(b=>b?.outbound),'指令关联箱尚未全部出仓');
+  const time=date(value,'实际出仓时间',true);assert(boxes.every(b=>!b.receivedAt||time>=b.receivedAt.replace('T',' ')),'出仓时间不能早于实际到仓时间');
+  const status=o.status;i.outboundAt=time;for(const b of boxes)b.outboundAt=time;
+  log(o,'更新实际出仓时间',`${i.id} · ${time}`);o.status=status;return i;
 }
 export function addFee(o,data){allowed(o,'fee');const name=str(data.name),currency=str(data.currency);assert(name,'请填写费用项目');assert(['USD','CAD','CNY'].includes(currency),'币种无效');const fee={name,amount:nonnegative(data.amount,'费用金额'),currency,note:str(data.note),time:now(),operator:OPERATOR};o.fees.push(fee);log(o,'登记报价 / 费用',`${fee.name} · ${fee.currency} ${fee.amount}`);return fee;}
 
@@ -170,6 +208,7 @@ export function seed(){
   const uncounted=make(6);accept(uncounted);received(uncounted,pack(uncounted,1),{counted:false,boxes:3});notify(uncounted,uncounted.boxes.map(b=>b.id)); // 实收箱，内件未知，已通知认领
   const closed=make(7);close(closed,'客户已撤回退件申请，尚未寄回',true); // 未实收的关闭样例
   const unknown=make(8,{unknown:true});accept(unknown);received(unknown,pack(unknown,1),{counted:false,boxes:1});unknown.ticket='TK-US-202610-008';unknown.ticketStatus='核实中';
+  unknown.registrationType='unforecasted';unknown.unclaimedDescription='未预报快递退件 · 外箱标签待核实';for(const p of unknown.packages){p.unforecasted=true;p.forecast=null;}
   const available=make(9);accept(available);received(available,pack(available,1));claimed(available);
   const processing=make(10);accept(processing);received(processing,pack(processing,1));claimed(processing);const pending=instruct(processing,{type:'库内增值服务',boxIds:[processing.boxes[0].id],note:'核对 SKU 并更换标签'});syncInstruction(processing,pending.id,'指令处理中');
   const out=make(11);accept(out);received(out,pack(out,1),{boxes:3});claimed(out);const shipment=instruct(out,{type:'发货计划',boxIds:[out.boxes[0].id],note:'转发至客户指定地址'});syncInstruction(out,shipment.id,'已出库');

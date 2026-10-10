@@ -75,6 +75,7 @@
       approvalStage: '待仓库审批', applicationTime: instruction.created || new Date().toISOString(),
       appointmentDeliveryTime: '-', shippingApplicationAttachment: '-', processingStartedAt: '-',
       processingFinishedAt: '-', timeoutCount: 0,
+      outboundAt: instruction.outboundAt || '',
       applicationRemark: instruction.note || '', operator: instruction.operator || '仓库操作员',
       instructions: [{ text: `${type}：${instruction.note || '按客户指令处理'}`, completed: false }],
       status: '待审批'
@@ -101,6 +102,8 @@
     for (const order of orders || []) {
       for (const instruction of order.instructions || []) {
         if (!find(instruction.id)) publish(order, instruction, true);
+        const entry=find(instruction.id);
+        if(entry){entry.row.destination=order.warehouse;entry.row.returnWarehouse=order.warehouse;if(entry.row.returnType!=='自提')entry.row.dispatch=order.warehouse;if(instruction.outboundAt)entry.row.outboundAt=instruction.outboundAt;}
       }
     }
     // Remove rows created by earlier versions without changing the source receipts or boxes.
@@ -114,6 +117,14 @@
     if (!entry) return null;
     persist();
     return canonical(entry.stage, entry.row);
+  }
+  function outboundTime(id) {
+    const entry=find(id);
+    return entry&&!service(entry.row)&&['已出库','销毁'].includes(entry.stage)?entry.row.outboundAt||'':'';
+  }
+  function updateOutboundTime(id,time){
+    const entry=find(id);if(!entry||service(entry.row)||!['已出库','销毁'].includes(entry.stage))return false;
+    entry.row.outboundAt=time;persist();return true;
   }
   function openInstruction(id) {
     const entry = find(id);
@@ -138,7 +149,8 @@
     if (!entry || entry.stage !== '待出库' || service(entry.row) || entry.row.returnCompleted) return false;
     if (!window.confirm(`确认 ${entry.row.applicationNo} 的 ${entry.row.appliedBoxes} 箱已实际${entry.row.returnType === '销毁' ? '销毁' : '出库'}？确认后将扣除退换货在库箱数。`)) return false;
     const destination = entry.row.returnType === '销毁' ? destroyedRows : shippedRows;
-    destination.unshift({ ...entry.row, id: nextId(destination), status: entry.row.returnType === '销毁' ? '销毁' : '已出库', processingFinishedAt: new Date().toISOString() });
+    const time=new Date().toISOString();
+    destination.unshift({ ...entry.row, id: nextId(destination), status: entry.row.returnType === '销毁' ? '销毁' : '已出库', processingFinishedAt: time, outboundAt: time });
     entry.rows.splice(entry.rows.indexOf(entry.row), 1);
     refresh();
     return true;
@@ -181,6 +193,6 @@
       return;
     }
   }, true);
-  window.ReturnsBridge = { sync, publish, status, openInstruction, confirmOutbound };
+  window.ReturnsBridge = { sync, publish, status, outboundTime, updateOutboundTime, openInstruction, confirmOutbound };
   counts();
 })();

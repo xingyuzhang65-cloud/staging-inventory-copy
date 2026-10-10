@@ -1,5 +1,5 @@
 import { HEADERS } from './clearance-import.js';
-import { stock } from './clearance-model.js';
+import { stock, departureInfo, acceptedTime, clearanceProgress } from './clearance-model.js';
 import { arrivalInfo } from './clearance-arrival.js';
 
 const keys = ['name', 'sku', 'quantity', 'weight', 'length', 'width', 'height', 'boxes', 'link', 'image', 'price', 'currency', 'tracking', 'shipped', 'requirement'];
@@ -65,14 +65,14 @@ export function exportProductGrid(orders) {
   const header = [
     ...TEMPLATE_FIELDS.map(field => field.label),
     '清货单号', '客户名称', '清货仓库', '清货状态', '到仓状态',
-    '实收数量(件)', '当前在库(件)', '已提货数量(件)', '申请时间', '最后更新时间', '到仓时间'
+    '实收数量(件)', '当前在库(件)', '已提货数量(件)', '申请时间', '最后更新时间', '到仓时间', '出仓时间', '受理时间', '清货时长'
   ];
   const rows = orders.flatMap(order => (order.products || []).map(product => {
     const arrival = arrivalInfo(order, product.id);
     return [
       ...TEMPLATE_FIELDS.map(field => productFieldValue(product, field.key)),
       order.id ?? '', order.customer ?? '', order.warehouse ?? '', order.status ?? '', arrival.status,
-      product.received ?? 0, stock(product), product.delivered ?? 0, order.created ?? '', order.updated ?? '', arrival.arrivedAt
+      product.received ?? 0, stock(product), product.delivered ?? 0, order.created ?? '', order.updated ?? '', arrival.arrivedAt, departureInfo(order, product.id).times.join('；'), acceptedTime(order), clearanceProgress(order).durationText
     ];
   }));
   return [header, ...rows];

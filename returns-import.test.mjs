@@ -45,5 +45,5 @@ test('CSV quoting, actual Excel date cells, and the downloadable one-sheet templ
 test('metadata migration preserves actual stock, product filters and per-product exports',()=>{
   const o=M.seed().find(o=>o.status==='待指令'),before=JSON.stringify({boxes:o.boxes,receipts:o.receipts,instructions:o.instructions,status:o.status});delete o.products[0].location;M.migrate([o]);assert.equal(JSON.stringify({boxes:o.boxes,receipts:o.receipts,instructions:o.instructions,status:o.status}),before);
   o.products[0].requirement='换标';o.products[0].location='洛杉矶退件区';assert.equal(F.matchesProductFilters(o,{requirement:'换标',location:'洛杉矶',quantityMin:'1'}),true);assert.equal(F.matchesProductFilters(o,{location:'芝加哥'}),false);
-  const grid=F.exportProductGrid([o]);assert.equal(grid.length,2);assert.equal(grid[0].length,21);assert.ok(grid[1].includes('洛杉矶退件区'));
+  const grid=F.exportProductGrid([o]);assert.equal(grid.length,2);assert.equal(grid[0].length,22);assert.ok(grid[1].includes('洛杉矶退件区'));assert.ok(grid[0].includes('到仓时间'));assert.equal(grid[0].at(-1),'出仓时间');
 });

@@ -25,7 +25,7 @@ async function createUI(initialOrders){
   const context=vm.createContext({document,window,localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)},location:{search:'?page=returns'},URL,URLSearchParams,Blob,TextDecoder,console,structuredClone,setTimeout:()=>0,clearTimeout(){}});
   const modules=new Map();
   async function load(file){if(modules.has(file))return modules.get(file);const module=new vm.SourceTextModule(fs.readFileSync(new URL(file,import.meta.url),'utf8'),{context,identifier:file});modules.set(file,module);await module.link(specifier=>load(specifier.replace('./','')));return module;}
-  function click(data,orderId=''){const target={disabled:false,dataset:data,closest(selector){if(selector==='[data-rt-order]')return orderId?{dataset:{rtOrder:orderId}}:null;if(selector==='[data-rt-action]'&&data.rtAction)return target;if(selector==='[data-rt-detail-tab]'&&data.rtDetailTab!=null)return target;return null;}};for(const callback of listeners.get('click')||[])callback({target});}
+  function click(data,orderId=''){const target={disabled:false,dataset:data,closest(selector){if(selector==='[data-rt-order]')return orderId?{dataset:{rtOrder:orderId}}:null;if(selector==='[data-rt-action]'&&data.rtAction)return target;if(selector==='[data-rt-detail-tab]'&&data.rtDetailTab!=null)return target;if(selector==='[data-rt-tab]'&&data.rtTab)return target;return null;}};for(const callback of listeners.get('click')||[])callback({target});}
   const ui=await load('returns.js');await ui.evaluate();
   return {node,listeners,stored,modules,window,bridge,confirmations,opened,click};
 }
@@ -48,6 +48,31 @@ for(const callback of listeners.get('change')||[])callback({target});await new P
 assert.ok(node('#rtImportPreview').innerHTML.includes('SKU-IMPORT'));assert.equal(node('#rtImportSubmit').disabled,false);
 for(const callback of listeners.get('submit')||[])callback({target:f,preventDefault(){}});
 const saved=JSON.parse(stored.get('mw-returns-prototype-v1')),created=saved.find(o=>o.products.some(p=>p.sku==='SKU-IMPORT'));assert.ok(created,'The import submission creates a real order.');assert.equal(created.status,'待受理');assert.equal(created.boxes.length,0);assert.equal(created.products[0].requirement,'换标');
+assert.equal(node('#rtCreateUnclaimed').hidden,true,'Unforecasted registration is offered in the unclaimed state.');
+click({rtTab:'待认领'});assert.equal(node('#rtCreateUnclaimed').hidden,false);
+click({rtAction:'create-unclaimed'});assert.ok(node('#rtDrawer').innerHTML.includes('rtUnclaimedForm'));
+assert.ok(node('#rtDrawer').innerHTML.includes('暂不支持客户查看'));
+const address=modules.get('warehouse-address.js').namespace;
+address.saveWarehouseAddress(model.WAREHOUSES[0],'123 Test Ave, CA');address.saveWarehouseAddress(model.WAREHOUSES[2],'456 Sample St, NJ');
+const uf=node('#rtUnclaimedForm');uf.id='rtUnclaimedForm';
+for(const [key,value]of Object.entries({warehouse:model.WAREHOUSES[0],time:'2026-10-08T11:00',boxes:'2',tracking:'',carrier:'待核实',description:'无主外箱样例',note:'外箱标签不完整',image:'data:image/png;base64,INTERNAL'}))uf.elements[key].value=value;
+uf.elements.confirmed.checked=true;
+const warehouseChange={id:'',form:uf,matches:selector=>selector.includes('#rtUnclaimedForm [name="warehouse"]')};
+for(const callback of listeners.get('change')||[])callback({target:warehouseChange});
+assert.equal(uf.elements.warehouseAddress.value,'123 Test Ave, CA');
+const submit=form=>{for(const callback of listeners.get('submit')||[])callback({target:form,preventDefault(){}});};
+submit(uf);
+const readUnknown=()=>JSON.parse(stored.get('mw-returns-prototype-v1')).find(o=>o.unclaimedDescription==='无主外箱样例');
+const unknown=readUnknown();assert.ok(unknown);assert.equal(unknown.status,'待认领');assert.equal(unknown.products.length,0);assert.equal(unknown.packages[0].forecast,null);assert.equal(unknown.boxes.length,2);
+assert.ok(node('#rtDrawer').innerHTML.includes('修改仓库'));
+click({rtDetailTab:'2'});assert.ok(node('#rtDrawer').innerHTML.includes('INTERNAL'));assert.ok(node('#rtDrawer').innerHTML.includes('仅仓库内部可见'));
+const count=JSON.parse(stored.get('mw-returns-prototype-v1')).length;submit(uf);assert.equal(JSON.parse(stored.get('mw-returns-prototype-v1')).length,count,'A stale unclaimed form cannot duplicate physical stock.');
+click({rtAction:'warehouse'});assert.ok(node('#rtModal').innerHTML.includes('仓库地址'));
+const mf=node('#rtModalForm');mf.id='rtModalForm';mf.elements.warehouse.value=model.WAREHOUSES[2];mf.elements.warehouseAddress.value='456 Sample St, NJ';submit(mf);
+const moved=readUnknown();assert.equal(moved.warehouse,model.WAREHOUSES[2]);assert.equal(moved.returnAddress,'456 Sample St, NJ');assert.deepEqual(moved.boxes,unknown.boxes);assert.deepEqual(moved.receipts,unknown.receipts);
+click({rtAction:'claim'});mf.elements.customer.value=model.CLIENTS[0].name;mf.elements.customerCode.value=model.CLIENTS[0].code;
+mf.querySelectorAll=selector=>selector==='input[name="boxId"]:checked'?moved.boxes.map(b=>({value:b.id})):[];submit(mf);
+assert.equal(readUnknown().status,'待指令');assert.equal(model.totals(readUnknown()).available,2);
 function actualStock(type,index){
   const c=model.CLIENTS[0],productId=`P-UI-${index}`;
   const o=model.createOrder({customer:c.name,customerCode:c.code,warehouse:model.WAREHOUSES[0],source:'客户预报',products:[{id:productId,name:'实际收货耳机',sku:`SKU-UI-${index}`,quantity:9}],packages:[]});

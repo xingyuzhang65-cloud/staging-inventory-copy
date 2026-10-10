@@ -58,16 +58,25 @@ eq(matchesProductFilters(multiple, { shippedFrom: '2026-02-30' }), false);
 
 const grid = exportProductGrid([multiple]);
 eq(grid.length, 3);
-eq(grid[0].length, 26);
+eq(grid[0].length, 29);
 deep(grid[0].slice(0, 15), HEADERS.map(label => label.replaceAll('*', '')));
-deep(grid[0].slice(15), ['清货单号', '客户名称', '清货仓库', '清货状态', '到仓状态', '实收数量(件)', '当前在库(件)', '已提货数量(件)', '申请时间', '最后更新时间', '到仓时间']);
+deep(grid[0].slice(15), ['清货单号', '客户名称', '清货仓库', '清货状态', '到仓状态', '实收数量(件)', '当前在库(件)', '已提货数量(件)', '申请时间', '最后更新时间', '到仓时间', '出仓时间', '受理时间', '清货时长']);
 deep(grid[1].slice(0, 15), ['蓝牙 Speaker', 'SPK-001', 100, 0.8, 42, 30, 25, 10, first.link, first.image, 29.99, 'USD', '00012345', '2026-10-08T23:59:59', first.requirement]);
-deep(grid[1].slice(15), ['QH-1', '客户甲', 'LAX', '待确认报价', '已到仓', 80, 60, 20, multiple.created, multiple.updated, '']);
+deep(grid[1].slice(15), ['QH-1', '客户甲', 'LAX', '待确认报价', '已到仓', 80, 60, 20, multiple.created, multiple.updated, '', '', '', '受理时间待补录']);
 deep(grid[2].slice(0, 3), ['收纳架', 'RACK-002', 40]);
 eq(grid[2][12], 'SECOND-999');
 deep(grid[2].slice(20, 23), [0, 0, 0]);
 eq(grid[2][19], '未到仓'); eq(grid[2][25], '');
 eq(exportProductGrid([]).length, 1);
+
+// Actual outbound records stay separate from arrivals and forecasts.
+const departed=structuredClone(multiple);
+departed.deliveries=[{product:'P1',quantity:10,time:'2026-10-07T09:00'},{product:'P1',quantity:10,time:'2026-10-08T13:00'}];
+departed.acceptedAt='2026-10-01T09:00';
+departed.closedAt='2026-10-10T13:00';departed.status='已终止';
+const departureGrid=exportProductGrid([departed]);
+eq(departureGrid[1][26],'2026-10-07T09:00；2026-10-08T13:00');
+eq(departureGrid[2][26],'');eq(departureGrid[1][27],departed.acceptedAt);eq(departureGrid[1][28],'9 天 4 小时');
 
 // Arrival columns trace actual receipt history, never shipment or application dates.
 const history = order([{ ...first }, { ...second }]);
@@ -79,7 +88,7 @@ history.receipts = [
 const historyGrid = exportProductGrid([history]);
 eq(historyGrid[1][19], '已到仓'); eq(historyGrid[1][25], '2026-10-03T10:00');
 eq(historyGrid[2][19], '未到仓'); eq(historyGrid[2][25], '');
-eq(historyGrid.every(row => row.length === 26), true);
+eq(historyGrid.every(row => row.length === 29), true);
 const explicit = structuredClone(history);
 explicit.arrivedAt = '2026-10-07T09:00';
 explicit.products[0].arrivedAt = '2026-10-02T12:00';
