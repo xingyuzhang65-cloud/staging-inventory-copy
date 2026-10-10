@@ -40,6 +40,11 @@ for(const order of seed){click({rtAction:'detail'},order.id);assert.ok(!node('#r
 assert.ok(seed.some(o=>model.totals(o).receivedUnknown),'An uncounted actual receipt must be represented.');
 assert.ok(seed.some(o=>model.receiptStatus(o)==='待仓库确认'),'Carrier delivery and warehouse receipt remain separate.');
 assert.ok(seed.some(o=>model.receiptStatus(o)==='部分入仓'),'Partially received orders must be represented.');
+for(const state of ['全部',...model.STATUSES]){
+  click({rtTab:state});const pending=state==='待受理';
+  assert.equal(node('#rtCreateTemplate').hidden,!pending);assert.equal(node('#rtCreateUnclaimed').hidden,!pending);
+}
+click({rtTab:'待受理'});
 click({rtAction:'create'});assert.ok(node('#rtDrawer').innerHTML.includes('rtImportForm'));assert.ok(node('#rtDrawer').innerHTML.includes('下载退换货模板'));
 const f=node('#rtImportForm');Object.assign(f.elements.customer,{value:model.CLIENTS[0].name});f.elements.warehouse.value=model.WAREHOUSES[0];f.elements.source.value='客户预报';f.id='rtImportForm';
 const headers=modules.get('returns-fields.js').namespace.TEMPLATE_FIELDS.map(f=>f.label),csv=[headers,[model.CLIENTS[0].name,'导入样例','SKU-IMPORT','','6','0.2','18×12×6','2','TRACK-IMPORT','2026-10-02','2026-10-08','6','2','换标','代理退件区']].map(row=>row.map(v=>'"'+v+'"').join(',')).join('\r\n');
@@ -48,9 +53,11 @@ for(const callback of listeners.get('change')||[])callback({target});await new P
 assert.ok(node('#rtImportPreview').innerHTML.includes('SKU-IMPORT'));assert.equal(node('#rtImportSubmit').disabled,false);
 for(const callback of listeners.get('submit')||[])callback({target:f,preventDefault(){}});
 const saved=JSON.parse(stored.get('mw-returns-prototype-v1')),created=saved.find(o=>o.products.some(p=>p.sku==='SKU-IMPORT'));assert.ok(created,'The import submission creates a real order.');assert.equal(created.status,'待受理');assert.equal(created.boxes.length,0);assert.equal(created.products[0].requirement,'换标');
-assert.equal(node('#rtCreateUnclaimed').hidden,true,'Unforecasted registration is offered in the unclaimed state.');
-click({rtTab:'待认领'});assert.equal(node('#rtCreateUnclaimed').hidden,false);
-click({rtAction:'create-unclaimed'});assert.ok(node('#rtDrawer').innerHTML.includes('rtUnclaimedForm'));
+const importCount=saved.length;for(const callback of listeners.get('submit')||[])callback({target:f,preventDefault(){}});assert.equal(JSON.parse(stored.get('mw-returns-prototype-v1')).length,importCount,'A stale import cannot create another order.');
+assert.equal(node('#rtCreateUnclaimed').hidden,false,'Both registration entries are offered only in pending acceptance.');
+click({rtTab:'待认领'});assert.equal(node('#rtCreateUnclaimed').hidden,true);
+click({rtAction:'create-unclaimed'});assert.equal(node('#rtDrawer').hidden,true,'Registration cannot open from another state.');
+click({rtTab:'待受理'});click({rtAction:'create-unclaimed'});assert.ok(node('#rtDrawer').innerHTML.includes('rtUnclaimedForm'));
 assert.ok(node('#rtDrawer').innerHTML.includes('暂不支持客户查看'));
 const address=modules.get('warehouse-address.js').namespace;
 address.saveWarehouseAddress(model.WAREHOUSES[0],'123 Test Ave, CA');address.saveWarehouseAddress(model.WAREHOUSES[2],'456 Sample St, NJ');
@@ -73,6 +80,33 @@ const moved=readUnknown();assert.equal(moved.warehouse,model.WAREHOUSES[2]);asse
 click({rtAction:'claim'});mf.elements.customer.value=model.CLIENTS[0].name;mf.elements.customerCode.value=model.CLIENTS[0].code;
 mf.querySelectorAll=selector=>selector==='input[name="boxId"]:checked'?moved.boxes.map(b=>({value:b.id})):[];submit(mf);
 assert.equal(readUnknown().status,'待指令');assert.equal(model.totals(readUnknown()).available,2);
+// Register identified products without inventing forecast or uncounted quantities.
+function unclaimedProductCard(id,values){
+  const controls=Object.fromEntries(Object.entries({productName:'',productSku:'',productImage:'',productReceived:'',productWeight:'',productLength:'',productWidth:'',productHeight:'',productRequirement:'',...values}).map(([key,value])=>[key,{value}]));
+  return {dataset:{rtUnclaimedProduct:id},controls,querySelector(selector){const name=/^\[name="([^"]+)"\]$/.exec(selector)?.[1];assert.ok(controls[name],selector);return controls[name];}};
+}
+click({rtTab:'待受理'});click({rtAction:'create-unclaimed'});
+assert.ok(node('#rtUnclaimedProducts').innerHTML.includes('name="productName"'));assert.ok(node('#rtUnclaimedProducts').innerHTML.includes('name="productReceived"'));
+assert.match(node('#rtUnclaimedProducts').innerHTML,/name="productReceived"[^>]*disabled/);
+const metadataCard=unclaimedProductCard('P-UI-METADATA',{productName:'可识别耳机',productSku:'UNKNOWN-SKU-1',productImage:'data:image/png;base64,PRIVATE-PRODUCT',productWeight:'0.2',productLength:'18',productWidth:'12',productHeight:'6',productRequirement:'先核实货主'});
+uf.querySelectorAll=selector=>selector==='[data-rt-unclaimed-product]'?[metadataCard]:[];
+uf.elements.counted.value='0';uf.elements.description.value='含产品信息的无主货物';submit(uf);
+const metadata=JSON.parse(stored.get('mw-returns-prototype-v1')).find(o=>o.unclaimedDescription==='含产品信息的无主货物');
+assert.ok(metadata);assert.equal(metadata.status,'待认领');assert.equal(metadata.products[0].sku,'UNKNOWN-SKU-1');assert.equal(metadata.products[0].quantity,null);assert.equal(model.totals(metadata).received,0);assert.equal(model.totals(metadata).receivedUnknown,true);
+assert.equal(metadata.products[0].imageVisibility,'warehouse');assert.equal(metadata.receipts[0].items.length,0);
+click({rtDetailTab:'1'});assert.ok(node('#rtDrawer').innerHTML.includes('登记产品信息'));assert.ok(node('#rtDrawer').innerHTML.includes('PRIVATE-PRODUCT'));assert.ok(node('#rtDrawer').innerHTML.includes('未预报'));assert.ok(node('#rtDrawer').innerHTML.includes('2026-10-08 11:00:00'));
+// A counted registration records actual units and blocks missing quantities.
+click({rtTab:'待受理'});click({rtAction:'create-unclaimed'});
+const countedCard=unclaimedProductCard('P-UI-COUNTED',{productName:'已清点退回商品',productSku:'COUNTED-SKU-1'});
+uf.querySelectorAll=selector=>selector==='[data-rt-unclaimed-product]'?[countedCard]:[];
+uf.elements.description.value='已清点无主货物';uf.elements.counted.value='1';
+for(const callback of listeners.get('change')||[])callback({target:{id:'',matches:selector=>selector==='#rtUnclaimedForm [name="counted"]'}});
+assert.match(node('#rtUnclaimedProducts').innerHTML,/name="productReceived"[^>]*required/);
+const beforeInvalid=JSON.parse(stored.get('mw-returns-prototype-v1')).length;submit(uf);
+assert.equal(JSON.parse(stored.get('mw-returns-prototype-v1')).length,beforeInvalid);assert.ok(node('#rtUnclaimedError').textContent.includes('产品实收个数'));
+countedCard.controls.productReceived.value='7';submit(uf);
+const counted=JSON.parse(stored.get('mw-returns-prototype-v1')).find(o=>o.unclaimedDescription==='已清点无主货物');
+assert.ok(counted);assert.equal(counted.products[0].quantity,null);assert.equal(counted.packages[0].forecast,null);assert.equal(model.totals(counted).received,7);assert.equal(model.totals(counted).receivedUnknown,false);assert.equal(counted.boxes.length,2);assert.equal(counted.products[0].imageVisibility,'warehouse');
 function actualStock(type,index){
   const c=model.CLIENTS[0],productId=`P-UI-${index}`;
   const o=model.createOrder({customer:c.name,customerCode:c.code,warehouse:model.WAREHOUSES[0],source:'客户预报',products:[{id:productId,name:'实际收货耳机',sku:`SKU-UI-${index}`,quantity:9}],packages:[]});

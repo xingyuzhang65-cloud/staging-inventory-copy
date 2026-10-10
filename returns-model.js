@@ -114,13 +114,32 @@ export function registerUnclaimedReturn(data){
   assert(data.confirmed===true,'请确认货物已实际到达海外仓');
   assert(WAREHOUSES.includes(data.warehouse),'请选择退回仓库');
   const time=date(data.time,'实际到仓时间',true),boxes=integer(data.boxes,'实际到仓箱数',1);
+  const counted=data.counted===true;
+  assert(data.counted===undefined||typeof data.counted==='boolean','请确认内件是否已清点');
+  const raw=data.products??[];assert(Array.isArray(raw),'产品信息须为数组');assert(raw.length<=500,'产品信息最多 500 行');
+  const products=[],items=[];
+  for(const row of raw){
+    assert(row&&typeof row==='object','产品信息格式无效');
+    const dimensions=row.dimensions??[];assert(Array.isArray(dimensions)&&[0,3].includes(dimensions.length),'外箱尺寸须包含长宽高');
+    const present=value=>value!==null&&value!==undefined&&str(value)!=='';
+    if(!['name','sku','image','weight','requirement'].some(key=>present(row[key]))&&!dimensions.some(present)&&!(counted&&present(row.actualQuantity)))continue;
+    const productId=str(row.id)||id('P');assert(!products.some(p=>p.id===productId),'产品编号重复');
+    const optional=(value,label)=>present(value)?nonnegative(value,label):null;
+    const p={id:productId,name:str(row.name),sku:str(row.sku),image:str(row.image),imageVisibility:'warehouse',
+      quantity:null,weight:optional(row.weight,'单件重量'),dimensions:dimensions.map(value=>optional(value,'外箱尺寸')),packing:null,
+      returnedAt:'',tracking:'',requirement:str(row.requirement),location:data.warehouse+' · 退件区',
+      reportedReceivedAt:'',reportedReceived:null,reportedBoxes:null};
+    products.push(p);
+    if(counted)items.push({productId,quantity:integer(row.actualQuantity,'产品实收个数',1)});
+  }
+  assert(!counted||products.length,'已清点时请至少登记一个产品及实收个数');
   const o=createOrder({warehouse:data.warehouse,source:'其他',reason:'未预报到仓，货主待核实',request:'核实货主后按客户指令处理',remark:str(data.note),products:[],packages:[]});
-  o.registrationType='unforecasted';o.unclaimedDescription=str(data.description)||'待核实退回货物';
+  o.registrationType='unforecasted';o.unclaimedDescription=str(data.description)||'待核实退回货物';o.products=products;
   o.acceptedAt=now();o.acceptedBy=OPERATOR;
-  const p={id:id('PK'),tracking:str(data.tracking),carrier:str(data.carrier)||'待核实',forecast:null,items:[],returnedAt:'',shipped:'',eta:'',logistics:'物流已妥投',note:str(data.note),received:false,unforecasted:true};
+  const p={id:id('PK'),tracking:str(data.tracking),carrier:str(data.carrier)||'待核实',forecast:null,items:[],productIds:products.map(p=>p.id),returnedAt:'',shipped:'',eta:'',logistics:'物流已妥投',note:str(data.note),received:false,unforecasted:true};
   o.packages.push(p);
-  receive(o,{packageId:p.id,time,boxes,counted:false,items:[],note:str(data.note),image:str(data.image),complete:true});
-  log(o,'登记无主退换货',`${o.warehouse} · 实际到仓 ${boxes} 箱 · 待核实货主`);
+  receive(o,{packageId:p.id,time,boxes,counted,items,note:str(data.note),image:str(data.image),complete:true});
+  log(o,'登记无主退换货',`${o.warehouse} · 实际到仓 ${boxes} 箱 · 产品信息 ${products.length} 项 · ${counted?'内件已清点':'内件未清点'} · 待核实货主`);
   return o;
 }
 export function editWarehouse(o,warehouse){

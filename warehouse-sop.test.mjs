@@ -88,6 +88,47 @@ test('unforecasted goods register directly as unclaimed real boxes with private 
   assert.throws(()=>R.registerUnclaimedReturn({warehouse:R.WAREHOUSES[0],time:'2026-10-08T10:30',boxes:3,confirmed:false}),/实际到达/);
   const c=R.CLIENTS[0];R.claim(o,{boxIds:o.boxes.map(b=>b.id),customer:c.name,customerCode:c.code});assert.equal(o.status,'待指令');assert.equal(R.totals(o).available,3);
 });
+test('unclaimed product metadata preserves unknown quantities and internal photos through storage and export',()=>{
+  const data={warehouse:R.WAREHOUSES[0],time:'2026-10-08T10:30',boxes:3,confirmed:true,counted:false,tracking:'UNREPORTED-BOX',
+    products:[{id:'P-UNCLAIMED-A',name:'可识别耳机',sku:'UNKNOWN-A',image:'data:image/png;base64,PRIVATE-PRODUCT',weight:'0.2',dimensions:['18','12','6'],requirement:'先核实货主',actualQuantity:99},
+      {id:'P-UNCLAIMED-B',name:'货物名称待确认',sku:'',dimensions:['20','','']},{id:'P-BLANK',name:'',sku:'',dimensions:['','','']}]};
+  const before=structuredClone(data),o=R.registerUnclaimedReturn(data);assert.deepEqual(data,before);
+  assert.equal(o.products.length,2);assert.equal(o.status,'待认领');assert.equal(o.customer,'');
+  assert.ok(o.products.every(p=>p.quantity===null&&p.packing===null&&p.imageVisibility==='warehouse'));
+  assert.equal(o.products[1].sku,'');assert.equal(o.products[1].weight,null);assert.deepEqual(o.products[1].dimensions,[20,null,null]);
+  assert.equal(o.packages[0].forecast,null);assert.deepEqual(o.packages[0].items,[]);assert.deepEqual(o.receipts[0].items,[]);
+  assert.deepEqual(o.packages[0].productIds,o.products.map(p=>p.id));
+  assert.deepEqual([R.totals(o).boxes,R.totals(o).received,R.totals(o).receivedUnknown],[3,0,true]);
+  assert.ok(o.boxes.every(b=>!b.counted&&b.items.length===0));
+  for(const p of o.products){
+    assert.equal(F.productReceipt(o,p).unknown.length,3);assert.deepEqual(F.productReceipt(o,p).times,['2026-10-08 10:30:00']);
+    assert.equal(F.productStorage(o,p).inStock,3);assert.equal(F.templateValue(o,p,'quantity'),'未预报');
+    assert.equal(F.templateValue(o,p,'reportedReceived'),'未清点');
+  }
+  const persisted=R.migrate(JSON.parse(JSON.stringify([o])))[0];assert.deepEqual(persisted.products,o.products);assert.deepEqual(persisted.packages,o.packages);
+  const grid=F.exportProductGrid([persisted]);assert.equal(grid.length,3);assert.ok(!JSON.stringify(grid).includes('PRIVATE-PRODUCT'));
+  assert.equal(grid[1][grid[0].indexOf('到仓时间')],'2026-10-08 10:30:00');assert.equal(grid[1][grid[0].indexOf('预报产品数量(个)')],'未预报');
+  assert.equal(F.templateValue(o,o.products[1],'dimensions'),'20 × — × —');
+  assert.equal(F.matchesProductFilters(o,{quantityMax:'0'}),false);assert.equal(F.matchesProductFilters(o,{sku:'unknown-a'}),true);
+});
+test('counted unclaimed goods record actual units per product without a forecast',()=>{
+  const o=R.registerUnclaimedReturn({warehouse:R.WAREHOUSES[1],time:'2026-10-08T10:30',boxes:3,confirmed:true,counted:true,
+    products:[{id:'P-COUNT-A',name:'耳机',sku:'COUNT-A',actualQuantity:'8'},{id:'P-COUNT-B',name:'充电线',actualQuantity:'4'}]});
+  assert.equal(o.status,'待认领');assert.equal(o.packages[0].forecast,null);assert.ok(o.products.every(p=>p.quantity===null));
+  assert.deepEqual([R.totals(o).boxes,R.totals(o).received,R.totals(o).receivedUnknown],[3,12,false]);
+  assert.equal(o.receipts[0].counted,true);assert.deepEqual(o.receipts[0].items,[{productId:'P-COUNT-A',quantity:8},{productId:'P-COUNT-B',quantity:4}]);
+  assert.deepEqual(o.products.map(p=>F.productReceipt(o,p).received),[8,4]);assert.ok(o.boxes.every(b=>b.counted&&!b.claimed));
+  const c=R.CLIENTS[0];R.claim(o,{boxIds:o.boxes.map(b=>b.id),customer:c.name,customerCode:c.code});assert.equal(o.status,'待指令');assert.equal(R.totals(o).available,3);
+});
+test('unclaimed product validation rejects incomplete counts without changing submitted data',()=>{
+  const base={warehouse:R.WAREHOUSES[0],time:'2026-10-08T10:30',boxes:2,confirmed:true,counted:true};
+  for(const products of [[],[{name:'商品'}],[{name:'商品',actualQuantity:0}],[{name:'商品',actualQuantity:1.5}],[{name:'商品',actualQuantity:2},{name:'另一商品',actualQuantity:''}]]){
+    const data={...base,products},before=structuredClone(data);assert.throws(()=>R.registerUnclaimedReturn(data),/实收个数|至少登记/);assert.deepEqual(data,before);
+  }
+  assert.throws(()=>R.registerUnclaimedReturn({...base,counted:false,products:[{name:'商品',weight:-1}]}),/单件重量/);
+  assert.throws(()=>R.registerUnclaimedReturn({...base,counted:false,products:[{name:'商品',dimensions:[1,2]}]}),/长宽高/);
+  assert.throws(()=>R.registerUnclaimedReturn({...base,counted:false,products:[{id:'P-DUP',name:'商品一'},{id:'P-DUP',name:'商品二'}]}),/产品编号重复/);
+});
 test('only real physical outbound adds departure time and invalid backfill is atomic',()=>{
   const o=R.seed().find(o=>o.id.endsWith('0009')),first=o.boxes[0],second=structuredClone(o.boxes[1]);
   const i=R.instruct(o,{type:'发货计划',boxIds:[first.id],note:'寄回'});R.syncInstruction(o,i.id,'指令处理完成、待出库');

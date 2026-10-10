@@ -10,7 +10,7 @@ export const TEMPLATE_FIELDS=[
 ];
 export function productReceipt(o,p){
   if(!p)return {packages:o.packages,known:o.boxes.filter(b=>b.counted),unknown:o.boxes.filter(b=>!b.counted),received:o.boxes.filter(b=>b.counted).reduce((n,b)=>n+b.items.reduce((s,i)=>s+i.quantity,0),0),boxes:o.boxes.length,times:[...new Set(o.boxes.map(b=>b.receivedAt))],tracking:o.packages.map(k=>k.tracking)};
-  const packages=o.packages.filter(k=>k.items.some(i=>i.productId===p.id));
+  const packages=o.packages.filter(k=>k.items.some(i=>i.productId===p.id)||(k.productIds||[]).includes(p.id));
   const known=o.boxes.filter(b=>b.counted&&b.items.some(i=>i.productId===p.id));
   const unknown=o.boxes.filter(b=>!b.counted&&packages.some(k=>k.id===b.packageId));
   return {packages,known,unknown,received:known.reduce((n,b)=>n+b.items.filter(i=>i.productId===p.id).reduce((s,i)=>s+i.quantity,0),0),boxes:known.length,times:[...new Set([...known,...unknown].map(b=>b.receivedAt))],tracking:[...new Set([...packages.map(k=>k.tracking),...String(p.tracking||'').split(/[;；,，\n]+/).map(s=>s.trim()).filter(Boolean)])]};
@@ -27,7 +27,10 @@ export function templateValue(o,p,key,{reported=false}={}){
     if(key==='reportedBoxes')return r.boxes;
     return '';
   }
-  if(key==='dimensions')return (p.dimensions||[]).join(' × ');
+  if(key==='name')return p.name||p.sku||'待核实产品';
+  if(key==='quantity'&&o.registrationType==='unforecasted')return '未预报';
+  if(key==='image'&&p.imageVisibility==='warehouse')return '';
+  if(key==='dimensions')return (p.dimensions||[]).some(value=>value!==null&&value!==undefined&&value!=='')?(p.dimensions||[]).map(value=>value??'—').join(' × '):'';
   if(reported)return p[key]??'';
   const r=productReceipt(o,p);
   if(key==='tracking')return r.tracking.join('；');
@@ -43,6 +46,7 @@ export function matchesProductFilters(o,f){
   return o.products.some(p=>{
     for(const [key,prop] of [['productName','name'],['sku','sku'],['requirement','requirement'],['location','location']])if(f[key]&&!has(p[prop],f[key]))return false;
     for(const key of ['quantity','weight','packing']){
+      if((f[key+'Min']!==undefined&&f[key+'Min']!==''||f[key+'Max']!==undefined&&f[key+'Max']!=='')&&(p[key]===null||p[key]===undefined||p[key]===''))return false;
       if(f[key+'Min']!==undefined&&f[key+'Min']!==''&&Number(p[key]||0)<Number(f[key+'Min']))return false;
       if(f[key+'Max']!==undefined&&f[key+'Max']!==''&&Number(p[key]||0)>Number(f[key+'Max']))return false;
     }

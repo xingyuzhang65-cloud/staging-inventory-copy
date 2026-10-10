@@ -24,7 +24,9 @@ const model=modules.get('clearance-model.js').namespace,address=modules.get('war
 const read=id=>JSON.parse(stored.get('mw-clearance-prototype-v2')).find(o=>o.id===id);
 function click(data,orderId=''){const target={disabled:false,dataset:data,closest(selector){if(selector==='[data-cl-order]')return orderId?{dataset:{clOrder:orderId}}:null;if(selector==='[data-cl-action]'&&data.clAction)return target;if(selector==='[data-cl-tab]'&&data.clTab)return target;if(selector==='[data-cl-detail-tab]'&&data.clDetailTab!=null)return target;return null;}};for(const callback of listeners.get('click')||[])callback({target});}
 const mf=node('#clModalForm');const submit=()=>mf.onsubmit({target:mf,preventDefault(){}});
-assert.equal(node('main').hidden,false);assert.ok(node('#clHead').innerHTML.includes('受理时间'));assert.ok(node('#clHead').innerHTML.includes('清货时长'));
+assert.equal(node('main').hidden,false);assert.equal(node('[data-cl-action="create"]').hidden,false);assert.ok(!node('#clHead').innerHTML.includes('受理时间'));assert.ok(!node('#clHead').innerHTML.includes('清货时长'));
+assert.ok(!node('#clColumns').innerHTML.includes('data-cl-col="acceptedAt"'));assert.ok(!node('#clColumns').innerHTML.includes('data-cl-col="duration"'));
+click({clAction:'detail'},pending.id);assert.ok(!node('#clDrawer').innerHTML.includes('cl-service-clock'));
 assert.ok(node('#clDeadlineSummary').innerHTML.includes('满 30 天待人工处理 1 条'));
 address.saveWarehouseAddress(model.WAREHOUSES[0],'123 Test Ave, CA');address.saveWarehouseAddress(model.WAREHOUSES[1],'456 Sample St, NJ');
 click({clAction:'accept'},pending.id);assert.ok(node('#clModal').innerHTML.includes('受理清货申请'));assert.ok(node('#clModal').innerHTML.includes('123 Test Ave, CA'));
@@ -34,7 +36,7 @@ const change={id:'',form:mf,matches:selector=>selector.includes('#clModalForm [n
 for(const callback of listeners.get('change')||[])callback({target:change});
 assert.equal(mf.elements.warehouseAddress.value,'456 Sample St, NJ');submit();
 const accepted=read(pending.id);assert.equal(accepted.status,'寻找买家中');assert.ok(accepted.acceptedAt);assert.equal(accepted.acceptedAt,accepted.searchAt);assert.equal(accepted.warehouse,model.WAREHOUSES[1]);
-click({clTab:'寻找买家中'});assert.ok(node('#clBody').innerHTML.includes('8 天 3 小时'));assert.ok(node('#clBody').innerHTML.includes('已达 30 天 · 待人工处理'));
+click({clTab:'寻找买家中'});assert.equal(node('[data-cl-action="create"]').hidden,true);assert.ok(node('#clHead').innerHTML.includes('受理时间'));assert.ok(node('#clHead').innerHTML.includes('清货时长'));assert.ok(node('#clColumns').innerHTML.includes('data-cl-col="acceptedAt"'));assert.ok(node('#clBody').innerHTML.includes('8 天 3 小时'));assert.ok(node('#clBody').innerHTML.includes('已达 30 天 · 待人工处理'));
 click({clAction:'detail'},waiting.id);assert.ok(node('#clDrawer').innerHTML.includes('7 天反馈时间'));assert.ok(node('#clDrawer').innerHTML.includes('30 天寻找上限'));assert.ok(node('#clDrawer').innerHTML.includes('请提醒客户确认是否继续寻找'));
 click({clAction:'remind'},waiting.id);mf.elements.notified.checked=false;mf.elements.note.value='已联系客户，等待反馈';const before=read(waiting.id);submit();assert.deepEqual(read(waiting.id),before);assert.ok(node('#clModalError').textContent.includes('人工提醒客户'));
 mf.elements.notified.checked=true;submit();assert.equal(read(waiting.id).reminderCount,1);assert.equal(read(waiting.id).status,'寻找买家中');
@@ -44,7 +46,7 @@ click({clAction:'detail'},limit.id);assert.ok(node('#clDrawer').innerHTML.includ
 const stockBefore=structuredClone({products:read(limit.id).products,receipts:read(limit.id).receipts});click({clAction:'terminate'},limit.id);assert.ok(node('#clModal').innerHTML.includes('清货时长停止计时'));mf.elements.reason.value='客户确认停止';submit();
 const ended=read(limit.id);assert.equal(ended.status,'已终止');assert.ok(ended.closedAt);assert.deepEqual({products:ended.products,receipts:ended.receipts},stockBefore);
 const clock=model.clearanceProgress(ended);assert.equal(model.clearanceProgress(ended,Date.now()+100*DAY).durationText,clock.durationText);
-click({clTab:'全部'});click({clAction:'warehouse'},limit.id);mf.elements.warehouse.value=model.WAREHOUSES[2];mf.elements.warehouseAddress.value='789 Test Road, TX';submit();
+click({clTab:'全部'});assert.equal(node('[data-cl-action="create"]').hidden,true);click({clAction:'warehouse'},limit.id);mf.elements.warehouse.value=model.WAREHOUSES[2];mf.elements.warehouseAddress.value='789 Test Road, TX';submit();
 const corrected=read(limit.id);assert.equal(corrected.warehouse,model.WAREHOUSES[2]);assert.equal(corrected.status,'已终止');assert.equal(corrected.closedAt,ended.closedAt);assert.deepEqual({products:corrected.products,receipts:corrected.receipts},stockBefore);
 assert.equal(address.warehouseAddress(model.WAREHOUSES[2]),'789 Test Road, TX');
 console.log('Clearance UI smoke checks passed: acceptance warehouse and address, acceptance clock, 7-day client reminder and consent, 30-day manual termination, frozen duration and preserved inventory.');
