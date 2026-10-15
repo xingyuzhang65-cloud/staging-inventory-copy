@@ -111,7 +111,7 @@ function harness({ bypassNativeValidity = false } = {}) {
   };
   const c = {
     $, document, releaseForm: $('#releaseForm'), releaseOverlay: $('#releaseOverlay'),
-    activeReleaseRow: null, activeReleaseSourceRow: null, activeReleaseReadOnly: false,
+    activeReleaseRow: null, activeReleaseSourceRow: null, activeReleaseReadOnly: false, activeApprovalEdit: false,
     activeReleaseStatus: '暂存', activeReleaseOrderType: '发货', activeStatus: '暂存',
     selectedDetailInstructionCodes: new Set(), instructionRowsByInventory: new Map(),
     attachmentRowsByInventory: new Map(), instructionCatalog: [], instructionWorkflowRows: [],
@@ -129,7 +129,7 @@ function harness({ bypassNativeValidity = false } = {}) {
     'getReleaseScheduleValue', 'getReleaseRemarkValue', 'createApprovalRequestFromActiveRelease',
     'finishReleaseSubmission', 'normalizeReleaseRow', 'isMarketplaceRelease', 'isPrivateAddressRelease',
     'updateReleaseTextCount', 'updateReleaseApplicationFields', 'updateReleaseShippingState',
-    'setReleaseDrawerMode', 'openReleaseDrawer', 'closeReleaseDrawer',
+    'setReleaseDrawerMode', 'configureApprovalEdit', 'saveApprovalProcessing', 'openReleaseDrawer', 'closeReleaseDrawer',
   ];
   const fragments = names.map(actualFunction);
   fragments.push(actualBlock('document.querySelectorAll(\'input[name="releaseOrderType"]\').forEach', '$("#releaseAddressDetail").addEventListener'));
@@ -160,6 +160,71 @@ function pickup(h, row = stock()) {
   h.choose('自提');
   return row;
 }
+
+test('approval processing edits preserve boxes while saving time, remark and attachments', () => {
+  const h = harness();
+  const row = stock({ status: '待审批', applicationNo: 'EDIT-1', releaseType: '自提', appliedBoxes: 3, selectedCargoBoxes: ['BOX-1'] });
+  h.c.openReleaseDrawer(row, { readOnly: true, status: '待审批', editInstructions: true });
+  for (const id of ['releasePickupTime', 'releaseShipOutRemark', 'drawerAttachmentButton']) assert.equal(h.$(`#${id}`).disabled, false);
+  for (const id of ['releaseShipOutBoxes', 'releaseApplication', 'releaseMethod', 'releaseDestroyBoxNo', 'cargoBoxSelectAll']) assert.equal(h.$(`#${id}`).disabled, true);
+  h.$('#releaseShipOutBoxes').value = '5';
+  h.$('#releasePickupTime').value = '2026-10-18T10:30';
+  h.$('#releaseShipOutRemark').value = '更新处理备注';
+  h.c.getReleaseAttachments().push({ name: '附件.pdf', url: 'blob:test', kind: 'file' });
+  h.submit();
+  assert.equal(row.appliedBoxes, 3);
+  assert.equal(row.appliedVolume, undefined);
+  assert.equal(row.scheduledPickupTime, '2026-10-18 10:30');
+  assert.equal(row.customerRemark, '更新处理备注');
+  assert.equal(row.attachments[0].name, '附件.pdf');
+  assert.equal(row.status, '待审批');
+  assert.equal(row.unsent, 8);
+  assert.equal(row.container, 'PICKUP-CONTAINER');
+  assert.equal(row.dispatch, 'Truck-Amazon');
+  assert.deepEqual(row.selectedCargoBoxes, ['BOX-1']);
+  assert.equal(h.c.approvalRows.length, 0);
+  h.c.openReleaseDrawer(row, { readOnly: true, status: '待审批', editInstructions: true });
+  assert.equal(h.$('#releaseShipOutBoxes').value, '3');
+  assert.equal(h.$('#releaseShipOutRemark').value, '更新处理备注');
+});
+
+test('shipping approval processing works for FBA, marketplace and private addresses', () => {
+  for (const [application, boxesId, dateId, remarkId] of [
+    ['FBA', 'releaseBoxes', 'releaseDate', 'releaseRemark'],
+    ['Walmart', 'releaseMarketplaceBoxes', 'releaseMarketplaceDate', 'releaseOverseasRemark'],
+    ['私人地址', 'releasePrivateBoxes', 'releasePrivateDate', 'releasePrivateRemark']
+  ]) {
+    const h = harness();
+    const row = stock({ status: '待审批', applicationNo: 'EDIT-SHIP', releaseApplication: application, appliedBoxes: 2 });
+    h.c.openReleaseDrawer(row, { readOnly: true, status: '待审批', editInstructions: true });
+    assert.equal(h.$(`#${boxesId}`).disabled, true);
+    assert.equal(h.$('#releaseApplication').disabled, false);
+    if (application === 'FBA') {
+      for (const id of ['releaseDestination', 'releaseShipment', 'releaseMethod', 'releaseReference']) assert.equal(h.$(`#${id}`).disabled, false);
+      h.$('#releaseShipment').value = 'SHIP-EDIT';
+      h.$('#releaseReference').value = 'REF-EDIT';
+      h.$('#releaseDestination').value = 'ABE3';
+      h.$('#releaseMethod').value = 'FEDEX';
+    }
+    h.$(`#${boxesId}`).value = '4';
+    h.$(`#${dateId}`).value = application === 'Walmart' ? '2026-10-19T09:00' : '2026-10-19';
+    h.$(`#${remarkId}`).value = '处理备注';
+    h.submit();
+    assert.equal(row.appliedBoxes, 2, application);
+    assert.equal(row.customerRemark, '处理备注');
+    assert.equal(row.dispatch, application === 'FBA' ? 'FEDEX' : 'Truck-Amazon');
+    if (application === 'FBA') {
+      assert.equal(row.shipmentId, 'SHIP-EDIT');
+      assert.equal(row.referenceId, 'REF-EDIT');
+      assert.equal(row.destination, 'ABE3');
+    }
+    assert.equal(row.status, '待审批');
+    h.c.openReleaseDrawer(row, { readOnly: true, status: '待审批' });
+    assert.equal(h.$(`#${boxesId}`).value, '2');
+    assert.equal(h.$(`#${remarkId}`).value, '处理备注');
+    assert.equal(h.$(`#${boxesId}`).disabled, true);
+  }
+});
 
 test('the actual order type radio selects only pickup fields, with box count required and other fields optional', () => {
   const h = harness(); pickup(h);

@@ -671,7 +671,7 @@ function renderInstructionLines(row) {
   if (!row.instructions?.length) return '<span class="instruction-empty">-</span>';
   return `<div class="instruction-lines">${row.instructions.map((instruction) => {
     const status = instruction.completed ? "已处理" : "待处理";
-    return `<div class="instruction-line ${instruction.completed ? "status-success" : "status-pending"}" title="${status}：${instruction.text}"><span class="instruction-state-label">${status}</span><span class="instruction-line-text">${instruction.text}</span></div>`;
+    return `<div class="instruction-line ${instruction.completed ? "status-success" : "status-pending"}" title="${status}：${escapeHtml(instruction.text)}"><span class="instruction-state-label">${status}</span><span class="instruction-line-text">${escapeHtml(instruction.text)}</span></div>`;
   }).join("")}</div>`;
 }
 
@@ -835,7 +835,7 @@ function renderRows() {
           ? `<button class="action-link receivable-button">应收费用</button><button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
           : isInstructionView()
             ? `<button class="action-link detail-button" data-id="${row.id}">详情</button><button class="action-link log-button">日志</button>`
-            : `<button class="action-link review-button" data-id="${row.id}">审核申请</button><button class="action-link detail-button" data-id="${row.id}">详情</button>`}</td>
+            : `<button class="action-link review-button" data-id="${row.id}">审核申请</button><button class="action-link approval-edit-button" data-id="${row.id}">编辑</button><button class="action-link detail-button" data-id="${row.id}">详情</button>`}</td>
     </tr>`).join("") : visibleRows.map((row) => `
     <tr>
       <td class="index-col">${row.id}</td>
@@ -1431,6 +1431,7 @@ const releaseForm = $("#releaseForm");
 let activeReleaseRow = null;
 let activeReleaseSourceRow = null;
 let activeReleaseReadOnly = false;
+let activeApprovalEdit = false;
 let activeReleaseStatus = "暂存";
 let activeReleaseOrderType = "发货";
 const selectedDetailInstructionCodes = new Set();
@@ -1601,19 +1602,25 @@ function updateReleaseApplicationFields() {
   document.querySelectorAll(".fba-release-field").forEach((field) => { field.hidden = marketplace || privateAddress; });
   document.querySelectorAll(".marketplace-release-field").forEach((field) => { field.hidden = !marketplace; });
   document.querySelectorAll(".private-release-field").forEach((field) => { field.hidden = !privateAddress; });
-  $("#releaseApplication").disabled = activeReleaseReadOnly;
+  const fieldsReadOnly = activeReleaseReadOnly && !activeApprovalEdit;
+  $("#releaseApplication").disabled = fieldsReadOnly;
   document.querySelectorAll(".fba-release-field input, .fba-release-field select, .fba-release-field button").forEach((control) => {
-    control.disabled = activeReleaseReadOnly || marketplace || privateAddress;
+    control.disabled = fieldsReadOnly || marketplace || privateAddress;
   });
   document.querySelectorAll(".marketplace-release-field input, .marketplace-release-field select, .marketplace-release-field button").forEach((control) => {
-    control.disabled = activeReleaseReadOnly || !marketplace;
+    control.disabled = fieldsReadOnly || !marketplace;
   });
   document.querySelectorAll(".private-release-field input, .private-release-field select, .private-release-field button, .private-release-field textarea").forEach((control) => {
-    control.disabled = activeReleaseReadOnly || !privateAddress;
+    control.disabled = fieldsReadOnly || !privateAddress;
   });
   releaseOverlay.classList.toggle("private-address-mode", privateAddress);
   $("#instructionSection").hidden = false;
   updateReleaseShippingState();
+  if (activeApprovalEdit) {
+    ["releaseBoxes", "releaseMarketplaceBoxes", "releasePrivateBoxes", "releaseShipOutBoxes"].forEach(id => { $(`#${id}`).disabled = true; });
+    $("#uploadButton").disabled = false;
+    $("#releaseFile").disabled = false;
+  }
 }
 
 function updateReleaseShippingState() {
@@ -1663,9 +1670,58 @@ function setReleaseDrawerMode(readOnly, status) {
   releaseForm.classList.toggle("release-readonly", readOnly);
 }
 
+function configureApprovalEdit() {
+  const compact = activeReleaseOrderType !== "发货";
+  const boxesId = compact ? "releaseShipOutBoxes" : isPrivateAddressRelease() ? "releasePrivateBoxes" : isMarketplaceRelease() ? "releaseMarketplaceBoxes" : "releaseBoxes";
+  const dateId = compact ? "releasePickupTime" : isPrivateAddressRelease() ? "releasePrivateDate" : isMarketplaceRelease() ? "releaseMarketplaceDate" : "releaseDate";
+  const remarkId = compact ? "releaseShipOutRemark" : isPrivateAddressRelease() ? "releasePrivateRemark" : isMarketplaceRelease() ? "releaseOverseasRemark" : "releaseRemark";
+  $(`#${boxesId}`).value = String(activeReleaseRow.appliedBoxes ?? activeReleaseRow.shipOutBoxes ?? "");
+  $(`#${remarkId}`).value = activeReleaseRow.customerRemark || activeReleaseRow.shipOutRemark || "";
+  if (!compact) $(`#${dateId}`).value = (activeReleaseRow.scheduledShippingTime || "").replace(" ", "T").slice(0, dateId === "releaseMarketplaceDate" ? 16 : 10);
+  [remarkId, ...(!compact || activeReleaseOrderType === "自提" ? [dateId] : [])].forEach(id => { $(`#${id}`).disabled = false; });
+  $(`#${boxesId}`).disabled = true;
+  $("#drawerAttachmentButton").disabled = false;
+  $("#drawerAttachmentFile").disabled = false;
+  $("#cargoBoxSection").querySelectorAll("input, select, button, textarea").forEach(control => { control.disabled = true; });
+  $("#releaseConfirm").hidden = false;
+  $("#releaseConfirm").textContent = "保存修改";
+  $("#releaseCancel").textContent = "关闭";
+}
+
+function saveApprovalProcessing() {
+  if (!activeReleaseSourceRow || activeReleaseSourceRow.status !== "待审批") return;
+  const changes = {
+    customerRemark: getReleaseRemarkValue(),
+    attachments: getReleaseAttachments().map(attachment => ({ ...attachment }))
+  };
+  if (activeReleaseOrderType === "发货") {
+    changes.scheduledShippingTime = getReleaseScheduleValue();
+    changes.releaseApplication = $("#releaseApplication").value;
+    changes.applicationType = getReleaseApplicationTypeValue();
+    changes.destination = getReleaseDestinationValue();
+    changes.dispatch = getReleaseDispatchValue();
+    changes.shipmentId = $("#releaseShipment").value.trim();
+    changes.referenceId = $("#releaseReference").value.trim();
+    changes.processingFields = {};
+    $("#releaseFields").querySelectorAll("input, select, textarea").forEach(control => {
+      if (control.id && !control.disabled && control.type !== "file") changes.processingFields[control.id] = control.value;
+    });
+  }
+  else {
+    changes.shipOutRemark = changes.customerRemark;
+    if (activeReleaseOrderType === "自提") changes.scheduledPickupTime = getReleaseScheduleValue();
+  }
+  Object.assign(activeReleaseSourceRow, changes);
+  closeReleaseDrawer();
+  renderRows();
+}
+
 function openReleaseDrawer(sourceRow, options = {}) {
   const row = normalizeReleaseRow(sourceRow);
   const readOnly = Boolean(options.readOnly);
+  activeApprovalEdit = Boolean(options.editInstructions) && sourceRow.status === "待审批";
+  releaseOverlay.classList.toggle("approval-edit-mode", activeApprovalEdit);
+  $("#releaseHeaderActions").hidden = !activeApprovalEdit;
   const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
   activeReleaseSourceRow = sourceRow;
@@ -1702,22 +1758,36 @@ function openReleaseDrawer(sourceRow, options = {}) {
   destination.value = [...destination.options].some((option) => option.value === row.destination) ? row.destination : "";
   $("#releaseShipment").value = row.shipmentId;
   $("#releaseReference").value = row.referenceId;
-  $("#releaseBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
-  $("#releaseMarketplaceBoxes").value = readOnly ? String(Math.max(0, row.unsent)) : "";
+  $("#releaseBoxes").value = readOnly ? String(Math.max(0, row.appliedBoxes ?? row.unsent)) : "";
+  $("#releaseMarketplaceBoxes").value = readOnly ? String(Math.max(0, row.appliedBoxes ?? row.unsent)) : "";
+  $("#releasePrivateBoxes").value = readOnly ? String(Math.max(0, row.appliedBoxes ?? row.unsent)) : "";
+  $("#releaseMarketplaceDate").value = (row.scheduledShippingTime || "").replace(" ", "T").slice(0, 16);
+  $("#releaseOverseasRemark").value = row.customerRemark || "";
+  $("#releasePrivateRemark").value = row.customerRemark || "";
   $("#releaseDate").value = (row.scheduledShippingTime || row.time || "").slice(0, 10);
   $("#releasePrivateDate").value = (row.scheduledShippingTime || "").slice(0, 10);
   $("#releaseRemark").value = row.customerRemark || "";
+  $("#releaseWarehouseCode").value = row.destination || "";
+  $("#releaseMarketplaceDispatch").value = row.dispatch || "";
+  $("#releasePrivateDispatch").value = row.dispatch || "";
+  $("#releasePrivateAddress").value = row.destination || "";
+  Object.entries(row.processingFields || {}).forEach(([id, value]) => {
+    const control = document.querySelector(`#${id}`);
+    if (control && !["releaseBoxes", "releaseMarketplaceBoxes", "releasePrivateBoxes", "releaseShipOutBoxes"].includes(id)) control.value = value;
+  });
   $("#privateUploadName").textContent = "";
   updateReleaseTextCount("#releaseAddressDetail", "#releaseAddressCount");
   updateReleaseTextCount("#releaseOverseasRemark", "#releaseRemarkCount");
   setReleaseDrawerMode(readOnly, sourceStatus);
-  $("#releaseTitle").textContent = readOnly ? "运单详情" : "下单";
+  $("#releaseTitle").textContent = activeApprovalEdit ? "编辑处理信息" : readOnly ? "运单详情" : "下单";
+  $("#releaseConfirm").textContent = "确定";
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
   $("#releaseForm").insertBefore($("#cargoBoxSection"), $("#drawerAttachmentSection"));
   renderCargoBoxRows(row);
   renderReleaseAttachments();
   renderInstructionList();
+  if (activeApprovalEdit) configureApprovalEdit();
   requestAnimationFrame(() => {
     resetInstructionTableScroll();
     requestAnimationFrame(resetInstructionTableScroll);
@@ -1735,6 +1805,7 @@ function closeReleaseDrawer() {
   activeReleaseSourceRow = null;
   selectedDetailInstructionCodes.clear();
   activeReleaseReadOnly = false;
+  activeApprovalEdit = false;
   activeReleaseStatus = "暂存";
   activeReleaseOrderType = "发货";
   releaseForm.reset();
@@ -1745,6 +1816,12 @@ function closeReleaseDrawer() {
   $("#releasePickupTime").value = "";
 }
 
+body.addEventListener("click", (event) => {
+  const editButton = event.target.closest(".approval-edit-button");
+  if (!editButton || !isApprovalView()) return;
+  const row = visibleRows.find((item) => item.id === Number(editButton.dataset.id));
+  if (row) openReleaseDrawer(row, { readOnly: true, status: activeStatus, editInstructions: true });
+});
 body.addEventListener("click", (event) => {
   const detailButton = event.target.closest(".detail-button");
   if (!detailButton) return;
@@ -1759,6 +1836,7 @@ body.addEventListener("click", (event) => {
 });
 $("#releaseClose").addEventListener("click", closeReleaseDrawer);
 $("#releaseCancel").addEventListener("click", closeReleaseDrawer);
+$("#releaseHeaderCancel").addEventListener("click", closeReleaseDrawer);
 releaseOverlay.addEventListener("click", (event) => {
   if (event.target === releaseOverlay) closeReleaseDrawer();
 });
@@ -2077,13 +2155,21 @@ $("#instructionEditCancel").addEventListener("click", () => {
 $("#instructionEditForm").addEventListener("submit", (event) => {
   event.preventDefault();
   if (!activeReleaseRow || !editingInstructionCode || !event.currentTarget.reportValidity()) return;
+  const name = $("#editInstructionName").value.trim();
+  if (!name) {
+    window.alert("请输入费用名称");
+    return;
+  }
   const rows = getActiveInstructionRows().map((row) => row.code === editingInstructionCode ? {
     ...row,
+    name,
     type: $("#editInstructionType").value,
     unit: $("#editInstructionUnit").value,
     price: $("#editInstructionPrice").value,
     quantity: $("#editInstructionQuantity").value,
-    currency: $("#editInstructionCurrency").value
+    currency: $("#editInstructionCurrency").value,
+    originalAmount: Number($("#editInstructionPrice").value) * Number($("#editInstructionQuantity").value),
+    cnyAmount: Number((Number($("#editInstructionPrice").value) * Number($("#editInstructionQuantity").value) * (Number(row.exchangeRate) || 1)).toFixed(2))
   } : row);
   const detailKey = getInstructionDetailKey(activeReleaseRow);
   instructionRowsByInventory.set(detailKey, rows);
@@ -2186,11 +2272,15 @@ $("#releaseShipOutFile").addEventListener("change", (event) => {
 });
 releaseForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (activeReleaseReadOnly) {
+  if (activeReleaseReadOnly && !activeApprovalEdit) {
     closeReleaseDrawer();
     return;
   }
   if (!activeReleaseRow) return;
+  if (activeApprovalEdit) {
+    if (releaseForm.reportValidity()) saveApprovalProcessing();
+    return;
+  }
   const boxesControl = activeReleaseOrderType !== "发货"
     ? $("#releaseShipOutBoxes")
     : isPrivateAddressRelease()

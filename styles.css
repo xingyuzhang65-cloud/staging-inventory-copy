@@ -1176,6 +1176,19 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .approval-actions { padding: 0 6px !important; }
 .approval-actions .action-link { margin: 0 4px; font-weight: 500; }
 .approval-actions .more-button::first-letter { letter-spacing: 1px; }
+.approval-view .inventory-table th.operation-col,
+.approval-view .inventory-table td.operation-col {
+  width: 200px;
+  min-width: 200px;
+  white-space: normal;
+  text-overflow: clip;
+}
+.approval-view .approval-actions .action-link {
+  display: inline-block;
+  margin: 4px;
+  padding: 4px 3px;
+  white-space: nowrap;
+}
 .request-view .floating-tools { bottom: 282px; }
 .request-view .status-actions .context-action { padding-right: 16px; padding-left: 16px; }
 .request-view .table-footer button.active { border-color: var(--blue); color: var(--blue); background: #fff; }
@@ -1570,6 +1583,10 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   border-bottom: 1px solid #edf0f2;
 }
 .release-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.release-header-actions { display: flex; gap: 8px; margin-left: auto; }
+.release-header-actions[hidden] { display: none; }
+.approval-edit-mode .release-header { position: sticky; top: 0; z-index: 5; background: #fff; }
+.approval-edit-mode .release-actions { display: none; }
 .release-close {
   width: 16px;
   height: 22px;

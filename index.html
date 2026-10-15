@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20261008-warehouse-nav" />
+  <link rel="stylesheet" href="styles.css?v=20261015-edit-actions" />
 </head>
 <body>
 
@@ -345,6 +345,10 @@
     <header class="release-header">
       <button class="release-close" id="releaseClose" type="button" aria-label="关闭">×</button>
       <h2 id="releaseTitle">下单</h2>
+      <div class="release-header-actions" id="releaseHeaderActions" hidden>
+        <button class="btn" id="releaseHeaderCancel" type="button">取消</button>
+        <button class="btn primary" type="submit" form="releaseForm">保存修改</button>
+      </div>
     </header>
     <div class="release-summary">
       <div><span>柜号：</span><b id="releaseContainer">-</b></div>
@@ -479,7 +483,7 @@
     <form id="instructionEditForm">
       <div class="instruction-edit-fields">
         <label><span class="required">费用代码</span><input id="editInstructionCode" readonly /></label>
-        <label><span class="required">费用名称</span><input id="editInstructionName" readonly /></label>
+        <label><span class="required">费用名称</span><input id="editInstructionName" required maxlength="100" /></label>
         <label><span class="required">费用类型</span><select id="editInstructionType"><option>仓储费</option><option>操作费</option></select></label>
         <label><span class="required">计费单位</span><select id="editInstructionUnit"><option>票</option><option>箱</option><option>KG</option></select></label>
         <label><span class="required">计费单价</span><input id="editInstructionPrice" type="number" min="0" step="0.01" required /></label>
@@ -529,7 +533,7 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20261009-pickup-1"></script>
+<script src="script.js?v=20261015-approval-processing-4"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
 <script src="forecast.js?v=20261008-warehouse-nav"></script>
 <script type="importmap">
