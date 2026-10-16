@@ -1783,7 +1783,11 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseConfirm").textContent = "确定";
   releaseOverlay.hidden = false;
   document.body.classList.add("release-open");
-  $("#releaseForm").insertBefore($("#cargoBoxSection"), $("#drawerAttachmentSection"));
+  if (sourceStatus === "暂存") {
+    releaseForm.insertBefore($("#drawerAttachmentSection"), $("#cargoBoxSection"));
+  } else {
+    releaseForm.insertBefore($("#cargoBoxSection"), $("#drawerAttachmentSection"));
+  }
   renderCargoBoxRows(row);
   renderReleaseAttachments();
   renderInstructionList();
