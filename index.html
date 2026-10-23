@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20261015-edit-actions" />
+  <link rel="stylesheet" href="styles.css?v=20261023-box-selection" />
 </head>
 <body>
 
@@ -20,7 +20,7 @@
       <div class="nav-children inventory-children">
         <button id="navRegularInventory" type="button"><span>♙</span>常规库存</button>
         <button class="active" id="navStagingInventory" type="button"><span>♙</span>暂存库存</button>
-        <button id="navInstructionManagement" type="button"><span>▤</span>指令管理</button>
+        <button id="navInstructionManagement" type="button"><span>▤</span>指令列表</button>
         <button id="navInterceptManagement" type="button"><span>♙</span>拦截管理</button>
         <button id="navClearanceManagement" type="button"><span>♙</span>清货管理</button>
         <button id="navReturnsManagement" type="button"><span>♙</span>退换货管理</button>
@@ -432,6 +432,12 @@
         <div class="release-attachment-list" id="releaseAttachmentList" aria-live="polite"></div>
       </section>
       <section class="cargo-box-section" id="cargoBoxSection">
+        <div class="cargo-box-selection-heading"><strong>货箱明细</strong><span id="cargoBoxSelectionSummary" aria-live="polite"></span></div>
+        <div id="cargoSelectionModes" class="cargo-box-selection-modes" role="radiogroup" aria-label="货箱选择方式"><span>选择方式：</span><label><input id="cargoSelectionSpecified" type="radio" name="cargoSelectionMode" value="指定" />指定</label><label><input id="cargoSelectionRandom" type="radio" name="cargoSelectionMode" value="随机" checked />随机</label></div>
+        <p id="cargoSelectionModeDisplay" hidden></p>
+        <p class="cargo-box-selection-hint">指定：按顺序选箱，也可手动调整；随机：从可用货箱中随机选取。</p>
+        <p class="cargo-box-selection-hint">输入箱数自动勾选对应数量的可用货箱，手动勾选同步更新箱数。处理中、已出库货箱不可选。</p>
+        <p class="release-box-error" id="cargoBoxUnavailable" role="status" hidden>暂无可用货箱，无法下单。</p>
         <div class="cargo-box-table-wrap">
           <table class="cargo-box-table">
             <thead><tr>
@@ -533,7 +539,7 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20261016-order-attachments-1"></script>
+<script src="script.js?v=20261023-box-selection"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
 <script src="forecast.js?v=20261008-warehouse-nav"></script>
 <script type="importmap">

@@ -771,7 +771,7 @@ function renderTableChrome() {
   head.innerHTML = requestTable ? `<tr>
     <th class="index-col">#</th><th class="check-col"><input id="selectAll" type="checkbox" /></th>
     <th class="sortable">客户名称</th><th>申请单号</th><th>柜号</th><th>系统柜号</th><th>入仓号</th><th>库存类型</th>
-    <th>运单类型</th><th class="release-type-col">下单类型</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
+    <th>运单类型</th><th class="release-type-col">下单类型</th><th>货箱选择方式</th><th>Shipment ID</th><th>Reference ID</th><th>${isDestroyedView() ? "运输方式" : "转运方式"}</th><th>派送方式</th><th>托盘标签</th>
     ${(isApprovalView() || isTerminalRequestView())
       ? `<th class="instruction-count-col">指令数量</th><th class="instruction-list-col">指令</th>`
       : (isInstructionView() || isOutboundView())
@@ -803,7 +803,7 @@ function renderTableChrome() {
 function renderRows() {
   renderTableChrome();
   if (!visibleRows.length) {
-    const emptyColumns = isDestroyedView() ? 30 : isInstructionView() || isOutboundView() ? 23 : isApprovalView() ? 22 : isTerminalRequestView() ? 22 : 22;
+    const emptyColumns = (isDestroyedView() ? 30 : isInstructionView() || isOutboundView() ? 23 : 22) + (isRequestTableView() ? 1 : 0);
     body.innerHTML = `<tr><td class="empty-row" colspan="${emptyColumns}">暂无匹配库存记录</td></tr>`;
     selectAll.checked = false;
     updateSummary();
@@ -817,7 +817,7 @@ function renderRows() {
       <td title="${row.applicationNo}">${row.applicationNo}</td>
       <td title="${row.container}">${row.container}</td>
       <td>${row.system}</td><td>${row.inbound}</td><td>${renderBlockedStatus(row.blocked)}</td>
-      <td>${row.applicationType}</td><td class="release-type-col">${renderReleaseType(row)}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
+      <td>${row.applicationType}</td><td class="release-type-col">${renderReleaseType(row)}</td><td>${getCargoSelectionMode(row)}</td><td>${row.shipmentId}</td><td>${row.referenceId}</td>
       <td>${isDestroyedView() ? row.dispatch : row.transfer}</td><td>${row.dispatch}</td><td title="${row.pallet}">${row.pallet}</td>
       ${(isApprovalView() || isTerminalRequestView())
         ? `<td class="instruction-count-col">${renderInstructionCount(row)}</td>
@@ -1048,7 +1048,7 @@ $("#exportButton").addEventListener("click", () => {
     window.alert("请先保存或放弃指令修改，再执行导出");
     return;
   }
-  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","库存类型","运单类型","下单类型","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
+  const requestHeader = ["客户名称","申请单号","柜号","系统柜号","入仓号","库存类型","运单类型","下单类型","货箱选择方式","Shipment ID","Reference ID","转运方式","派送方式","托盘标签"];
   if (isApprovalView() || isTerminalRequestView()) requestHeader.push("指令数量", "指令");
   else if (isInstructionView() || isOutboundView()) requestHeader.push("财务审核", "指令数量", "指令");
   requestHeader.push("入库时间", "申请箱数", "申请箱数总体积", "收费托数");
@@ -1063,7 +1063,7 @@ $("#exportButton").addEventListener("click", () => {
       const instructionCompleted = instructionRows.filter((instruction) => instruction.status === "已处理").length;
       return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,instructionRemarks,instructionImages ? `${instructionImages} 张` : "暂无图片",`${instructionCompleted}/${instructionRows.length} 已处理`,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
     }
-    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,getReleaseType(r),r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
+    const requestRow = [r.customer,r.applicationNo,r.container,r.system,r.inbound,r.blocked,r.applicationType,getReleaseType(r),getCargoSelectionMode(r),r.shipmentId,r.referenceId,r.transfer,r.dispatch,r.pallet];
     if (isApprovalView() || isTerminalRequestView()) requestRow.push(getInstructionCount(r), getInstructionText(r));
     else if (isInstructionView() || isOutboundView()) requestRow.push(r.financialAudit, getInstructionCount(r), getInstructionText(r));
     requestRow.push(r.inboundTime, r.appliedBoxes, r.appliedVolume, r.chargedPallets);
@@ -1180,7 +1180,8 @@ approvalReviewOverlay.addEventListener("click", (event) => {
 });
 
 function getCargoBoxRows(row) {
-  const count = Math.max(1, Math.min(Number(row.unsent || row.boxes || 1), 10));
+  if (Array.isArray(row.cargoBoxSnapshot)) return row.cargoBoxSnapshot.map((box) => ({ ...box }));
+  const count = Math.max(0, Math.floor(Number(row.unsent ?? row.boxes ?? 0)));
   return Array.from({ length: count }, (_, index) => {
     const boxIndex = index + 1;
     const key = `${getInstructionDetailKey(row)}::${boxIndex}`;
@@ -1228,6 +1229,82 @@ function setSelectedCargoBoxes(row, selectedBoxes) {
   row.selectedCargoBoxes = [...selectedBoxes];
 }
 
+const releaseBoxControlIds = ["releaseBoxes", "releaseMarketplaceBoxes", "releasePrivateBoxes", "releaseShipOutBoxes"];
+
+function getCargoSelectionMode(row) {
+  return row.boxSelectionMode === "指定" ? "指定" : "随机";
+}
+
+function chooseCargoBoxes(available, count, mode) {
+  const candidates = [...available];
+  if (mode === "随机") {
+    for (let index = candidates.length - 1; index > 0; index--) {
+      const other = Math.floor(Math.random() * (index + 1));
+      [candidates[index], candidates[other]] = [candidates[other], candidates[index]];
+    }
+  }
+  return new Set(candidates.slice(0, count).map((box) => box.key));
+}
+
+function changeCargoSelectionMode(mode) {
+  if (!activeReleaseRow || activeReleaseReadOnly) return;
+  activeReleaseRow.boxSelectionMode = mode;
+  if (mode === "随机") {
+    const available = getCargoBoxRows(activeReleaseRow).filter(isCargoBoxSelectable);
+    setSelectedCargoBoxes(activeReleaseRow, chooseCargoBoxes(available, getSelectedCargoBoxes(activeReleaseRow).size, mode));
+  }
+  renderCargoBoxRows(activeReleaseRow);
+}
+
+function syncReleaseBoxCount(value = String(getSelectedCargoBoxes(activeReleaseRow).size)) {
+  releaseBoxControlIds.forEach((id) => {
+    const control = $(`#${id}`);
+    control.value = value;
+    showReleaseBoxError(control, "");
+  });
+}
+
+function showReleaseBoxError(control, message) {
+  control.setCustomValidity(message);
+  control.setAttribute("aria-invalid", message ? "true" : "false");
+  let error = $(`#${control.id}Error`);
+  if (!error) {
+    error = document.createElement("span");
+    error.id = `${control.id}Error`;
+    error.className = "release-box-error";
+    error.setAttribute("aria-live", "polite");
+    control.insertAdjacentElement("afterend", error);
+    const describedBy = control.getAttribute("aria-describedby") || "";
+    control.setAttribute("aria-describedby", `${describedBy} ${error.id}`.trim());
+  }
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function getReleaseBoxError(control, required = false) {
+  const available = getCargoBoxRows(activeReleaseRow).filter(isCargoBoxSelectable).length;
+  if (!available) return "暂无可用货箱，无法下单";
+  if (control.validity.badInput) return "请输入有效的整数箱数";
+  if (control.value === "") return required ? "请输入下单箱数或勾选货箱" : "";
+  const count = Number(control.value);
+  if (!Number.isInteger(count) || count <= 0) return "下单箱数必须为大于 0 的整数";
+  if (count > available) return `下单箱数不能超过可用箱数 ${available} 箱，当前输入 ${count} 箱`;
+  return "";
+}
+
+function selectCargoBoxesByCount(control) {
+  if (!activeReleaseRow || activeReleaseReadOnly) return;
+  const value = control.value;
+  const count = Number(value);
+  const available = getCargoBoxRows(activeReleaseRow).filter(isCargoBoxSelectable);
+  const error = getReleaseBoxError(control);
+  const valid = !error && Number.isInteger(count) && count >= 0;
+  syncReleaseBoxCount(value);
+  setSelectedCargoBoxes(activeReleaseRow, valid ? chooseCargoBoxes(available, count, activeReleaseRow.boxSelectionMode) : new Set());
+  showReleaseBoxError(control, error);
+  renderCargoBoxRows(activeReleaseRow);
+}
+
 function renderCargoBoxRows(row) {
   if (!row) return;
   const selectedBoxes = getSelectedCargoBoxes(row);
@@ -1237,8 +1314,24 @@ function renderCargoBoxRows(row) {
     if (!isCargoBoxSelectable(box)) selectedBoxes.delete(box.key);
   });
   setSelectedCargoBoxes(row, selectedBoxes);
+  $("#cargoSelectionModes").hidden = activeReleaseReadOnly;
+  $("#cargoSelectionModeDisplay").hidden = !activeReleaseReadOnly;
+  $("#cargoSelectionModeDisplay").textContent = `选择方式：${getCargoSelectionMode(row)}`;
+  $("#cargoSelectionSpecified").checked = row.boxSelectionMode === "指定";
+  $("#cargoSelectionRandom").checked = row.boxSelectionMode === "随机";
+  $("#cargoSelectionSpecified").disabled = activeReleaseReadOnly;
+  $("#cargoSelectionRandom").disabled = activeReleaseReadOnly;
+  const availableCount = rows.filter(isCargoBoxSelectable).length;
+  $("#cargoBoxSelectionSummary").textContent = `可用 ${availableCount} 箱 · 已选 ${selectedBoxes.size} 箱`;
+  if (!activeReleaseReadOnly) {
+    $("#releaseConfirm").disabled = availableCount === 0;
+    $("#cargoBoxUnavailable").hidden = availableCount > 0;
+  } else {
+    $("#releaseConfirm").disabled = false;
+    $("#cargoBoxUnavailable").hidden = true;
+  }
   $("#cargoBoxBody").innerHTML = rows.length ? rows.map((box) => `<tr data-cargo-key="${escapeHtml(box.key)}">
-    <td class="cargo-box-check-col"><input class="cargo-box-check" type="checkbox" data-cargo-key="${escapeHtml(box.key)}" ${selectedBoxes.has(box.key) ? "checked" : ""} ${isCargoBoxSelectable(box) ? "" : "disabled"} aria-label="选择货箱 ${escapeHtml(box.systemBoxNo)}" /></td>
+    <td class="cargo-box-check-col"><input class="cargo-box-check" type="checkbox" data-cargo-key="${escapeHtml(box.key)}" ${selectedBoxes.has(box.key) ? "checked" : ""} ${isCargoBoxSelectable(box) && !activeReleaseReadOnly ? "" : "disabled"} aria-label="选择货箱 ${escapeHtml(box.systemBoxNo)}" /></td>
     <td class="cargo-box-code">${escapeHtml(box.systemBoxNo)}</td>
     <td>${escapeHtml(box.customerData)}</td>
     <td>${escapeHtml(box.pickingData)}</td>
@@ -1248,7 +1341,7 @@ function renderCargoBoxRows(row) {
     const selectableRows = rows.filter(isCargoBoxSelectable);
     selectAll.checked = selectableRows.length > 0 && selectableRows.every((box) => selectedBoxes.has(box.key));
     selectAll.indeterminate = selectableRows.some((box) => selectedBoxes.has(box.key)) && !selectAll.checked;
-    selectAll.disabled = selectableRows.length === 0;
+    selectAll.disabled = activeReleaseReadOnly || selectableRows.length === 0;
   }
 }
 function getActiveInstructionRows() {
@@ -1522,6 +1615,9 @@ function createApprovalRequestFromActiveRelease(appliedBoxes) {
     pallet: activeReleaseRow.pallet,
     inboundTime: activeReleaseRow.time || activeReleaseRow.inboundTime || "",
     appliedBoxes: appliedBoxCount,
+    selectedCargoBoxes: [...getSelectedCargoBoxes(activeReleaseRow)],
+    cargoBoxSnapshot: getCargoBoxRows(activeReleaseRow),
+    boxSelectionMode: activeReleaseRow.boxSelectionMode,
     appliedVolume,
     chargedPallets: activeReleaseSourceRow.chargedPallets || "",
     approvalStage: "待仓库审批",
@@ -1616,6 +1712,7 @@ function updateReleaseApplicationFields() {
   releaseOverlay.classList.toggle("private-address-mode", privateAddress);
   $("#instructionSection").hidden = false;
   updateReleaseShippingState();
+  if (activeReleaseRow && !activeReleaseReadOnly) syncReleaseBoxCount();
   if (activeApprovalEdit) {
     ["releaseBoxes", "releaseMarketplaceBoxes", "releasePrivateBoxes", "releaseShipOutBoxes"].forEach(id => { $(`#${id}`).disabled = true; });
     $("#uploadButton").disabled = false;
@@ -1724,6 +1821,8 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseHeaderActions").hidden = !activeApprovalEdit;
   const sourceStatus = options.status || activeStatus;
   activeReleaseRow = row;
+  row.boxSelectionMode = readOnly ? getCargoSelectionMode(row) : "随机";
+  if (!readOnly) setSelectedCargoBoxes(row, new Set());
   activeReleaseSourceRow = sourceRow;
   activeReleaseOrderType = sourceStatus === "审批拒绝" ? "增值服务" : getReleaseType(row);
   selectedDetailInstructionCodes.clear();
@@ -1748,6 +1847,10 @@ function openReleaseDrawer(sourceRow, options = {}) {
   $("#releaseMarketplaceBoxes").max = Math.max(1, row.unsent);
   $("#releasePrivateBoxes").max = Math.max(1, row.unsent);
   $("#releaseShipOutBoxes").max = Math.max(1, row.unsent);
+  if (!readOnly) {
+    const availableCount = getCargoBoxRows(row).filter(isCargoBoxSelectable).length;
+    releaseBoxControlIds.forEach((id) => { $(`#${id}`).max = availableCount; });
+  }
   $("#releaseBoxes").placeholder = "请输入";
   $("#releaseBoxes").setCustomValidity("");
   $("#releaseMarketplaceBoxes").setCustomValidity("");
@@ -1846,18 +1949,22 @@ releaseOverlay.addEventListener("click", (event) => {
 });
 $("#cargoBoxBody").addEventListener("change", (event) => {
   const checkbox = event.target.closest(".cargo-box-check");
-  if (!checkbox || !activeReleaseRow) return;
+  if (!checkbox || !activeReleaseRow || activeReleaseReadOnly) return;
+  activeReleaseRow.boxSelectionMode = "指定";
   const selectedBoxes = getSelectedCargoBoxes(activeReleaseRow);
   checkbox.checked ? selectedBoxes.add(checkbox.dataset.cargoKey) : selectedBoxes.delete(checkbox.dataset.cargoKey);
   setSelectedCargoBoxes(activeReleaseRow, selectedBoxes);
+  if (!activeReleaseReadOnly) syncReleaseBoxCount();
   renderCargoBoxRows(activeReleaseRow);
 });
 $("#cargoBoxSelectAll").addEventListener("change", (event) => {
-  if (!activeReleaseRow) return;
+  if (!activeReleaseRow || activeReleaseReadOnly) return;
+  activeReleaseRow.boxSelectionMode = "指定";
   const selectedBoxes = event.target.checked
     ? new Set(getCargoBoxRows(activeReleaseRow).filter(isCargoBoxSelectable).map((box) => box.key))
     : new Set();
   setSelectedCargoBoxes(activeReleaseRow, selectedBoxes);
+  if (!activeReleaseReadOnly) syncReleaseBoxCount();
   renderCargoBoxRows(activeReleaseRow);
 });
 $("#instructionAdd").addEventListener("click", openInstructionPicker);
@@ -2303,6 +2410,11 @@ releaseForm.addEventListener("submit", (event) => {
     boxesControl.reportValidity();
     return;
   }
+  if (boxes !== getSelectedCargoBoxes(activeReleaseRow).size) {
+    boxesControl.setCustomValidity("下单箱数须与已勾选的可下单货箱数量一致");
+    boxesControl.reportValidity();
+    return;
+  }
   boxesControl.setCustomValidity("");
   if (!releaseForm.reportValidity()) return;
   activeReleaseRow.releaseType = activeReleaseOrderType;
@@ -2335,10 +2447,18 @@ releaseForm.addEventListener("submit", (event) => {
   if (activeReleaseSourceRow) activeReleaseSourceRow.customerRemark = activeReleaseRow.customerRemark;
   finishReleaseSubmission(boxes);
 });
-$("#releaseBoxes").addEventListener("input", () => $("#releaseBoxes").setCustomValidity(""));
-$("#releaseMarketplaceBoxes").addEventListener("input", () => $("#releaseMarketplaceBoxes").setCustomValidity(""));
-$("#releasePrivateBoxes").addEventListener("input", () => $("#releasePrivateBoxes").setCustomValidity(""));
-$("#releaseShipOutBoxes").addEventListener("input", () => $("#releaseShipOutBoxes").setCustomValidity(""));
+$("#cargoSelectionSpecified").addEventListener("change", () => changeCargoSelectionMode("指定"));
+$("#cargoSelectionRandom").addEventListener("change", () => changeCargoSelectionMode("随机"));
+releaseBoxControlIds.forEach((id) => {
+  const control = $(`#${id}`);
+  control.addEventListener("input", (event) => selectCargoBoxesByCount(event.target));
+  control.addEventListener("blur", () => {
+    if (activeReleaseRow && !activeReleaseReadOnly && !control.disabled) showReleaseBoxError(control, getReleaseBoxError(control, true));
+  });
+  control.addEventListener("invalid", () => {
+    if (activeReleaseRow && !activeReleaseReadOnly && !control.disabled) showReleaseBoxError(control, getReleaseBoxError(control, true));
+  });
+});
 $("#releaseDestroyBoxNo").addEventListener("input", () => $("#releaseDestroyBoxNo").setCustomValidity(""));
 
 function buildWatermarks() {
@@ -4133,7 +4253,7 @@ function showInventorySection(page, status) {
   filters.blocked.innerHTML = '<option value="">全部库存类型</option><option value="暂存">暂存</option><option value="拦截">拦截</option>'
     + (staging ? '' : '<option value="退换货">退换货</option>');
   filters.blocked.value = staging && inventoryType === "退换货" ? "" : inventoryType;
-  activateWarehousePage(page, staging ? "暂存库存" : "指令管理", staging ? "#navStagingInventory" : "#navInstructionManagement");
+  activateWarehousePage(page, staging ? "暂存库存" : "指令列表", staging ? "#navStagingInventory" : "#navInstructionManagement");
   activeStatus = status;
   if (!staging) lastInstructionStatus = status;
   const stagingStatuses = new Set(["暂存", "待出库", "已出库"]);

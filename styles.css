@@ -2278,3 +2278,17 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   .instruction-modal.instruction-fee-modal { width: calc(100vw - 24px); max-width: calc(100vw - 24px); height: calc(100vh - 32px); min-height: 360px; }
   .edit-modal, .delete-modal { width: calc(100vw - 24px); }
 }
+/* Quantity validation and cargo selection feedback. */
+.release-box-error { display: block; color: #d93025; font-size: 12px; line-height: 1.5; margin-top: 5px; white-space: normal; }
+.release-box-error[hidden] { display: none; }
+.release-field > .release-box-error { grid-column: 2; }
+.cargo-box-selection-modes { display: flex; align-items: center; gap: 18px; margin: 10px 0 6px; font-size: 13px; }
+.cargo-box-selection-modes label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.cargo-box-selection-modes input { accent-color: #1769c2; }
+.cargo-box-selection-modes[hidden] { display: none; }
+input[aria-invalid="true"] { border-color: #d93025 !important; background-color: #fff8f7; }
+input[aria-invalid="true"]:focus { outline-color: #d93025; }
+.cargo-box-selection-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 12px 0 8px; }
+.cargo-box-selection-heading span { color: #526477; font-size: 12px; }
+.cargo-box-selection-hint { color: #758295; font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
+#releaseConfirm:disabled { opacity: .5; cursor: not-allowed; }
