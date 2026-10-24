@@ -2936,12 +2936,13 @@ function formatInterceptInstructionFee(row) {
   return `${formatInterceptInstructionFeeAmount(total)} ${formatInterceptInstructionFeeCurrency(row.currency)} ${row.name || "费用"} (${formatInterceptInstructionFeeAmount(price)}/${row.unit || "票"})`;
 }
 
-function renderInterceptInstructionFees(rows) {
-  if (!rows.length) return "-";
-  return rows.map((row) => {
-    const text = formatInterceptInstructionFee(row);
-    return `<div title="${escapeHtml(text)}">${escapeHtml(text)}</div>`;
-  }).join("");
+function getInterceptInstructionSummary(rows) {
+  return {
+    instructions: rows.map((row) => ({
+      text: formatInterceptInstructionFee(row),
+      completed: row.status === "已处理" || row.completed === true
+    }))
+  };
 }
 
 function getInterceptReconciliationStatus(task, rows = getInterceptInstructionRows(task)) {
@@ -3540,10 +3541,11 @@ function renderInterceptRows() {
     ? "已完成任务可在「拦截结果」列区分成功和失败，失败任务会展示失败原因"
     : "拦截成功后将自动生成暂存单";
   if (!interceptVisibleRows.length) {
-    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${17 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
+    interceptTableBody.innerHTML = `<tr class="intercept-empty"><td colspan="${18 + statusColumns.length}">暂无匹配的拦截任务</td></tr>`;
   } else {
     interceptTableBody.innerHTML = interceptVisibleRows.map((task) => {
-      const instructionRows = getInterceptInstructionRows(task);
+      const instructionRows = getInterceptFeeRows(task);
+      const instructionSummary = getInterceptInstructionSummary(instructionRows);
       const checked = selectedInterceptIds.has(task.id) ? " checked" : "";
       const disabled = "";
       const boxCount = escapeHtml(task.actualBoxes || task.boxes || "-");
@@ -3559,7 +3561,7 @@ function renderInterceptRows() {
       return `<tr data-intercept-id="${task.id}"${rowClass}>
         <td class="intercept-check"><input class="intercept-row-check" type="checkbox" data-intercept-id="${task.id}" aria-label="选择${escapeHtml(task.no)}"${checked}${disabled} /></td>
         <td>${escapeHtml(task.customer)}</td><td>${escapeHtml(getInterceptType(task))}</td><td title="${escapeHtml(task.no)}">${escapeHtml(task.no)}</td><td title="${escapeHtml(task.waybill)}">${escapeHtml(task.waybill)}</td><td title="${escapeHtml(task.container || "-")}">${escapeHtml(task.container || "-")}</td>
-        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>${statusColumnCells}<td>${boxCount}</td><td class="intercept-instruction-fee-cell">${renderInterceptInstructionFees(instructionRows)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
+        <td>${getInterceptForecastStatusTag(task)}</td><td title="${escapeHtml(task.reason)}">${escapeHtml(task.reason)}</td>${statusColumnCells}<td>${boxCount}</td><td class="instruction-count-col">${renderInstructionCount(instructionSummary)}</td><td class="instruction-list-col instruction-list-cell">${renderInstructionLines(instructionSummary)}</td><td>${renderInterceptReconciliationStatus(task, instructionRows)}</td><td title="${escapeHtml(task.customerRemark || "-")}">${escapeHtml(task.customerRemark || "-")}</td><td title="${escapeHtml(task.remark || "-")}">${escapeHtml(task.remark || "-")}</td><td>${escapeHtml(task.source || "-")}</td>
         <td>${escapeHtml(task.applicant)}</td><td>${escapeHtml(task.appliedAt)}</td>
         <td class="intercept-operation-col"><button class="intercept-action" data-intercept-action="detail" type="button">详情</button><button class="intercept-action" data-intercept-action="log" type="button">日志</button>${cancelOrderAction}</td>
       </tr>`;
@@ -3866,12 +3868,13 @@ function exportInterceptTasks() {
     return;
   }
   const statusColumns = getInterceptStatusColumns();
-  const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截箱数", "指令费用", "核销状态", "客户备注", "内部备注", "拦截来源", "申请人", "申请时间"];
+  const headers = ["客户名称", "拦截类型", "拦截单号", "入仓号", "柜号", "预报单状态", "拦截原因", "拦截箱数", "指令数量", "指令", "核销状态", "客户备注", "内部备注", "拦截来源", "申请人", "申请时间"];
   if (statusColumns.length) headers.splice(7, 0, ...statusColumns.map((column) => column.label));
   const rows = tasks.map((task) => {
+    const instructionSummary = getInterceptInstructionSummary(getInterceptFeeRows(task));
     return [
       task.customer, getInterceptType(task), task.no, task.waybill, task.container || "",
-      getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", getInterceptInstructionRows(task).map(formatInterceptInstructionFee).join("；"), getInterceptReconciliationStatus(task), task.customerRemark || "", task.remark || "", task.source || "",
+      getInterceptForecastStatus(task), task.reason, task.actualBoxes || task.boxes || "", getInstructionCount(instructionSummary), getInstructionText(instructionSummary), getInterceptReconciliationStatus(task), task.customerRemark || "", task.remark || "", task.source || "",
       task.applicant, task.appliedAt
     ];
   });

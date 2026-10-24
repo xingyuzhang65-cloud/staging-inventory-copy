@@ -477,7 +477,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .intercept-list-summary span:last-child { color: #929aa2; }
 .intercept-table {
   width: 100%;
-  min-width: 2550px;
+  min-width: 2820px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -550,21 +550,18 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   white-space: normal;
   line-height: 22px;
 }
-.intercept-table th:nth-child(10),
-.intercept-table td:nth-child(10) {
+.intercept-table th.instruction-count-col,
+.intercept-table td.instruction-count-col { width: 120px; text-align: center; }
+.intercept-table th.instruction-list-col,
+.intercept-table td.instruction-list-col { width: 340px; }
+.intercept-table th.instruction-list-col,
+.intercept-table td.instruction-list-cell {
   text-align: left;
   white-space: normal;
 }
-.intercept-instruction-fee-cell {
-  padding: 4px 10px !important;
-  color: #d29216;
-  text-align: left !important;
-  line-height: 18px;
-}
-.intercept-instruction-fee-cell div {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.intercept-table td.instruction-list-cell {
+  padding: 8px 10px;
+  vertical-align: top;
 }
 .intercept-reconciliation-status {
   display: inline-flex;
