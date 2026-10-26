@@ -3061,7 +3061,12 @@ function getInterceptFeeRows(task) {
   return task.fees;
 }
 
+function canEditInterceptTask(task) {
+  return task?.status === "待处理";
+}
+
 function renderInterceptFee(task) {
+  const canEdit = canEditInterceptTask(task);
   const rows = getInterceptFeeRows(task);
   const originalTotal = rows.reduce((sum, fee) => sum + getInterceptFeeOriginalAmount(fee), 0);
   const rmbTotal = rows.reduce((sum, fee) => sum + getInterceptFeeRmbAmount(fee), 0);
@@ -3072,7 +3077,7 @@ function renderInterceptFee(task) {
     const checked = selectedInterceptFeeIds.has(String(fee.id)) ? " checked" : "";
     const status = fee.status === "已处理" || fee.completed ? "已处理" : "待处理";
     const statusClass = status === "已处理" ? "is-complete" : "is-pending";
-    const canEditStatus = ["待处理", "拦截中"].includes(task.status) && interceptDetailMode !== "result";
+    const canEditStatus = canEdit && interceptDetailMode !== "result";
     const statusControl = canEditStatus
       ? `<select class="intercept-fee-status-control instruction-detail-status ${statusClass}" data-intercept-fee-id="${escapeHtml(fee.id)}" aria-label="设置${escapeHtml(fee.name)}状态"><option value="待处理" ${status === "待处理" ? "selected" : ""}>待处理</option><option value="已处理" ${status === "已处理" ? "selected" : ""}>已处理</option></select>`
       : `<span class="instruction-detail-status-tag ${statusClass}">${status}</span>`;
@@ -3102,6 +3107,13 @@ function renderInterceptFee(task) {
     <button class="btn primary" data-intercept-fee-action="add" type="button">新增指令费用</button>
   </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th class="instruction-check-col"><input class="intercept-fee-select-all" type="checkbox" aria-label="全选操作指令" /></th><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*计费单价</th><th>*计费数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>指令状态</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
   const selectAll = $("#interceptFeeContent .intercept-fee-select-all");
+  if (!canEdit) {
+    document.querySelectorAll("#interceptFeeContent [data-intercept-fee-action], #interceptFeeContent .intercept-fee-image-remove, #interceptFeeContent .instruction-image-actions").forEach((control) => control.remove());
+    document.querySelectorAll("#interceptFeeContent .intercept-fee-instruction-remark").forEach((control) => {
+      const fee = rows.find((row) => String(row.id) === control.dataset.interceptFeeId);
+      control.replaceWith(document.createTextNode(fee?.instructionRemark || "-"));
+    });
+  }
   if (selectAll) {
     const selectedCount = rows.filter((fee) => selectedInterceptFeeIds.has(String(fee.id))).length;
     selectAll.checked = rows.length > 0 && selectedCount === rows.length;
@@ -3211,7 +3223,7 @@ function renderInterceptFeeDraftRows() {
 
 function openInterceptFeeModal(focusId = null) {
   const task = getInterceptTask();
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   interceptFeeDraftRows = getInterceptFeeRows(task).map(createInterceptFeeDraft);
   interceptFeeDraftFocusId = focusId;
   $("#interceptFeeOverlay").hidden = false;
@@ -3227,7 +3239,7 @@ function closeInterceptFeeModal() {
 function saveInterceptFeeDraftRows(event) {
   event.preventDefault();
   const task = getInterceptTask();
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   for (const row of interceptFeeDraftRows) {
     const price = Number(row.unitPrice);
     const quantity = Number(row.quantity);
@@ -3277,6 +3289,8 @@ function saveInterceptFeeDraftRows(event) {
 
 function renderInterceptOtherInfo(task) {
   const rows = getInterceptAttachmentRows(task);
+  const canEdit = canEditInterceptTask(task);
+  $("#interceptAttachmentUploadButton").hidden = !canEdit;
   $("#interceptAttachmentType").innerHTML = interceptAttachmentTypeOptions.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
   $("#interceptAttachmentBody").innerHTML = rows.length ? rows.map((row) => `<tr data-intercept-attachment-id="${escapeHtml(row.id)}">
     <td title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
@@ -3287,6 +3301,7 @@ function renderInterceptOtherInfo(task) {
     <td class="intercept-attachment-time">${escapeHtml(row.uploadedAt || "-")}</td>
     <td><button class="intercept-action" data-intercept-attachment-action="edit" type="button">编辑</button><button class="intercept-action" data-intercept-attachment-action="download" type="button">下载</button><button class="intercept-action danger" data-intercept-attachment-action="delete" type="button">删除</button></td>
   </tr>`).join("") : '<tr><td colspan="7" class="intercept-attachment-empty"><span class="intercept-attachment-empty-icon" aria-hidden="true">▧</span>暂无附件</td></tr>';
+  if (!canEdit) document.querySelectorAll('#interceptAttachmentBody [data-intercept-attachment-action="edit"], #interceptAttachmentBody [data-intercept-attachment-action="delete"]').forEach((control) => control.remove());
 }
 
 function resetInterceptAttachmentForm() {
@@ -3307,7 +3322,7 @@ function renderInterceptAttachmentForm() {
 
 function openInterceptAttachmentModal(rowId = null) {
   const task = getInterceptTask();
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   const row = rowId ? getInterceptAttachmentRows(task).find((item) => String(item.id) === String(rowId)) : null;
   interceptAttachmentEditingId = row?.id || null;
   interceptAttachmentForm = row
@@ -3328,6 +3343,7 @@ function closeInterceptAttachmentModal() {
 
 function openInterceptAttachmentDelete(rowId) {
   const task = getInterceptTask();
+  if (!canEditInterceptTask(task)) return;
   const row = task && getInterceptAttachmentRows(task).find((item) => String(item.id) === String(rowId));
   if (!row) return;
   interceptAttachmentDeletingId = row.id;
@@ -3355,7 +3371,7 @@ function downloadInterceptAttachment(task, row) {
 function saveInterceptAttachment() {
   const task = getInterceptTask();
   const fileName = interceptAttachmentForm.fileName.trim();
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   if (!fileName) {
     window.alert("请先选择附件文件");
     return;
@@ -3385,7 +3401,7 @@ function saveInterceptAttachment() {
 
 function confirmDeleteInterceptAttachment() {
   const task = getInterceptTask();
-  if (!task || !interceptAttachmentDeletingId) return;
+  if (!canEditInterceptTask(task) || !interceptAttachmentDeletingId) return;
   const nextRows = getInterceptAttachmentRows(task).filter((row) => String(row.id) !== String(interceptAttachmentDeletingId));
   interceptAttachmentRowsByTask.set(task.id, nextRows);
   task.attachments = nextRows.map((row) => row.name);
@@ -3489,8 +3505,6 @@ function updateInterceptBatchControls() {
   const isPendingView = interceptActiveTab === "待处理";
   const isInterceptingView = interceptActiveTab === "拦截中";
   const isCompletedView = interceptActiveTab === "已完成";
-  const isRejectedView = interceptActiveTab === "已取消/已驳回";
-  const isAllView = interceptActiveTab === "全部";
   const selectableRows = getVisibleSelectableInterceptTasks();
   const selectedCount = selectableRows.filter((task) => selectedInterceptIds.has(task.id)).length;
   const selectAll = $("#interceptSelectAll");
@@ -3509,7 +3523,7 @@ function updateInterceptBatchControls() {
   successButton.textContent = "拦截成功";
   failureButton.hidden = !isInterceptingView;
   failureButton.textContent = "拦截失败";
-  noteButton.hidden = isCompletedView || isRejectedView || isAllView;
+  noteButton.hidden = !isPendingView;
   noteButton.textContent = "批量内部备注";
   exportButton.hidden = false;
   exportButton.textContent = "导出";
@@ -3608,6 +3622,7 @@ function renderInterceptDetail(task, mode = "view") {
     field("客户备注", `${escapeHtml(task.customerRemark || "-")}<button class="intercept-action" data-detail-action="editCustomerRemark" type="button" title="编辑客户备注" style="margin-left:6px">✎</button>`),
     field("内部备注", `${escapeHtml(task.remark || "-")}<button class="intercept-action" data-detail-action="editRemark" type="button" title="编辑内部备注" style="margin-left:6px">✎</button>`)
   ].join("");
+  if (!canEditInterceptTask(task)) document.querySelectorAll("#interceptBasicInfo [data-detail-action]").forEach((control) => control.remove());
   renderInterceptCargoBoxes(task);
   renderInterceptFee(task);
   renderInterceptOtherInfo(task);
@@ -3918,7 +3933,8 @@ function archiveSelectedCompletedTasks() {
 }
 
 function batchRemarkInterceptTasks() {
-  const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
+  if (interceptActiveTab !== "待处理") return;
+  const tasks = getSelectedPendingInterceptTasks();
   if (!tasks.length) {
     showInterceptToast();
     return;
@@ -3930,12 +3946,13 @@ function batchRemarkInterceptTasks() {
 
 function submitInterceptBatchNote(event) {
   event.preventDefault();
+  if (interceptActiveTab !== "待处理") return;
   const note = $("#interceptBatchNoteText").value.trim();
   if (!note) {
     window.alert("请输入内部备注内容");
     return;
   }
-  const tasks = getVisibleSelectableInterceptTasks().filter((task) => selectedInterceptIds.has(task.id));
+  const tasks = getSelectedPendingInterceptTasks();
   tasks.forEach((task) => {
     const previousRemark = task.remark || "";
     task.remark = previousRemark ? `${previousRemark}；${note}` : note;
@@ -3983,7 +4000,7 @@ function closeInterceptCancelReason() {
 
 function openInterceptRemark(taskId, field = "remark") {
   const task = getInterceptTask(taskId);
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   interceptRemarkContext = task.id;
   interceptRemarkField = field;
   const isCustomerRemark = field === "customerRemark";
@@ -4000,7 +4017,7 @@ function submitInterceptRemark(event) {
   event.preventDefault();
   if (!interceptRemarkContext) return;
   const task = getInterceptTask(interceptRemarkContext);
-  if (!task) return;
+  if (!canEditInterceptTask(task)) return;
   const remark = $("#interceptRemarkText").value.trim();
   const field = interceptRemarkField;
   const previousRemark = task[field] || "";
@@ -4472,6 +4489,7 @@ function initInterceptManagement() {
     const imageRemove = event.target.closest(".intercept-fee-image-remove");
     if (imageRemove) {
       const task = getInterceptTask();
+      if (!canEditInterceptTask(task)) return;
       const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(imageRemove.dataset.interceptFeeId));
       const imageIndex = Number(imageRemove.dataset.imageIndex);
       if (fee?.images?.[imageIndex]) {
@@ -4485,6 +4503,7 @@ function initInterceptManagement() {
     const instructionRemark = event.target.closest(".intercept-fee-instruction-remark");
     if (instructionRemark) {
       const task = getInterceptTask();
+      if (!canEditInterceptTask(task)) return;
       const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(instructionRemark.dataset.interceptFeeId));
       if (!fee) return;
       const next = window.prompt("请输入指令备注", fee.instructionRemark || "");
@@ -4494,7 +4513,7 @@ function initInterceptManagement() {
     const button = event.target.closest("[data-intercept-fee-action]");
     if (!button) return;
     const task = getInterceptTask();
-    if (!task) return;
+    if (!canEditInterceptTask(task)) return;
     const action = button.dataset.interceptFeeAction;
     const feeId = button.dataset.interceptFeeId;
     if (action === "add") {
@@ -4516,6 +4535,7 @@ function initInterceptManagement() {
     const statusControl = event.target.closest(".intercept-fee-status-control");
     if (statusControl) {
       const task = getInterceptTask();
+      if (!canEditInterceptTask(task)) return;
       const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(statusControl.dataset.interceptFeeId));
       if (!fee) return;
       fee.status = statusControl.value === "已处理" ? "已处理" : "待处理";
@@ -4534,6 +4554,7 @@ function initInterceptManagement() {
     const input = event.target.closest(".intercept-fee-image-input");
     if (!input) return;
     const task = getInterceptTask();
+    if (!canEditInterceptTask(task)) return;
     const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(input.dataset.interceptFeeId));
     if (!fee) return;
     fee.images ||= [];
