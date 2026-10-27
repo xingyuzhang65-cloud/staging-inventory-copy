@@ -1988,6 +1988,9 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
 .instruction-batch-complete:not(:disabled) { cursor: pointer; }
 .instruction-batch-complete:not(:disabled):hover { background: #086ac7; }
 .instruction-batch-complete:disabled { border-color: #cbd5df; color: #8d99a5; background: #edf1f4; }
+.instruction-processing-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; color: #56616c; font-size: 12px; }
+.instruction-processing-summary { padding: 4px 8px; border: 1px solid #b8dcff; border-radius: 3px; color: #1682e6; background: #f0f8ff; }
+.instruction-processing-hint { color: #84909b; }
 .instruction-list-wrap { width: 100%; overflow-x: auto; }
 .instruction-table {
   width: 100%;

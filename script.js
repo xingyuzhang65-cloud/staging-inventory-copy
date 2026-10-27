@@ -501,6 +501,9 @@ function syncInstructionStatus(detailKey, instructionIndex, status) {
       row.instructions[instructionIndex].completed = status === "已处理";
     });
   });
+  if (activeReleaseRow && getInstructionDetailKey(activeReleaseRow) === detailKey && activeReleaseRow.instructions?.[instructionIndex]) {
+    activeReleaseRow.instructions[instructionIndex].completed = status === "已处理";
+  }
 }
 
 function buildInstructionText(row) {
@@ -938,7 +941,7 @@ $("#contextAction").addEventListener("click", () => {
       ...row,
       id: nextProcessingId + index,
       instructionAudit: "审核中",
-      instructions: row.instructions.map((instruction) => ({ ...instruction, completed: false })),
+      instructions: row.instructions.map((instruction) => ({ ...instruction })),
       status: "指令处理中"
     })));
     for (let index = instructionPendingRows.length - 1; index >= 0; index -= 1) {
@@ -1394,11 +1397,54 @@ function renderInstructionPdaImages(row) {
   return `<div class="instruction-image-cell instruction-pda-images"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无回传图片</span>'}</div><span class="instruction-pda-image-source">海外仓回传</span></div>`;
 }
 
+function canProcessActiveInstructions() {
+  return Boolean(activeReleaseRow) && ["指令待处理", "指令处理中"].includes(activeReleaseStatus);
+}
+
+function updateInstructionProcessingToolbar(rows) {
+  const completedCount = rows.filter((row) => row.status === "已处理").length;
+  const selectedRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code));
+  $("#instructionProcessingToolbar").hidden = !canProcessActiveInstructions();
+  $("#instructionProcessSummary").textContent = `待处理 ${rows.length - completedCount} 项，已处理 ${completedCount} 项`;
+  $("#instructionProcessSelectedCount").textContent = `已选 ${selectedRows.length} 项`;
+  $("#instructionBatchComplete").disabled = !canProcessActiveInstructions() || !selectedRows.some((row) => row.status !== "已处理");
+  const selectAll = $("#instructionDetailSelectAll");
+  selectAll.checked = rows.length > 0 && selectedRows.length === rows.length;
+  selectAll.indeterminate = selectedRows.length > 0 && selectedRows.length < rows.length;
+  selectAll.disabled = rows.length === 0;
+}
+
+function validateInstructionPcImages(rows) {
+  const missingImages = rows.filter((row) => !Array.isArray(row.images) || !row.images.some((image) => typeof image?.url === "string" && image.url.trim()));
+  if (!missingImages.length) return true;
+  const names = missingImages.map((row) => `${row.name || "未命名指令"}（${row.code}）`).join("\n");
+  window.alert(`以下指令未上传PC端图片，无法处理完成。每条指令至少上传1张PC端图片，PDA端回传图片不计入：\n${names}`);
+  return false;
+}
+
+function completeSelectedDetailInstructions() {
+  if (!canProcessActiveInstructions()) return;
+  const rows = getActiveInstructionRows();
+  const selectedPendingRows = rows.filter((row) => selectedDetailInstructionCodes.has(row.code) && row.status !== "已处理");
+  if (!selectedPendingRows.length) return;
+  if (!validateInstructionPcImages(selectedPendingRows)) return;
+  const detailKey = getInstructionDetailKey(activeReleaseRow);
+  rows.forEach((instruction, index) => {
+    if (!selectedPendingRows.includes(instruction)) return;
+    instruction.status = "已处理";
+    syncInstructionStatus(detailKey, index, "已处理");
+  });
+  selectedDetailInstructionCodes.clear();
+  renderInstructionList();
+  renderRows();
+}
+
 function renderInstructionList() {
   const target = $("#instructionBody");
   const listWrap = target?.closest(".instruction-list-wrap");
   if (listWrap) listWrap.scrollLeft = 0;
   const rows = getActiveInstructionRows();
+  updateInstructionProcessingToolbar(rows);
   if (!rows.length) {
     target.innerHTML = '<tr class="instruction-empty"><td colspan="19"><i>▤</i>暂无数据</td></tr>';
     return;
@@ -2159,11 +2205,15 @@ $("#instructionBody").addEventListener("change", (event) => {
     return;
   }
   const control = event.target.closest(".instruction-detail-status");
-  if (!control || !activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus)) return;
+  if (!control || activeReleaseReadOnly || !activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus)) return;
   const instructionIndex = Number(control.dataset.instructionIndex);
   const rows = getActiveInstructionRows();
   const instruction = rows[instructionIndex];
   if (!instruction) return;
+  if (control.value === "已处理" && !validateInstructionPcImages([instruction])) {
+    renderInstructionList();
+    return;
+  }
   instruction.status = control.value;
   if (control.value === "已处理") selectedDetailInstructionCodes.delete(instruction.code);
   syncInstructionStatus(getInstructionDetailKey(activeReleaseRow), instructionIndex, control.value);
@@ -2249,19 +2299,7 @@ $("#instructionImagePreviewOverlay")?.addEventListener("click", (event) => {
   if (event.target === $("#instructionImagePreviewOverlay")) closeInstructionImagePreview();
 });
 
-$("#instructionBatchComplete")?.addEventListener("click", () => {
-  if (!activeReleaseRow || !["指令待处理", "指令处理中", "待出库"].includes(activeReleaseStatus) || !selectedDetailInstructionCodes.size) return;
-  const rows = getActiveInstructionRows();
-  const detailKey = getInstructionDetailKey(activeReleaseRow);
-  rows.forEach((instruction, index) => {
-    if (!selectedDetailInstructionCodes.has(instruction.code) || instruction.status === "已处理") return;
-    instruction.status = "已处理";
-    syncInstructionStatus(detailKey, index, "已处理");
-  });
-  selectedDetailInstructionCodes.clear();
-  renderInstructionList();
-  renderRows();
-});
+$("#instructionBatchComplete")?.addEventListener("click", completeSelectedDetailInstructions);
 
 $("#instructionEditCancel").addEventListener("click", () => {
   $("#instructionEditOverlay").hidden = true;

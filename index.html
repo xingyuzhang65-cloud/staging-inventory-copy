@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20261027-instruction-images-no-delete" />
+  <link rel="stylesheet" href="styles.css?v=20261027-instruction-pc-process" />
 </head>
 <body>
 
@@ -450,6 +450,12 @@
       <section class="instruction-section" id="instructionSection">
   <div class="instruction-section-heading"><h3>操作指令</h3></div>
   <div class="instruction-section-actions"><button class="instruction-add" id="instructionAdd" type="button">新增</button><button class="instruction-download-images" id="instructionDownloadImages" type="button">下载图片</button></div>
+  <div class="instruction-processing-toolbar" id="instructionProcessingToolbar" hidden>
+    <span class="instruction-processing-summary" id="instructionProcessSummary" role="status">待处理 0 项，已处理 0 项</span>
+    <button class="instruction-batch-complete" id="instructionBatchComplete" type="button" disabled>处理</button>
+    <span id="instructionProcessSelectedCount">已选 0 项</span>
+    <span class="instruction-processing-hint">每条指令至少上传1张PC端图片后可处理完成</span>
+  </div>
   <div class="instruction-list-wrap">
     <table class="instruction-table">
       <thead><tr>
@@ -539,7 +545,7 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20261027-instruction-images-no-delete"></script>
+<script src="script.js?v=20261027-instruction-pc-process"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
 <script src="forecast.js?v=20261008-warehouse-nav"></script>
 <script type="importmap">
