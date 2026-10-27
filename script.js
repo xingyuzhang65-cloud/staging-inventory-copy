@@ -472,7 +472,8 @@ function ensureInstructionDetailRows(row) {
         addedAt: row.inboundTime || "2026-07-08 18:30:00",
         addedBy: "天朗（付豪）",
         remark: "",
-        images: [],
+        images: Array.isArray(instruction.images) ? [...instruction.images] : [],
+        pdaImages: Array.isArray(instruction.pdaImages) ? [...instruction.pdaImages] : [],
         exchangeRate: "1",
         status: instruction.completed ? "已处理" : "待处理"
       };
@@ -483,6 +484,7 @@ function ensureInstructionDetailRows(row) {
   detailRows.forEach((instruction) => {
     if (typeof instruction.remark !== "string") instruction.remark = "";
     if (!Array.isArray(instruction.images)) instruction.images = [];
+    if (!Array.isArray(instruction.pdaImages)) instruction.pdaImages = [];
   });
   if (["指令待处理", "指令处理中", "待出库"].includes(row.status) && detailRows.length === (row.instructions?.length || 0)) {
     detailRows.forEach((instruction, index) => {
@@ -513,7 +515,9 @@ function syncInstructionDetails(detailKey, detailRows) {
       if (getInstructionDetailKey(row) !== detailKey) return;
       row.instructions = detailRows.map((instruction) => ({
         text: buildInstructionText(instruction),
-        completed: instruction.status === "已处理"
+        completed: instruction.status === "已处理",
+        images: Array.isArray(instruction.images) ? [...instruction.images] : [],
+        pdaImages: Array.isArray(instruction.pdaImages) ? [...instruction.pdaImages] : []
       }));
     });
   });
@@ -685,7 +689,7 @@ function renderInstructionRemarkSummary(row) {
 }
 
 function renderInstructionImageSummary(row) {
-  const count = getListInstructionRows(row).reduce((total, instruction) => total + (instruction.images?.length || 0), 0);
+  const count = getListInstructionRows(row).reduce((total, instruction) => total + (instruction.images?.length || 0) + (instruction.pdaImages?.length || 0), 0);
   return `<span class="list-instruction-images">${count ? `${count} 张` : "暂无图片"}</span>`;
 }
 
@@ -1059,7 +1063,7 @@ $("#exportButton").addEventListener("click", () => {
     if (!isRequestTableView()) {
       const instructionRows = getListInstructionRows(r);
       const instructionRemarks = instructionRows.map((instruction) => instruction.remark).filter(Boolean).join("；") || "备注";
-      const instructionImages = instructionRows.reduce((total, instruction) => total + (instruction.images?.length || 0), 0);
+      const instructionImages = instructionRows.reduce((total, instruction) => total + (instruction.images?.length || 0) + (instruction.pdaImages?.length || 0), 0);
       const instructionCompleted = instructionRows.filter((instruction) => instruction.status === "已处理").length;
       return [r.customer,r.container,r.system,r.inbound,r.blocked,r.transfer,r.destination,r.dispatch,r.pallet,instructionRemarks,instructionImages ? `${instructionImages} 张` : "暂无图片",`${instructionCompleted}/${instructionRows.length} 已处理`,r.time,r.weight,r.volume,r.boxes,r.pending,r.unsent,r.sent];
     }
@@ -1380,13 +1384,23 @@ function addReleaseAttachments(files) {
   renderReleaseAttachments();
 }
 
+function renderInstructionPdaImages(row) {
+  const images = Array.isArray(row.pdaImages) ? row.pdaImages : [];
+  const imageList = images.map((image, index) => {
+    const imageName = escapeHtml(image.name || `PDA端图片${index + 1}`);
+    const imageUrl = escapeHtml(image.url || "");
+    return `<span class="instruction-image-item"><a class="instruction-image-preview" href="${imageUrl}" data-image-name="${imageName}" title="查看 ${imageName}"><img src="${imageUrl}" alt="${imageName}" /></a></span>`;
+  }).join("");
+  return `<div class="instruction-image-cell instruction-pda-images"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无回传图片</span>'}</div><span class="instruction-pda-image-source">海外仓回传</span></div>`;
+}
+
 function renderInstructionList() {
   const target = $("#instructionBody");
   const listWrap = target?.closest(".instruction-list-wrap");
   if (listWrap) listWrap.scrollLeft = 0;
   const rows = getActiveInstructionRows();
   if (!rows.length) {
-    target.innerHTML = '<tr class="instruction-empty"><td colspan="18"><i>▤</i>暂无数据</td></tr>';
+    target.innerHTML = '<tr class="instruction-empty"><td colspan="19"><i>▤</i>暂无数据</td></tr>';
     return;
   }
   target.innerHTML = rows.map((row, index) => {
@@ -1419,7 +1433,7 @@ function renderInstructionList() {
       <td>${escapeHtml(row.chargeDate || row.addedAt || "-")}</td><td>${escapeHtml(row.name || "-")}</td><td>${escapeHtml(row.type || "-")}</td><td>${escapeHtml(row.unit || "-")}</td>
       <td>${escapeHtml(row.exchangeRate || "1")}</td><td>${escapeHtml(row.price || "0")}</td><td>${escapeHtml(row.quantity || "1")}</td><td>${escapeHtml(row.currency || "-")}</td>
       <td>${originalAmount.toFixed(2)}</td><td>${cnyAmount.toFixed(2)}</td><td>${escapeHtml(row.addedAt || "-")}</td><td>${escapeHtml(row.addedBy || "-")}</td>
-      <td class="instruction-description">${escapeHtml(row.description || row.rawText || "-")}</td><td>${remarkControl}</td><td>${imageControl}</td><td>${statusControl}</td><td class="instruction-actions">${operationControl}</td>
+      <td class="instruction-description">${escapeHtml(row.description || row.rawText || "-")}</td><td>${remarkControl}</td><td>${imageControl}</td><td>${renderInstructionPdaImages(row)}</td><td>${statusControl}</td><td class="instruction-actions">${operationControl}</td>
     </tr>`;
   }).join("");
 }
@@ -2219,7 +2233,8 @@ $("#instructionRemarkConfirm").addEventListener("click", () => {
 
 $("#instructionDownloadImages")?.addEventListener("click", () => {
   const images = getActiveInstructionRows().flatMap((row) => selectedDetailInstructionCodes.has(row.code)
-    ? (row.images || []).map((image, index) => ({ ...image, code: row.code, index }))
+    ? [...(row.images || []).map((image, index) => ({ ...image, code: row.code, index, source: "PC端" })),
+       ...(row.pdaImages || []).map((image, index) => ({ ...image, code: row.code, index, source: "PDA端" }))]
     : []);
   if (!images.length) {
     window.alert("所选指令暂无可下载图片");
@@ -2228,7 +2243,7 @@ $("#instructionDownloadImages")?.addEventListener("click", () => {
   images.forEach((image) => {
     const link = document.createElement("a");
     link.href = image.url;
-    link.download = `${image.code}-${image.index + 1}-${image.name}`;
+    link.download = `${image.code}-${image.source}-${image.index + 1}-${image.name}`;
     document.body.appendChild(link);
     link.click();
     link.remove();
