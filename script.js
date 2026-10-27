@@ -1417,7 +1417,7 @@ function renderInstructionList() {
     const imageList = instructionImages.map((image, imageIndex) => {
       const imageName = escapeHtml(image.name || `图片${imageIndex + 1}`);
       const imageUrl = escapeHtml(image.url || "");
-      return `<span class="instruction-image-item"><a class="instruction-image-preview" href="${imageUrl}" data-image-name="${imageName}" title="查看 ${imageName}"><img src="${imageUrl}" alt="${imageName}" /></a><button class="instruction-image-remove" data-code="${escapeHtml(row.code)}" data-image-index="${imageIndex}" type="button" aria-label="删除${imageName}" title="删除图片">×</button></span>`;
+      return `<span class="instruction-image-item"><a class="instruction-image-preview" href="${imageUrl}" data-image-name="${imageName}" title="查看 ${imageName}"><img src="${imageUrl}" alt="${imageName}" /></a></span>`;
     }).join("");
     const imageControl = `<div class="instruction-image-cell"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无图片</span>'}</div><div class="instruction-image-actions"><input class="instruction-image-input" data-code="${escapeHtml(row.code)}" type="file" accept="image/*" multiple hidden /><button class="instruction-image-upload" data-code="${escapeHtml(row.code)}" type="button"${instructionImages.length >= 9 ? " disabled" : ""}>上传图片</button><span>${instructionImages.length}/9</span></div></div>`;
     const remarkControl = `<div class="instruction-remark-display"><span title="${escapeHtml(instructionRemark || "-")}">${escapeHtml(instructionRemark || "-")}</span><button class="instruction-remark-edit" data-code="${escapeHtml(row.code)}" type="button">${instructionRemark ? "编辑" : "添加"}</button></div>`;
@@ -2084,7 +2084,6 @@ $("#instructionConfirm").addEventListener("click", () => {
 
 $("#instructionBody").addEventListener("click", (event) => {
   const uploadButton = event.target.closest(".instruction-image-upload");
-  const removeImageButton = event.target.closest(".instruction-image-remove");
   const previewImage = event.target.closest(".instruction-image-preview");
   const remarkButton = event.target.closest(".instruction-remark-edit");
   const editButton = event.target.closest(".instruction-edit");
@@ -2102,16 +2101,6 @@ $("#instructionBody").addEventListener("click", (event) => {
       $("#instructionImagePreview").alt = previewImage.dataset.imageName || image.alt || "图片预览";
       $("#instructionImagePreviewOverlay").hidden = false;
     }
-    return;
-  }
-  if (removeImageButton) {
-    const row = getActiveInstructionRows().find((item) => item.code === removeImageButton.dataset.code);
-    const imageIndex = Number(removeImageButton.dataset.imageIndex);
-    const image = row?.images?.[imageIndex];
-    if (!row || !image) return;
-    if (String(image.url).startsWith("blob:")) URL.revokeObjectURL(image.url);
-    row.images.splice(imageIndex, 1);
-    renderInstructionList();
     return;
   }
   if (remarkButton) {
@@ -3087,7 +3076,7 @@ function renderInterceptFee(task) {
   const rmbTotal = rows.reduce((sum, fee) => sum + getInterceptFeeRmbAmount(fee), 0);
   const body = rows.length ? rows.map((fee) => {
     const images = Array.isArray(fee.images) ? fee.images : [];
-    const imageList = images.map((image, index) => `<span class="instruction-image-item"><a class="instruction-image-preview intercept-fee-image-preview" href="${escapeHtml(image.url || '')}" data-image-name="${escapeHtml(image.name || `图片${index + 1}`)}"><img src="${escapeHtml(image.url || '')}" alt="${escapeHtml(image.name || '图片')}" /></a><button class="instruction-image-remove intercept-fee-image-remove" data-intercept-fee-id="${escapeHtml(fee.id)}" data-image-index="${index}" type="button" aria-label="删除图片">×</button></span>`).join("");
+    const imageList = images.map((image, index) => `<span class="instruction-image-item"><a class="instruction-image-preview intercept-fee-image-preview" href="${escapeHtml(image.url || '')}" data-image-name="${escapeHtml(image.name || `图片${index + 1}`)}"><img src="${escapeHtml(image.url || '')}" alt="${escapeHtml(image.name || '图片')}" /></a></span>`).join("");
     const imageControl = `<div class="instruction-image-cell"><div class="instruction-image-list">${imageList || '<span class="instruction-image-empty">暂无图片</span>'}</div><div class="instruction-image-actions"><input class="intercept-fee-image-input" data-intercept-fee-id="${escapeHtml(fee.id)}" type="file" accept="image/*" multiple hidden /><button class="intercept-fee-image-upload" data-intercept-fee-id="${escapeHtml(fee.id)}" type="button"${images.length >= 9 ? " disabled" : ""}>上传图片</button><span>${images.length}/9</span></div></div>`;
     const checked = selectedInterceptFeeIds.has(String(fee.id)) ? " checked" : "";
     const status = fee.status === "已处理" || fee.completed ? "已处理" : "待处理";
@@ -3123,7 +3112,7 @@ function renderInterceptFee(task) {
   </div><div class="intercept-fee-main-table-wrap"><table class="intercept-fee-table intercept-fee-main-table"><thead><tr><th class="instruction-check-col"><input class="intercept-fee-select-all" type="checkbox" aria-label="全选操作指令" /></th><th>计费时间</th><th>费用名称</th><th>费用类型</th><th>*计费单位</th><th>*汇率</th><th>*计费单价</th><th>*计费数量</th><th>*币种</th><th>原币应收金额</th><th>人民币应收金额</th><th>添加时间</th><th>添加人</th><th>费用备注</th><th>指令备注</th><th>图片</th><th>指令状态</th><th>操作</th></tr></thead><tbody>${body}</tbody></table></div>`;
   const selectAll = $("#interceptFeeContent .intercept-fee-select-all");
   if (!canEdit) {
-    document.querySelectorAll("#interceptFeeContent [data-intercept-fee-action], #interceptFeeContent .intercept-fee-image-remove, #interceptFeeContent .instruction-image-actions").forEach((control) => control.remove());
+    document.querySelectorAll("#interceptFeeContent [data-intercept-fee-action], #interceptFeeContent .instruction-image-actions").forEach((control) => control.remove());
     document.querySelectorAll("#interceptFeeContent .intercept-fee-instruction-remark").forEach((control) => {
       const fee = rows.find((row) => String(row.id) === control.dataset.interceptFeeId);
       control.replaceWith(document.createTextNode(fee?.instructionRemark || "-"));
@@ -4498,20 +4487,6 @@ function initInterceptManagement() {
         $("#instructionImagePreview").src = image.src;
         $("#instructionImagePreview").alt = imagePreview.dataset.imageName || image.alt || "图片预览";
         $("#instructionImagePreviewOverlay").hidden = false;
-      }
-      return;
-    }
-    const imageRemove = event.target.closest(".intercept-fee-image-remove");
-    if (imageRemove) {
-      const task = getInterceptTask();
-      if (!canEditInterceptTask(task)) return;
-      const fee = task && getInterceptFeeRows(task).find((item) => String(item.id) === String(imageRemove.dataset.interceptFeeId));
-      const imageIndex = Number(imageRemove.dataset.imageIndex);
-      if (fee?.images?.[imageIndex]) {
-        const image = fee.images[imageIndex];
-        if (String(image.url || "").startsWith("blob:")) URL.revokeObjectURL(image.url);
-        fee.images.splice(imageIndex, 1);
-        renderInterceptFee(task);
       }
       return;
     }
