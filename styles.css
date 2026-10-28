@@ -1107,6 +1107,7 @@ input:focus, select:focus { border-color: #7dbaf0; box-shadow: 0 0 0 1px rgba(22
   border-bottom: 1px solid #eef1f3;
 }
 .approval-tabs { display: flex; height: 100%; align-items: stretch; gap: 2px; }
+.warehouse-approval-records { max-height: 140px; margin: 0; padding-left: 18px; overflow-y: auto; color: #53606b; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
 .instruction-process-guide {
   display: flex;
   min-width: 0;

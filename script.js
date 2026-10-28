@@ -383,6 +383,8 @@ let deletingInstructionCode = "";
 const selected = new Set();
 const instructionStatusDrafts = new Map();
 let activeStatus = "暂存";
+let activeApprovalStage = "全部";
+let warehouseBatchApprovalIds = [];
 let activeInventoryPage = "staging";
 let lastInstructionStatus = "待审批";
 let visibleRows = [...inventoryRows];
@@ -552,6 +554,86 @@ addOptions(filters.location, ["A01-01", "A02-03", "B01-07"]);
 
 function isApprovalView() {
   return activeStatus === "待审批";
+}
+
+function isWarehouseApprovalView() {
+  return activeInventoryPage === "instructions" && isApprovalView() && activeApprovalStage === "待仓库审批";
+}
+
+function updateApprovalStageControls() {
+  $("#batchWarehouseApprovalButton").hidden = !isWarehouseApprovalView();
+  document.querySelectorAll(".approval-tab").forEach((tab) => {
+    const stage = tab.dataset.approvalStage;
+    const count = approvalRows.filter((row) => row.status === "待审批" && (stage === "全部" || row.approvalStage === stage)).length;
+    tab.textContent = `${stage}(${count})`;
+    tab.classList.toggle("active", stage === activeApprovalStage);
+  });
+}
+
+function openBatchWarehouseApproval() {
+  if (!isWarehouseApprovalView()) return;
+  const rows = visibleRows.filter((row) => selected.has(row.id));
+  if (!rows.length) return window.alert("请先勾选需要仓库审批的记录");
+  if (rows.some((row) => row.status !== "待审批" || row.approvalStage !== "待仓库审批")) {
+    return window.alert("仅支持审批待仓库审批的记录，请重新选择");
+  }
+  warehouseBatchApprovalIds = rows.map((row) => row.id);
+  $("#warehouseBatchApprovalSummary").textContent = `已选择 ${rows.length} 条待仓库审批记录，请确认审批结果。`;
+  $("#warehouseBatchApprovalRecords").innerHTML = rows.map((row) => `<li>${escapeHtml(row.applicationNo)} · ${escapeHtml(row.customer)}</li>`).join("");
+  $("#warehouseBatchApprovalDecision").value = "passed";
+  $("#warehouseBatchApprovalReason").value = "";
+  updateBatchWarehouseApprovalDecision();
+  $("#warehouseBatchApprovalOverlay").hidden = false;
+}
+
+function updateBatchWarehouseApprovalDecision() {
+  const rejected = $("#warehouseBatchApprovalDecision").value === "rejected";
+  $("#warehouseBatchApprovalReason").required = rejected;
+  $("#warehouseBatchApprovalReasonLabel").textContent = rejected ? "拒绝原因（必填）" : "审批说明";
+}
+
+function closeBatchWarehouseApproval() {
+  $("#warehouseBatchApprovalOverlay").hidden = true;
+  warehouseBatchApprovalIds = [];
+}
+
+function submitBatchWarehouseApproval(event) {
+  event.preventDefault();
+  if (!isWarehouseApprovalView() || !warehouseBatchApprovalIds.length) return;
+  const decision = $("#warehouseBatchApprovalDecision").value;
+  if (!["passed", "rejected"].includes(decision)) return;
+  const reason = $("#warehouseBatchApprovalReason").value.trim();
+  if (decision === "rejected" && !reason) return window.alert("请填写拒绝原因");
+  const rows = warehouseBatchApprovalIds.map((id) => approvalRows.find((row) => row.id === id));
+  if (rows.some((row) => !row || row.status !== "待审批" || row.approvalStage !== "待仓库审批")) {
+    closeBatchWarehouseApproval();
+    applyFilters();
+    return window.alert("部分记录状态已变化，请重新选择后审批");
+  }
+  const target = decision === "passed" ? instructionPendingRows : rejectedRows;
+  const nextId = target.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0) + 1;
+  const reviewedAt = formatLocalDateTime();
+  target.unshift(...rows.map((row, index) => ({
+    ...row,
+    id: nextId + index,
+    instructions: (row.instructions || []).map((instruction) => ({ ...instruction })),
+    status: decision === "passed" ? "指令待处理" : "审批拒绝",
+    approvalStage: decision === "passed" ? "仓库审批通过" : "仓库审批拒绝",
+    warehouseApprovalResult: decision,
+    warehouseApprovalRemark: reason,
+    warehouseApprovedAt: reviewedAt,
+    ...(decision === "rejected" ? { rejectReason: reason } : {})
+  })));
+  const reviewedIds = new Set(warehouseBatchApprovalIds);
+  for (let index = approvalRows.length - 1; index >= 0; index -= 1) {
+    if (reviewedIds.has(approvalRows[index].id)) approvalRows.splice(index, 1);
+  }
+  closeBatchWarehouseApproval();
+  selected.clear();
+  updateStatusTabCount("待审批", approvalRows.length);
+  updateStatusTabCount("指令待处理", instructionPendingRows.length);
+  updateStatusTabCount("审批拒绝", rejectedRows.length);
+  applyFilters();
 }
 
 function isInstructionView() {
@@ -769,7 +851,8 @@ function renderTableChrome() {
   document.body.classList.toggle("staging-view", activeStatus === "暂存");
   document.querySelector(".inventory-table").classList.toggle("approval-table", requestTable);
   $("#contextAction").textContent = isApprovalView() ? "批量初审" : isInstructionPendingView() ? "开始处理" : isInstructionProcessingView() ? "处理完成" : isOutboundView() ? "下单托盘标签导出" : "更换库位";
-  $("#contextAction").hidden = isTerminalRequestView();
+  $("#contextAction").hidden = isTerminalRequestView() || isWarehouseApprovalView();
+  updateApprovalStageControls();
   $("#countdownAction").hidden = !isInstructionPendingView();
   $("#approvalDensityButton").hidden = isTerminalRequestView();
   $("#financialAuditField").hidden = !isRequestTableView();
@@ -894,6 +977,7 @@ function applyFilters() {
   visibleRows = sourceRows.filter((row) => {
     const haystack = [row.customer, row.container, row.system, row.inbound, row.pallet].join(" ").toLowerCase();
     return row.status === activeStatus
+      && (!isApprovalView() || activeApprovalStage === "全部" || row.approvalStage === activeApprovalStage)
       && (!keyword || haystack.includes(keyword))
       && (!filters.customer.value || row.customer === filters.customer.value)
       && (!filters.request.value || (row.applicationNo || "").toLowerCase().includes(filters.request.value.trim().toLowerCase()))
@@ -914,8 +998,7 @@ $("#resetButton").addEventListener("click", () => {
   selected.clear();
   Object.values(filters).forEach((control) => { control.value = ""; });
   $("#dateFrom").value = ""; $("#dateTo").value = "";
-  visibleRows = getActiveStatusRows().filter((row) => row.status === activeStatus);
-  renderRows();
+  applyFilters();
 });
 Object.values(filters).forEach((control) => {
   control.addEventListener("keydown", (event) => { if (event.key === "Enter") applyFilters(); });
@@ -1039,13 +1122,19 @@ $("#approvalDensityButton").addEventListener("click", () => {
 });
 document.querySelectorAll(".approval-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".approval-tab").forEach((item) => item.classList.remove("active"));
-    tab.classList.add("active");
-    const stage = tab.textContent.startsWith("待初审") ? "待初审" : tab.textContent.startsWith("待仓库审批") ? "待仓库审批" : "全部";
-    visibleRows = stage === "全部" ? [...approvalRows] : approvalRows.filter((row) => row.approvalStage === stage);
-    selected.clear();
-    renderRows();
+    activeApprovalStage = tab.dataset.approvalStage;
+    applyFilters();
   });
+});
+$("#batchWarehouseApprovalButton").addEventListener("click", openBatchWarehouseApproval);
+$("#warehouseBatchApprovalForm").addEventListener("submit", submitBatchWarehouseApproval);
+$("#warehouseBatchApprovalDecision").addEventListener("change", updateBatchWarehouseApprovalDecision);
+["#warehouseBatchApprovalClose", "#warehouseBatchApprovalCancel"].forEach((id) => $(id).addEventListener("click", closeBatchWarehouseApproval));
+$("#warehouseBatchApprovalOverlay").addEventListener("click", (event) => {
+  if (event.target === $("#warehouseBatchApprovalOverlay")) closeBatchWarehouseApproval();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#warehouseBatchApprovalOverlay").hidden) closeBatchWarehouseApproval();
 });
 $(".menu-toggle").addEventListener("click", () => {
   document.body.classList.toggle("sidebar-collapsed");

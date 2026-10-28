@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>暂存库存 - 美仓海外仓系统</title>
-  <link rel="stylesheet" href="styles.css?v=20261027-instruction-pc-process" />
+  <link rel="stylesheet" href="styles.css?v=20261028-batch-warehouse-approval" />
 </head>
 <body>
 
@@ -88,7 +88,7 @@
             <button class="status-tab" data-status="销毁">已完成(36)</button>
             <button class="status-tab" data-status="审批拒绝">审批拒绝(36)</button>
           </div>
-          <div class="status-actions"><button class="btn context-action" id="contextAction">批量初审</button><button class="btn countdown-action" id="countdownAction" hidden>倒计时配置</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
+          <div class="status-actions"><button class="btn primary" id="batchWarehouseApprovalButton" type="button" hidden>批量仓库审批</button><button class="btn context-action" id="contextAction">批量初审</button><button class="btn countdown-action" id="countdownAction" hidden>倒计时配置</button><button class="btn split-button" id="exportButton">导出 <span>⌄</span></button></div>
         </div>
         <div class="summary-bar" id="summaryBar">
           <div>已选择内容：总托盘数：<b id="selectedPallets">0</b><span>总箱数：<b id="selectedBoxes">0</b></span><span>总板数：<b id="selectedBoards">0</b></span><span>总重量：<b id="selectedWeight">0</b></span><span>总体积：<b id="selectedVolume">0</b></span></div>
@@ -96,9 +96,9 @@
         </div>
         <div class="approval-subbar" id="approvalSubbar">
           <div class="approval-tabs">
-            <button class="approval-tab active">全部(8)</button>
-            <button class="approval-tab">待初审(3)</button>
-            <button class="approval-tab">待仓库审批(5)</button>
+            <button class="approval-tab active" data-approval-stage="全部">全部(8)</button>
+            <button class="approval-tab" data-approval-stage="待初审">待初审(3)</button>
+            <button class="approval-tab" data-approval-stage="待仓库审批">待仓库审批(5)</button>
           </div>
           <button class="settings-button" id="approvalDensityButton">⚙</button>
         </div>
@@ -290,6 +290,20 @@
   <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="interceptFeedbackTitle">
     <header><h2 id="interceptFeedbackTitle">拦截处理</h2><button class="intercept-close" id="interceptFeedbackClose" type="button" aria-label="关闭拦截处理">×</button></header>
     <form id="interceptFeedbackForm"><div class="intercept-feedback-content" id="interceptFeedbackFields"></div><footer><button class="btn" id="interceptFeedbackCancel" type="button">取消</button><button class="btn primary" type="submit">确认提交</button></footer></form>
+  </section>
+</div>
+<div class="intercept-overlay" id="warehouseBatchApprovalOverlay" hidden>
+  <section class="intercept-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="warehouseBatchApprovalTitle">
+    <header><h2 id="warehouseBatchApprovalTitle">批量仓库审批</h2><button class="intercept-close" id="warehouseBatchApprovalClose" type="button" aria-label="关闭批量仓库审批">×</button></header>
+    <form id="warehouseBatchApprovalForm">
+      <div class="intercept-feedback-content">
+        <p id="warehouseBatchApprovalSummary"></p>
+        <ul class="warehouse-approval-records" id="warehouseBatchApprovalRecords"></ul>
+        <label><span>审批结果</span><select id="warehouseBatchApprovalDecision"><option value="passed">通过</option><option value="rejected">拒绝</option></select></label>
+        <label><span id="warehouseBatchApprovalReasonLabel">审批说明</span><textarea id="warehouseBatchApprovalReason" maxlength="200" placeholder="请输入审批说明（拒绝时必填）"></textarea></label>
+      </div>
+      <footer><button class="btn" id="warehouseBatchApprovalCancel" type="button">取消</button><button class="btn primary" type="submit">确认审批</button></footer>
+    </form>
   </section>
 </div>
 <div class="instruction-draft-bar" id="instructionDraftBar" role="status" aria-live="polite" hidden>
@@ -545,7 +559,7 @@
 <div class="intercept-toast" id="interceptToast" role="status" aria-live="polite" hidden></div>
 <div class="floating-tools" aria-hidden="true"><span>⌘</span><span>☆</span></div>
 <div class="watermarks" id="watermarks"></div>
-<script src="script.js?v=20261027-instruction-pc-process"></script>
+<script src="script.js?v=20261028-batch-warehouse-approval"></script>
 <link rel="stylesheet" href="forecast.css?v=20260911-1" />
 <script src="forecast.js?v=20261008-warehouse-nav"></script>
 <script type="importmap">
